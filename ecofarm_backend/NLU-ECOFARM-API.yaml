@@ -1,0 +1,1458 @@
+openapi: 3.0.3
+info:
+  title: Melon Trace API
+  version: 1.0.0
+  description: |
+    Đặc tả API cho hệ thống truy xuất nguồn gốc dưa lưới (Spring Boot, Flutter), bám sát CSDL `NLU_ECOFARM` (file SQL đính kèm).
+
+    **Quy ước chung**
+    - Base path: `/api/v1`. Trang tra cứu công khai: `/public/...` (không cần đăng nhập).
+    - Định dạng: JSON, UTF-8. Lỗi theo RFC 7807 (`application/problem+json`).
+    - Khóa chính `id` là `bigint` (int64). **Lưu ý Flutter Web:** số nguyên lớn hơn 2^53 bị mất chính xác; nếu dùng Snowflake ID thì trả `id` dạng chuỗi, nếu dùng auto-increment thì giữ số.
+    - Mọi cột thời gian dạng `bigint` trong DB là **epoch mili-giây UTC** (int64). Cột `date` (sow_date, harvest_date, valid_from, valid_to) là chuỗi `YYYY-MM-DD`.
+    - Các cột chung của mọi bảng: `is_active`, `version`, `created_at`, `updated_at`. Ghi/sửa gửi `version` để khóa lạc quan (409 nếu lệch). Xóa là xóa mềm (`is_active=false`).
+    - Phân trang: `page` (từ 0), `size` (mặc định 20, tối đa 100); phản hồi dạng `{content, page, size, totalElements, totalPages}`.
+    - Xác thực: `Authorization: Bearer <accessToken>`. Mã vai trò: `ADMIN`, `ENGINEER`, `WORKER`, `PACKER` (đóng gói và kho), `PARTNER_QC`, `REGULATOR`. Cột `x-roles` ghi vai trò được phép.
+    - Idempotency: ghi sự kiện dùng `clientEventId` (cột `cultivation_events.client_event_id`, duy nhất).
+
+    **Chỗ SQL hiện tại chưa đủ cho các yêu cầu SRS (nên sửa trước khi code)**
+    1. `cultivation_events.recorded_at` đang là `blob`; đổi thành `bigint` và thêm cột `occurred_at bigint` (giờ xảy ra theo thiết bị). Thêm `UNIQUE(batch_id, seq)`.
+    2. `batches.salt_enc` đang là `bigint`; phải là `varbinary`/`bytea` (salt 32 byte đã mã hóa).
+    3. `varieties` thiếu `days_pollination_to_harvest`, `min_brix`, `min_isolation_days` (cần cho FR-MST-002, FR-QC-002, FR-QC-003, FR-LOG-003).
+    4. `ledger_records` chỉ gắn với `event_id`; bản ghi `finalizeBatch` của Private Chain không có chỗ lưu. Thêm `merkle_snapshots.private_tx_hash` (hoặc `ledger_records.batch_id` và `record_type`).
+    5. `shipments` thiếu `quantity`, `received_by`; `recalls` thiếu `revoke_tx_hash`.
+    6. `users` thiếu `failed_login_count`, `locked_until`, `must_change_password` (FR-AUTH-003, 004). Nếu refresh token có trạng thái, thêm bảng `refresh_tokens`.
+    7. `qr_codes` thiếu `scan_count`, `last_scanned_at` (FR-PCK-006, mức Could).
+    8. `payload`, `detail` (blob) nên là `json`/`jsonb` để truy vấn; `anchors` nên có `batch_id` để tra nhanh.
+  contact:
+    name: Melon Trace team
+servers:
+  - url: https://api.example.com
+    description: Thay bằng domain triển khai
+tags:
+  - name: Auth
+  - name: Catalog
+  - name: Batch
+  - name: Event
+  - name: Quality
+  - name: Packaging
+  - name: Shipping
+  - name: Blockchain
+  - name: Report
+  - name: Public
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Đăng nhập
+      description: Bảng `users`, `user_roles`, `roles`. Sai mật khẩu quá số lần cấu hình thì khóa tạm (401 với `code=ACCOUNT_LOCKED`).
+      x-roles: [ALL]
+      x-fr: [FR-AUTH-001, FR-AUTH-003]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+            example: { username: engineer01, password: "S3cret!pass" }
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooMany' }
+  /api/v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Làm mới token
+      x-roles: [ALL]
+      x-fr: [FR-AUTH-001]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: Cặp token mới
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/me:
+    get:
+      tags: [Auth]
+      summary: Hồ sơ người dùng hiện tại
+      x-roles: [ALL]
+      x-fr: [FR-AUTH-001]
+      responses:
+        '200':
+          description: Hồ sơ
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/greenhouses:
+    get:
+      tags: [Catalog]
+      summary: Danh sách nhà màng
+      description: Bảng `green_houses`.
+      x-roles: [ADMIN, ENGINEER]
+      x-fr: [FR-MST-001]
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+        - { name: status, in: query, schema: { type: string }, description: Lọc theo `status` }
+        - { name: q, in: query, schema: { type: string }, description: Tìm theo `code` hoặc `name` }
+      responses:
+        '200':
+          description: Trang kết quả
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageMeta'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items: { $ref: '#/components/schemas/Greenhouse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Catalog]
+      summary: Tạo nhà màng
+      x-roles: [ADMIN, ENGINEER]
+      x-fr: [FR-MST-001]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GreenhouseInput' }
+            example: { code: GH-01, name: Nhà màng số 1, gpsLat: 10.8231, gpsLng: 106.6297, areaM2: 1000, status: ACTIVE }
+      responses:
+        '201':
+          description: Đã tạo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Greenhouse' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /api/v1/greenhouses/{id}:
+    put:
+      tags: [Catalog]
+      summary: Sửa nhà màng
+      description: Không đổi được `code` khi đã có lô tham chiếu (FR-MST-004).
+      x-roles: [ADMIN, ENGINEER]
+      x-fr: [FR-MST-001, FR-MST-004]
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/GreenhouseInput'
+                - type: object
+                  required: [version]
+                  properties:
+                    version: { type: integer }
+      responses:
+        '200':
+          description: Đã sửa
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Greenhouse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/varieties:
+    get:
+      tags: [Catalog]
+      summary: Danh sách giống
+      description: Bảng `varieties`.
+      x-roles: [ADMIN, ENGINEER]
+      x-fr: [FR-MST-002]
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+      responses:
+        '200':
+          description: Trang kết quả
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageMeta'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items: { $ref: '#/components/schemas/Variety' }
+    post:
+      tags: [Catalog]
+      summary: Tạo giống
+      x-roles: [ADMIN, ENGINEER]
+      x-fr: [FR-MST-002]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VarietyInput' }
+            example: { code: HUYNH_LONG, name: Dưa lưới Huỳnh Long }
+      responses:
+        '201':
+          description: Đã tạo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Variety' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /api/v1/varieties/{id}:
+    put:
+      tags: [Catalog]
+      summary: Sửa giống
+      x-roles: [ADMIN, ENGINEER]
+      x-fr: [FR-MST-002, FR-MST-004]
+      parameters: [ { $ref: '#/components/parameters/Id' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/VarietyInput'
+                - type: object
+                  required: [version]
+                  properties:
+                    version: { type: integer }
+      responses:
+        '200':
+          description: Đã sửa
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Variety' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/certificates:
+    get:
+      tags: [Catalog]
+      summary: Danh sách chứng nhận
+      description: Bảng `certificates`. Có thể lọc theo nhà màng và sắp hết hạn.
+      x-roles: [ADMIN, ENGINEER]
+      x-fr: [FR-MST-003]
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+        - { name: greenhouseId, in: query, schema: { type: integer, format: int64 } }
+        - { name: expiringInDays, in: query, schema: { type: integer }, description: Chỉ lấy chứng nhận hết hạn trong N ngày tới }
+      responses:
+        '200':
+          description: Trang kết quả
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageMeta'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items: { $ref: '#/components/schemas/Certificate' }
+    post:
+      tags: [Catalog]
+      summary: Tạo chứng nhận
+      description: Tệp PDF tải lên trước qua `POST /api/v1/files/presign`, sau đó truyền `fileKey`.
+      x-roles: [ADMIN, ENGINEER]
+      x-fr: [FR-MST-003]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CertificateInput' }
+            example: { greenhouseId: 1, certType: VietGAP, certNo: VietGAP-2026-XYZ, validFrom: "2026-01-01", validTo: "2027-01-01", fileKey: certs/gh01/vietgap.pdf }
+      responses:
+        '201':
+          description: Đã tạo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Certificate' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /api/v1/files/presign:
+    post:
+      tags: [Catalog]
+      summary: Xin URL tải tệp lên MinIO (bổ sung)
+      description: |
+        Endpoint bổ sung, không có trong danh sách ban đầu nhưng cần cho ảnh sự kiện và PDF chứng nhận.
+        Client PUT tệp lên `uploadUrl`, sau đó dùng `fileKey` và `sha256` khi ghi sự kiện hoặc chứng nhận.
+      x-roles: [ADMIN, ENGINEER, WORKER, PACKER]
+      x-fr: [FR-LOG-009]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fileName, mimeType, sizeBytes]
+              properties:
+                fileName: { type: string, example: gieo-hat.jpg }
+                mimeType: { type: string, example: image/jpeg }
+                sizeBytes: { type: integer, format: int64, maximum: 5242880 }
+      responses:
+        '200':
+          description: URL ký sẵn
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fileKey: { type: string }
+                  uploadUrl: { type: string, format: uri }
+                  expiresAt: { type: integer, format: int64 }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /api/v1/batches:
+    post:
+      tags: [Batch]
+      summary: Tạo lô
+      description: |
+        Bảng `batches`. Server tự sinh `batch_code` dạng `DL-<mã nhà màng>-<ddMMyy>` (thêm hậu tố số nếu trùng ngày),
+        sinh salt 32 byte lưu `salt_enc`, đặt `status=DRAFT`, `created_by` lấy từ token.
+      x-roles: [ENGINEER]
+      x-fr: [FR-BAT-001, FR-BAT-002, FR-BAT-003]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BatchCreate' }
+            example: { greenhouseId: 1, varietyId: 2, sowDate: "2026-08-15" }
+      responses:
+        '201':
+          description: Đã tạo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Batch' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+    get:
+      tags: [Batch]
+      summary: Liệt kê lô
+      description: Công nhân chỉ thấy lô có trong `batch_assignments` của mình; Kỹ sư, Admin thấy tất cả.
+      x-roles: [ADMIN, ENGINEER, WORKER, PACKER, PARTNER_QC, REGULATOR]
+      x-fr: [FR-BAT-004, FR-BAT-005]
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/BatchStatus' } }
+        - { name: greenhouseId, in: query, schema: { type: integer, format: int64 } }
+        - { name: q, in: query, schema: { type: string }, description: Tìm theo `batchCode` }
+        - { name: mine, in: query, schema: { type: boolean }, description: Chỉ lô được phân công cho tôi }
+      responses:
+        '200':
+          description: Trang kết quả
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageMeta'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items: { $ref: '#/components/schemas/Batch' }
+  /api/v1/batches/{batchId}:
+    get:
+      tags: [Batch]
+      summary: Chi tiết lô
+      x-roles: [ADMIN, ENGINEER, WORKER, PACKER, PARTNER_QC, REGULATOR]
+      x-fr: [FR-BAT-004]
+      parameters: [ { $ref: '#/components/parameters/BatchId' } ]
+      responses:
+        '200':
+          description: Chi tiết lô kèm tổng hợp
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BatchDetail' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/batches/{batchId}/assignments:
+    post:
+      tags: [Batch]
+      summary: Phân công công nhân cho lô
+      description: Bảng `batch_assignments`. Gửi danh sách đầy đủ người được giao, server đồng bộ (thêm mới, xóa mềm người bị bỏ).
+      x-roles: [ENGINEER]
+      x-fr: [FR-BAT-005]
+      parameters: [ { $ref: '#/components/parameters/BatchId' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userIds]
+              properties:
+                userIds:
+                  type: array
+                  items: { type: integer, format: int64 }
+                  example: [11, 12]
+      responses:
+        '200':
+          description: Danh sách phân công sau cập nhật
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Assignment' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /api/v1/batches/{batchId}/events:
+    post:
+      tags: [Event]
+      summary: Ghi sự kiện canh tác
+      description: |
+        Bảng `cultivation_events`, `event_attachments`, `outbox_events`. Server chuẩn hóa JSON (RFC 8785), tính `event_hash`,
+        gán `seq` kế tiếp, lưu sự kiện và outbox trong cùng một transaction, trả `status=PENDING_CHAIN`.
+        Gửi lại cùng `clientEventId` trả lại kết quả cũ (200, không tạo mới).
+        Lô từ `ANCHORING` trở đi bị từ chối (409 `BATCH_LOCKED`).
+      x-roles: [WORKER, ENGINEER]
+      x-fr: [FR-LOG-001, FR-LOG-002, FR-LOG-003, FR-LOG-004, FR-LOG-005, FR-LOG-006, FR-LOG-009]
+      parameters: [ { $ref: '#/components/parameters/BatchId' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EventCreate' }
+            example:
+              clientEventId: 7f3a2c1e-5b7d-4e8a-9c21-7d4e5f6a8b90
+              eventType: THU_PHAN
+              occurredAt: 1789029000000
+              data: { pollinatedCount: 480, note: Hoàn thành thụ phấn, giữ 1 quả tối ưu trên cây }
+              attachments:
+                - { fileKey: events/2026/09/abc.jpg, sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08, mimeType: image/jpeg }
+      responses:
+        '201':
+          description: Đã tạo sự kiện
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Event' }
+        '200':
+          description: Trùng `clientEventId`, trả sự kiện đã có
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Event' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+    get:
+      tags: [Event]
+      summary: Liệt kê sự kiện của lô
+      x-roles: [ADMIN, ENGINEER, WORKER, PACKER, REGULATOR]
+      x-fr: [FR-LOG-001]
+      parameters:
+        - { $ref: '#/components/parameters/BatchId' }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/EventStatus' } }
+        - { name: eventType, in: query, schema: { $ref: '#/components/schemas/EventType' } }
+        - { name: includeSuperseded, in: query, schema: { type: boolean, default: true } }
+      responses:
+        '200':
+          description: Trang sự kiện sắp theo `seq` tăng dần
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageMeta'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items: { $ref: '#/components/schemas/Event' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/events/{eventId}/approve:
+    post:
+      tags: [Event]
+      summary: Duyệt sự kiện
+      description: Tạo thêm sự kiện `EVENT_APPROVED` (seq kế tiếp) tham chiếu `event_hash` gốc; sự kiện gốc đổi `status=APPROVED`.
+      x-roles: [ENGINEER]
+      x-fr: [FR-LOG-007]
+      parameters: [ { $ref: '#/components/parameters/EventId' } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: Sự kiện sau khi duyệt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Event' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/events/{eventId}/reject:
+    post:
+      tags: [Event]
+      summary: Từ chối sự kiện
+      description: Đổi `status=REJECTED`; sự kiện vẫn giữ nguyên. Muốn sửa thì dùng `/amend`.
+      x-roles: [ENGINEER]
+      x-fr: [FR-LOG-007]
+      parameters: [ { $ref: '#/components/parameters/EventId' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        '200':
+          description: Sự kiện sau khi từ chối
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Event' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/events/{eventId}/amend:
+    post:
+      tags: [Event]
+      summary: Đính chính sự kiện
+      description: Tạo sự kiện mới có `amends_event_id`; sự kiện cũ đổi `status=SUPERSEDED`. Không dùng được khi lô từ `ANCHORING` trở đi.
+      x-roles: [ENGINEER]
+      x-fr: [FR-LOG-008]
+      parameters: [ { $ref: '#/components/parameters/EventId' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EventAmend' }
+      responses:
+        '201':
+          description: Sự kiện đính chính
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Event' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /api/v1/batches/{batchId}/qc:
+    post:
+      tags: [Quality]
+      summary: Ghi kiểm định chất lượng
+      description: |
+        Bảng `qc_records`. `passed` do server tính theo ngưỡng của giống (min Brix, số ngày cách ly);
+        Kỹ sư xác nhận bằng `confirmPassed`. Đạt thì lô chuyển `QC_PASSED`, không đạt chuyển `REJECTED`.
+        Chặn QC đạt khi thời gian cách ly trước thu hoạch chưa đủ (422 `ISOLATION_NOT_ENOUGH`).
+      x-roles: [ENGINEER]
+      x-fr: [FR-QC-001, FR-QC-002, FR-QC-003]
+      parameters: [ { $ref: '#/components/parameters/BatchId' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QcCreate' }
+            example: { brix: 14.2, avgWeightKg: 1.6, confirmPassed: true, attachments: [] }
+      responses:
+        '201':
+          description: Kết quả QC
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QcRecord' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /api/v1/batches/{batchId}/harvest:
+    post:
+      tags: [Quality]
+      summary: Ghi nhận thu hoạch
+      description: Ghi sự kiện `THU_HOACH`, đặt `batches.harvest_date`, chuyển lô sang `HARVESTED`.
+      x-roles: [ENGINEER, WORKER]
+      x-fr: [FR-QC-004]
+      parameters: [ { $ref: '#/components/parameters/BatchId' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HarvestCreate' }
+            example: { clientEventId: 0b1c9a1e-2d3e-4f50-8a9b-0c1d2e3f4a5b, harvestedAt: 1793170800000, estimatedQuantity: 5000, area: Khu A }
+      responses:
+        '201':
+          description: Lô sau khi ghi nhận thu hoạch
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Batch' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /api/v1/batches/{batchId}/activate:
+    post:
+      tags: [Packaging]
+      summary: Kích hoạt lô và bắt đầu neo blockchain
+      description: |
+        Kiểm tra điều kiện (FR-PCK-001), tạo `packages`, dựng cây Merkle và lưu `merkle_snapshots`,
+        chuyển `status=ANCHORING`, ghi `outbox_events` (finalize Private Chain và anchor Polygon) trong một transaction.
+        Trả 202; theo dõi bằng `anchor-status`. Thiếu điều kiện trả 409 kèm `errors` liệt kê việc cần làm.
+      x-roles: [PACKER]
+      x-fr: [FR-PCK-001, FR-PCK-002]
+      parameters: [ { $ref: '#/components/parameters/BatchId' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [unitCount]
+              properties:
+                unitCount: { type: integer, minimum: 1, maximum: 100000, description: Số đơn vị đóng gói (cột `packages.unit_count`) }
+                version: { type: integer, description: Phiên bản lô để khóa lạc quan }
+            example: { unitCount: 5000 }
+      responses:
+        '202':
+          description: Đã nhận, đang neo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivateResponse' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/batches/{batchId}/anchor-status:
+    get:
+      tags: [Blockchain]
+      summary: Theo dõi tiến trình neo
+      description: Dùng cho màn hình SCR-09; client gọi lặp (polling) mỗi vài giây tới khi `batchStatus` là `ACTIVE` hoặc `ANCHOR_FAILED`.
+      x-roles: [PACKER, ENGINEER, ADMIN]
+      x-fr: [FR-LDG-003]
+      parameters: [ { $ref: '#/components/parameters/BatchId' } ]
+      responses:
+        '200':
+          description: Trạng thái
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnchorStatus' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/batches/{batchId}/qr:
+    get:
+      tags: [Packaging]
+      summary: Tệp in tem QR (PDF)
+      description: |
+        Bảng `qr_codes`, `packages`. Chỉ lô `ACTIVE` mới in được (409 nếu chưa). Lần đầu sinh `qr_codes` cho từng đơn vị
+        (`code` ngẫu nhiên khó đoán, `serial` từ 1). `reprint=true` giữ nguyên mã và ghi audit.
+      x-roles: [PACKER]
+      x-fr: [FR-PCK-003, FR-PCK-004]
+      parameters:
+        - { $ref: '#/components/parameters/BatchId' }
+        - { name: reprint, in: query, schema: { type: boolean, default: false } }
+        - { name: fromSerial, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: toSerial, in: query, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200':
+          description: Tệp PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/batches/{batchId}/shipments:
+    post:
+      tags: [Shipping]
+      summary: Xuất kho
+      description: Bảng `shipments`. Chuyển lô `ACTIVE` sang `SHIPPED`.
+      x-roles: [PACKER]
+      x-fr: [FR-SHP-001]
+      parameters: [ { $ref: '#/components/parameters/BatchId' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ShipmentCreate' }
+            example: { destination: Siêu thị Aeon Tân Phú, vehiclePlate: 51C-123.45, shippedAt: 1793250000000 }
+      responses:
+        '201':
+          description: Đã xuất kho
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Shipment' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /api/v1/shipments/{shipmentId}/receive:
+    post:
+      tags: [Shipping]
+      summary: Xác nhận nhận hàng
+      x-roles: [PARTNER_QC]
+      x-fr: [FR-SHP-002]
+      parameters:
+        - { name: shipmentId, in: path, required: true, schema: { type: integer, format: int64 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accepted]
+              properties:
+                accepted: { type: boolean, description: true thì `status=RECEIVED`, false thì `REJECTED` }
+                receivedAt: { type: integer, format: int64, description: Mặc định là giờ server }
+      responses:
+        '200':
+          description: Lô hàng sau xác nhận
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Shipment' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/batches/{batchId}/recall:
+    post:
+      tags: [Blockchain]
+      summary: Thu hồi lô
+      description: Bảng `recalls`. Chuyển lô `RECALLED`, ghi `revoke` lên Polygon qua outbox, trang tra cứu hiện cảnh báo.
+      x-roles: [ADMIN]
+      x-fr: [FR-AUD-003]
+      parameters: [ { $ref: '#/components/parameters/BatchId' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 5, maxLength: 1000 }
+      responses:
+        '201':
+          description: Bản ghi thu hồi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Recall' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/batches/{batchId}/proof-bundle:
+    get:
+      tags: [Blockchain]
+      summary: Gói bằng chứng
+      description: 'Dữ liệu để bên thứ ba tự dựng lại Merkle root (đã khử thông tin cá nhân, người ghi chỉ có mã ẩn danh).'
+      x-roles: [PARTNER_QC, REGULATOR, ADMIN]
+      x-fr: [FR-VER-006]
+      parameters: [ { $ref: '#/components/parameters/BatchId' } ]
+      responses:
+        '200':
+          description: Gói bằng chứng
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProofBundle' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/reports/dashboard:
+    get:
+      tags: [Report]
+      summary: Số liệu dashboard
+      x-roles: [ADMIN, ENGINEER, REGULATOR]
+      x-fr: [FR-RPT-001]
+      parameters:
+        - { name: from, in: query, schema: { type: integer, format: int64 }, description: Epoch ms }
+        - { name: to, in: query, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: Số liệu tổng hợp
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Dashboard' }
+  /api/v1/audit-logs:
+    get:
+      tags: [Report]
+      summary: Nhật ký kiểm toán
+      description: Bảng `audit_logs`, chỉ đọc.
+      x-roles: [ADMIN, REGULATOR]
+      x-fr: [FR-AUD-001, FR-AUD-002]
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+        - { name: actorId, in: query, schema: { type: integer, format: int64 } }
+        - { name: entity, in: query, schema: { type: string }, example: batches }
+        - { name: entityId, in: query, schema: { type: integer, format: int64 } }
+        - { name: action, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: integer, format: int64 } }
+        - { name: to, in: query, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: Trang nhật ký, mới nhất trước
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageMeta'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items: { $ref: '#/components/schemas/AuditLog' }
+  /api/v1/admin/anchors/{anchorId}/retry:
+    post:
+      tags: [Blockchain]
+      summary: Thử lại neo lỗi
+      description: Chỉ áp dụng khi lô ở `ANCHOR_FAILED`; chuyển lại `ANCHORING` và tạo outbox mới.
+      x-roles: [ADMIN]
+      x-fr: [FR-LDG-002]
+      parameters:
+        - { name: anchorId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '202':
+          description: Đã đưa vào hàng đợi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Anchor' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/admin/reconciliation:
+    get:
+      tags: [Blockchain]
+      summary: Kết quả đối soát DB, Private Chain, Public Chain
+      x-roles: [ADMIN]
+      x-fr: [FR-LDG-005]
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+        - { name: onlyMismatch, in: query, schema: { type: boolean, default: false } }
+      responses:
+        '200':
+          description: Danh sách đối soát
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageMeta'
+                  - type: object
+                    properties:
+                      checkedAt: { type: integer, format: int64 }
+                      content:
+                        type: array
+                        items: { $ref: '#/components/schemas/ReconciliationItem' }
+  /public/trace/{code}:
+    get:
+      tags: [Public]
+      summary: Hành trình sản phẩm công khai
+      description: |
+        Tra theo `qr_codes.code`. Không có thông tin cá nhân, sản lượng hay số tem. Giới hạn tần suất theo IP (429).
+        Lô chưa `ACTIVE` vẫn trả 200 với `blockchain.anchored=false` để trang báo rõ.
+      x-roles: [PUBLIC]
+      x-fr: [FR-VER-001, FR-VER-002, FR-VER-005]
+      security: []
+      parameters:
+        - { $ref: '#/components/parameters/Code' }
+      responses:
+        '200':
+          description: Hành trình
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicTrace' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooMany' }
+  /public/trace/{code}/verify:
+    post:
+      tags: [Public]
+      summary: Xác thực dữ liệu trên blockchain
+      description: Server dựng lại Merkle root từ DB, đọc anchor từ Polygon và so sánh. Không cần body.
+      x-roles: [PUBLIC]
+      x-fr: [FR-VER-003, FR-VER-004, FR-VER-005, FR-VER-007]
+      security: []
+      parameters:
+        - { $ref: '#/components/parameters/Code' }
+      responses:
+        '200':
+          description: Kết quả so sánh
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerifyResult' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooMany' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    BatchId: { name: batchId, in: path, required: true, schema: { type: integer, format: int64 } }
+    EventId: { name: eventId, in: path, required: true, schema: { type: integer, format: int64 } }
+    Code: { name: code, in: path, required: true, description: Giá trị `qr_codes.code`, schema: { type: string, minLength: 16, maxLength: 64 } }
+    Page: { name: page, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+    Size: { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+  responses:
+    Unauthorized:
+      description: Thiếu hoặc sai token, hoặc sai tài khoản
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    Forbidden:
+      description: Không đủ quyền hoặc không được giao lô này
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    NotFound:
+      description: Không tìm thấy
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    Conflict:
+      description: Sai trạng thái, trùng khóa duy nhất hoặc lệch `version`
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: about:blank, title: Conflict, status: 409, code: BATCH_LOCKED, detail: Lô đã ở trạng thái ANCHORING, không thể thêm sự kiện }
+    Unprocessable:
+      description: Dữ liệu không hợp lệ hoặc vi phạm quy tắc nghiệp vụ
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: about:blank
+            title: Unprocessable Entity
+            status: 422
+            code: VALIDATION_FAILED
+            errors: [ { field: data.isolationDays, message: Phải lớn hơn hoặc bằng số ngày cách ly tối thiểu của giống } ]
+    TooMany:
+      description: Vượt giới hạn tần suất
+      headers:
+        Retry-After: { schema: { type: integer } }
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+  schemas:
+    Problem:
+      type: object
+      required: [title, status]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        code: { type: string, description: 'Mã lỗi máy đọc được, ví dụ VALIDATION_FAILED, BATCH_LOCKED, ISOLATION_NOT_ENOUGH, ACCOUNT_LOCKED, VERSION_CONFLICT' }
+        detail: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }
+    PageMeta:
+      type: object
+      properties:
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+        totalPages: { type: integer }
+    Audit:
+      type: object
+      description: Các cột chung của mọi bảng
+      properties:
+        isActive: { type: boolean, default: true }
+        version: { type: integer, default: 1 }
+        createdAt: { type: integer, format: int64, description: Epoch ms }
+        updatedAt: { type: integer, format: int64, description: Epoch ms }
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string, minLength: 3, maxLength: 64 }
+        password: { type: string, minLength: 8, maxLength: 128, format: password }
+    TokenResponse:
+      type: object
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        tokenType: { type: string, example: Bearer }
+        expiresIn: { type: integer, description: Giây }
+        mustChangePassword: { type: boolean }
+        user: { $ref: '#/components/schemas/User' }
+    User:
+      description: Bảng `users` (không trả `password_hash`) và `roles` qua `user_roles`
+      allOf:
+        - $ref: '#/components/schemas/Audit'
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+            username: { type: string }
+            fullName: { type: string }
+            phone: { type: string }
+            status: { type: string, example: ACTIVE }
+            roles:
+              type: array
+              items: { type: string, enum: [ADMIN, ENGINEER, WORKER, PACKER, PARTNER_QC, REGULATOR] }
+    GreenhouseInput:
+      type: object
+      required: [code, name]
+      properties:
+        code: { type: string, maxLength: 32, example: GH-01 }
+        name: { type: string, maxLength: 128 }
+        gpsLat: { type: number, minimum: -90, maximum: 90 }
+        gpsLng: { type: number, minimum: -180, maximum: 180 }
+        areaM2: { type: number, minimum: 0 }
+        status: { type: string, example: ACTIVE }
+    Greenhouse:
+      description: Bảng `green_houses`
+      allOf:
+        - $ref: '#/components/schemas/Audit'
+        - $ref: '#/components/schemas/GreenhouseInput'
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+    VarietyInput:
+      type: object
+      required: [code, name]
+      properties:
+        code: { type: string, maxLength: 32 }
+        name: { type: string, maxLength: 128 }
+        daysPollinationToHarvest: { type: integer, description: 'Cần thêm cột DB (xem mục sửa SQL số 3)' }
+        minBrix: { type: number, description: 'Cần thêm cột DB' }
+        minIsolationDays: { type: integer, description: 'Cần thêm cột DB' }
+    Variety:
+      description: Bảng `varieties`
+      allOf:
+        - $ref: '#/components/schemas/Audit'
+        - $ref: '#/components/schemas/VarietyInput'
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+    CertificateInput:
+      type: object
+      required: [greenhouseId, certType, certNo, validFrom, validTo]
+      properties:
+        greenhouseId: { type: integer, format: int64 }
+        certType: { type: string, example: VietGAP }
+        certNo: { type: string }
+        validFrom: { type: string, format: date }
+        validTo: { type: string, format: date }
+        fileKey: { type: string, description: Khóa tệp PDF trong MinIO }
+    Certificate:
+      description: Bảng `certificates`
+      allOf:
+        - $ref: '#/components/schemas/Audit'
+        - $ref: '#/components/schemas/CertificateInput'
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+            downloadUrl: { type: string, format: uri, description: URL ký tạm thời }
+    BatchStatus:
+      type: string
+      description: Cột `batches.status`
+      enum: [DRAFT, GROWING, HARVESTED, QC_PASSED, REJECTED, ANCHORING, ANCHOR_FAILED, ACTIVE, SHIPPED, RECALLED]
+    BatchCreate:
+      type: object
+      required: [greenhouseId, varietyId, sowDate]
+      properties:
+        greenhouseId: { type: integer, format: int64 }
+        varietyId: { type: integer, format: int64 }
+        sowDate: { type: string, format: date, description: Ngày xuống giống dự kiến }
+    Batch:
+      description: Bảng `batches` (không trả `salt_enc`)
+      allOf:
+        - $ref: '#/components/schemas/Audit'
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+            batchCode: { type: string, example: DL-MANG01-281026 }
+            greenhouseId: { type: integer, format: int64 }
+            varietyId: { type: integer, format: int64 }
+            status: { $ref: '#/components/schemas/BatchStatus' }
+            sowDate: { type: string, format: date }
+            harvestDate: { type: string, format: date, nullable: true }
+            createdBy: { type: integer, format: int64 }
+            activatedAt: { type: integer, format: int64, nullable: true }
+    BatchDetail:
+      allOf:
+        - $ref: '#/components/schemas/Batch'
+        - type: object
+          properties:
+            greenhouse: { $ref: '#/components/schemas/Greenhouse' }
+            variety: { $ref: '#/components/schemas/Variety' }
+            assignedUserIds:
+              type: array
+              items: { type: integer, format: int64 }
+            eventCount: { type: integer }
+            pendingApprovalCount: { type: integer }
+            latestQc: { $ref: '#/components/schemas/QcRecord' }
+            package: { $ref: '#/components/schemas/Package' }
+            anchor: { $ref: '#/components/schemas/Anchor' }
+    Assignment:
+      description: Bảng `batch_assignments`
+      allOf:
+        - $ref: '#/components/schemas/Audit'
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+            batchId: { type: integer, format: int64 }
+            userId: { type: integer, format: int64 }
+    EventType:
+      type: string
+      description: Cột `cultivation_events.event_type`. `EVENT_APPROVED` do hệ thống sinh, client không gửi.
+      enum: [XUONG_GIONG, THU_PHAN, BON_PHAN_TUOI, NGUNG_PHAN_CACH_LY, DO_BRIX, THU_HOACH, GHI_CHU, EVENT_APPROVED]
+    EventStatus:
+      type: string
+      description: Cột `cultivation_events.status`
+      enum: [PENDING_CHAIN, CONFIRMED, APPROVED, REJECTED, SUPERSEDED]
+    AttachmentInput:
+      type: object
+      required: [fileKey, sha256, mimeType]
+      properties:
+        fileKey: { type: string }
+        sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+        mimeType: { type: string, enum: [image/jpeg, image/png, image/webp, application/pdf] }
+    Attachment:
+      description: Bảng `event_attachments`
+      allOf:
+        - $ref: '#/components/schemas/AttachmentInput'
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+            downloadUrl: { type: string, format: uri }
+    EventData:
+      description: |
+        Nội dung `payload.data`, tùy `eventType`:
+        - XUONG_GIONG: `quantity` (số cây), `seedLot`, `note`
+        - THU_PHAN: `pollinatedCount`, `note`
+        - BON_PHAN_TUOI: `kind` (BON_PHAN, TUOI, PHUN_VI_LUONG), `product`, `amount`, `unit`, `note`
+        - NGUNG_PHAN_CACH_LY: `isolationDays`, `note`
+        - DO_BRIX: `brix` (0 đến 30, 1 chữ số thập phân), `sampleCount`
+        - THU_HOACH: `estimatedQuantity`, `area`
+        - GHI_CHU: `note`
+      type: object
+      additionalProperties: true
+      properties:
+        quantity: { type: integer }
+        seedLot: { type: string }
+        pollinatedCount: { type: integer }
+        kind: { type: string, enum: [BON_PHAN, TUOI, PHUN_VI_LUONG] }
+        product: { type: string }
+        amount: { type: number }
+        unit: { type: string }
+        isolationDays: { type: integer, minimum: 0 }
+        brix: { type: number, minimum: 0, maximum: 30 }
+        sampleCount: { type: integer }
+        estimatedQuantity: { type: integer }
+        area: { type: string }
+        note: { type: string, maxLength: 1000 }
+    EventCreate:
+      type: object
+      required: [clientEventId, eventType, occurredAt, data]
+      properties:
+        clientEventId: { type: string, format: uuid, description: Cột `client_event_id`, app sinh một lần cho mỗi sự kiện }
+        eventType: { $ref: '#/components/schemas/EventType' }
+        occurredAt: { type: integer, format: int64, description: Giờ xảy ra theo thiết bị (epoch ms) }
+        data: { $ref: '#/components/schemas/EventData' }
+        attachments:
+          type: array
+          maxItems: 5
+          items: { $ref: '#/components/schemas/AttachmentInput' }
+    EventAmend:
+      type: object
+      required: [clientEventId, reason, data]
+      properties:
+        clientEventId: { type: string, format: uuid }
+        reason: { type: string, minLength: 3, maxLength: 500 }
+        occurredAt: { type: integer, format: int64, description: Mặc định giữ giờ của sự kiện gốc }
+        data: { $ref: '#/components/schemas/EventData' }
+        attachments:
+          type: array
+          maxItems: 5
+          items: { $ref: '#/components/schemas/AttachmentInput' }
+    Event:
+      description: Bảng `cultivation_events` kèm `event_attachments` và `ledger_records`
+      allOf:
+        - $ref: '#/components/schemas/Audit'
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+            batchId: { type: integer, format: int64 }
+            seq: { type: integer, description: Số thứ tự liên tục trong lô, bắt đầu từ 1 }
+            eventType: { $ref: '#/components/schemas/EventType' }
+            payload:
+              type: object
+              description: Cột `payload`; gồm `schemaVersion`, `eventType`, `batchCode`, `occurredAt`, `actorRef`, `data`, `attachments`
+              additionalProperties: true
+            eventHash: { type: string, example: '0x4a3b0f9c2d7e1a65b8c4d3e2f1a09876543210fedcba9876543210fedcba2c1f' }
+            status: { $ref: '#/components/schemas/EventStatus' }
+            recordedBy: { type: integer, format: int64 }
+            recordedAt: { type: integer, format: int64, description: Giờ server ghi (epoch ms) }
+            occurredAt: { type: integer, format: int64 }
+            clientEventId: { type: string, format: uuid }
+            amendsEventId: { type: integer, format: int64, nullable: true }
+            attachments:
+              type: array
+              items: { $ref: '#/components/schemas/Attachment' }
+            ledger:
+              nullable: true
+              type: object
+              description: Bảng `ledger_records`; null khi còn `PENDING_CHAIN`
+              properties:
+                txHash: { type: string }
+                blockNumber: { type: integer, format: int64 }
+                status: { type: string, enum: [PENDING, CONFIRMED, FAILED] }
+                confirmedAt: { type: integer, format: int64 }
+    QcCreate:
+      type: object
+      required: [brix, avgWeightKg]
+      properties:
+        brix: { type: number, minimum: 0, maximum: 30, multipleOf: 0.1 }
+        avgWeightKg: { type: number, minimum: 0.1, maximum: 20 }
+        confirmPassed: { type: boolean, description: Kỹ sư xác nhận kết quả server tính; false thì lô bị `REJECTED` }
+        attachments:
+          type: array
+          maxItems: 5
+          items: { $ref: '#/components/schemas/AttachmentInput' }
+    QcRecord:
+      description: Bảng `qc_records`
+      allOf:
+        - $ref: '#/components/schemas/Audit'
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+            batchId: { type: integer, format: int64 }
+            brix: { type: number }
+            avgWeightKg: { type: number }
+            passed: { type: boolean }
+            inspectedBy: { type: integer, format: int64 }
+            inspectedAt: { type: integer, format: int64 }
+    HarvestCreate:
+      type: object
+      required: [clientEventId, harvestedAt, estimatedQuantity]
+      properties:
+        clientEventId: { type: string, format: uuid }
+        harvestedAt: { type: integer, format: int64 }
+        estimatedQuantity: { type: integer, minimum: 1 }
+        area: { type: string }
+    Package:
+      description: Bảng `packages`
+      allOf:
+        - $ref: '#/components/schemas/Audit'
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+            batchId: { type: integer, format: int64 }
+            packageCode: { type: string }
+            unitCount: { type: integer }
+            packedBy: { type: integer, format: int64 }
+            packedAt: { type: integer, format: int64 }
+    ActivateResponse:
+      type: object
+      properties:
+        batchId: { type: integer, format: int64 }
+        status: { $ref: '#/components/schemas/BatchStatus' }
+        package: { $ref: '#/components/schemas/Package' }
+        snapshotId: { type: integer, format: int64 }
+        merkleRoot: { type: string }
+        leafCount: { type: integer }
+        statusUrl: { type: string, example: /api/v1/batches/10/anchor-status }
+    Anchor:
+      description: Bảng `anchors`
+      allOf:
+        - $ref: '#/components/schemas/Audit'
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+            snapshotId: { type: integer, format: int64 }
+            chainId: { type: integer, example: 80002, description: Chain ID mạng Public (Polygon Amoy hoặc mainnet) }
+            contractAddress: { type: string }
+            txHash: { type: string, nullable: true }
+            blockNumber: { type: integer, format: int64, nullable: true }
+            confirmations: { type: integer }
+            status: { type: string, enum: [PENDING, SUBMITTED, CONFIRMED, FAILED] }
+            anchoredAt: { type: integer, format: int64, nullable: true }
+            explorerUrl: { type: string, format: uri, nullable: true }
+    AnchorStatus:
+      type: object
+      properties:
+        batchId: { type: integer, format: int64 }
+        batchStatus: { $ref: '#/components/schemas/BatchStatus' }
+        snapshot:
+          type: object
+          properties:
+            id: { type: integer, format: int64 }
+            merkleRoot: { type: string }
+            leafCount: { type: integer }
+        privateChain:
+          type: object
+          properties:
+            finalized: { type: boolean }
+            txHash: { type: string, nullable: true }
+        publicChain:
+          allOf:
+            - $ref: '#/components/schemas/Anchor'
+            - type: object
+              properties:
+                requiredConfirmations: { type: integer }
+        attempts: { type: integer, description: Từ `outbox_events.attempts` }
+        lastError: { type: string, nullable: true }
+        nextAttemptAt: { type: integer, format: int64, nullable: true }
+    ShipmentCreate:
+      type: object
+      required: [destination, vehiclePlate]
+      properties:
+        destination: { type: string, maxLength: 255 }
+        vehiclePlate: { type: string, maxLength: 20 }
+        shippedAt: { type: integer, format: int64, description: Mặc định là giờ server }
+    Shipment:
+      description: Bảng `shipments`
+      allOf:
+        - $ref: '#/components/schemas/Audit'
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+            batchId: { type: integer, format: int64 }
+            destination: { type: string }
+            vehiclePlate: { type: string }
+            shippedAt: { type: integer, format: int64 }
+            receivedAt: { type: integer, format: int64, nullable: true }
+            status: { type: string, enum: [SHIPPED, RECEIVED, REJECTED] }
+    Recall:
+      description: Bảng `recalls`
+      allOf:
+        - $ref: '#/components/schemas/Audit'
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+            batchId: { type: integer, format: int64 }
+            reason: { type: string }
+            createdBy: { type: integer, format: int64 }
+            revokeTxHash: { type: string, nullable: true, description: Cần thêm cột DB }
+    ProofBundle:
+      type: object
+      properties:
+        batchCode: { type: string }
+        batchIdHash: { type: string, description: keccak256 của `batchCode` }
+        hashAlgorithm: { type: string, example: keccak256 }
+        canonicalization: { type: string, example: RFC8785 }
+        salt: { type: string, description: Salt của lô dạng hex }
+        merkleRoot: { type: string }
+        leaves:
+          type: array
+          items:
+            type: object
+            properties:
+              seq: { type: integer }
+              eventHash: { type: string }
+              leaf: { type: string }
+              proof:
+                type: array
+                items: { type: string }
+        events:
+          type: array
+          description: Sự kiện đã khử thông tin cá nhân
+          items:
+            type: object
+            properties:
+              seq: { type: integer }
+              eventType: { $ref: '#/components/schemas/EventType' }
+              payload: { type: object, additionalProperties: true }
+        anchor: { $ref: '#/components/schemas/Anchor' }
+        generatedAt: { type: integer, format: int64 }
+    Dashboard:
+      type: object
+      properties:
+        batchesByStatus:
+          type: object
+          additionalProperties: { type: integer }
+          example: { GROWING: 3, ACTIVE: 12, ANCHOR_FAILED: 0 }
+        qcPassRate: { type: number, minimum: 0, maximum: 1 }
+        pendingAnchors: { type: integer }
+        failedAnchors: { type: integer }
+        pendingApprovals: { type: integer }
+        unitsPackedByWeek:
+          type: array
+          items:
+            type: object
+            properties:
+              weekStart: { type: string, format: date }
+              units: { type: integer }
+        publicWalletLow: { type: boolean, description: Số dư ví Public thấp }
+    AuditLog:
+      description: Bảng `audit_logs`
+      allOf:
+        - $ref: '#/components/schemas/Audit'
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+            actorId: { type: integer, format: int64, nullable: true }
+            actorName: { type: string, nullable: true }
+            action: { type: string, example: BATCH_ACTIVATE }
+            entity: { type: string, example: batches }
+            entityId: { type: integer, format: int64 }
+            detail: { type: object, additionalProperties: true }
+            ipAddr: { type: string }
+    ReconciliationItem:
+      type: object
+      properties:
+        batchId: { type: integer, format: int64 }
+        batchCode: { type: string }
+        dbRoot: { type: string }
+        privateRoot: { type: string, nullable: true }
+        publicRoot: { type: string, nullable: true }
+        result: { type: string, enum: [OK, MISMATCH_DB_PRIVATE, MISMATCH_DB_PUBLIC, MISSING_PUBLIC, UNAVAILABLE] }
+    PublicTrace:
+      type: object
+      properties:
+        code: { type: string }
+        batch:
+          type: object
+          properties:
+            batchCode: { type: string }
+            status: { $ref: '#/components/schemas/BatchStatus' }
+            varietyName: { type: string }
+            greenhouseCode: { type: string }
+            greenhouseName: { type: string }
+            sowDate: { type: string, format: date }
+            harvestDate: { type: string, format: date, nullable: true }
+        metrics:
+          type: object
+          nullable: true
+          properties:
+            brix: { type: number }
+            avgWeightKg: { type: number }
+        timeline:
+          type: array
+          description: Chỉ sự kiện `APPROVED`, sắp theo `occurredAt` giảm dần
+          items:
+            type: object
+            properties:
+              occurredAt: { type: integer, format: int64 }
+              eventType: { $ref: '#/components/schemas/EventType' }
+              title: { type: string, example: Hoàn thành thụ phấn }
+              description: { type: string }
+              photoUrl: { type: string, format: uri, nullable: true }
+        certificates:
+          type: array
+          items:
+            type: object
+            properties:
+              certType: { type: string }
+              certNo: { type: string }
+              validTo: { type: string, format: date }
+        shipment:
+          type: object
+          nullable: true
+          properties:
+            destination: { type: string }
+            shippedAt: { type: integer, format: int64 }
+        blockchain:
+          type: object
+          properties:
+            anchored: { type: boolean }
+            chainName: { type: string, example: Polygon Amoy }
+            merkleRoot: { type: string, nullable: true }
+            txHash: { type: string, nullable: true }
+            anchoredAt: { type: integer, format: int64, nullable: true }
+            explorerUrl: { type: string, format: uri, nullable: true }
+        recall:
+          type: object
+          properties:
+            recalled: { type: boolean }
+            reason: { type: string, nullable: true }
+    VerifyResult:
+      type: object
+      properties:
+        result: { type: string, enum: [MATCH, MISMATCH, UNAVAILABLE] }
+        computedRoot: { type: string, nullable: true, description: Root dựng lại từ dữ liệu hiện có }
+        onChainRoot: { type: string, nullable: true }
+        txHash: { type: string, nullable: true }
+        blockNumber: { type: integer, format: int64, nullable: true }
+        anchoredAt: { type: integer, format: int64, nullable: true }
+        explorerUrl: { type: string, format: uri, nullable: true }
+        recalled: { type: boolean }
+        checkedAt: { type: integer, format: int64 }
+        message: { type: string, example: Dữ liệu xác thực, chưa bị chỉnh sửa }
