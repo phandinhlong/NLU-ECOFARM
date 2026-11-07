@@ -1,7 +1,6 @@
 package jakarta.ecofarm_backend.config;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Produces;
 
 @ApplicationScoped
 public class BlockchainConfig {
@@ -14,6 +13,8 @@ public class BlockchainConfig {
     private String publicRpcEndpoint = "https://rpc-amoy.polygon.technify";
     // Public chain network ID
     private Integer publicChainId = 80002;
+    // Gas price for private chain (wei)
+    private Long privateGasPrice = 1000000000L;
     // Gas price for public chain (wei)
     private Long gasPrice = 1000000000L;
     // Confirmation needed before moving to public
@@ -27,6 +28,8 @@ public class BlockchainConfig {
     public void setPublicRpcEndpoint(String publicRpcEndpoint) { this.publicRpcEndpoint = publicRpcEndpoint; }
     public Integer getPublicChainId() { return publicChainId; }
     public void setPublicChainId(Integer publicChainId) { this.publicChainId = publicChainId; }
+    public Long getPrivateGasPrice() { return privateGasPrice; }
+    public void setPrivateGasPrice(Long privateGasPrice) { this.privateGasPrice = privateGasPrice; }
     public Long getGasPrice() { return gasPrice; }
     public void setGasPrice(Long gasPrice) { this.gasPrice = gasPrice; }
     public Integer getRequiredConfirmations() { return requiredConfirmations; }

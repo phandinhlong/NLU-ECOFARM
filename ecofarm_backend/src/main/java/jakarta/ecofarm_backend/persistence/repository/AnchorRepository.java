@@ -35,4 +35,8 @@ public class AnchorRepository {
             em.merge(anchor);
         }
     }
+
+    public List<Anchor> findAll() {
+        return em.createQuery("select a from Anchor a", Anchor.class).getResultList();
+    }
 }
