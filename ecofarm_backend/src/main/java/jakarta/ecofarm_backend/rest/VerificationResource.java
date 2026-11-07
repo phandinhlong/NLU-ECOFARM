@@ -25,7 +25,7 @@ public class VerificationResource {
     public PublicTrace getPublicTrace(@PathParam("code") String code) {
         PublicTrace trace = new PublicTrace();
         trace.setCode(code);
-        trace.setBatch(new BatchInfo("BATCH-EXAMPLE", "GROWING", null, null, null));
+        trace.setBatch(new BatchInfo("BATCH-EXAMPLE", "GROWING", null, null, null, null));
         trace.setBlockchain(new BlockchainStatus(false, "Private Chain", null, null, null, null));
         return trace;
     }

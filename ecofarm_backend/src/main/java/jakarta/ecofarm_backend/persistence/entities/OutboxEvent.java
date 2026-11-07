@@ -60,9 +60,9 @@ public class OutboxEvent {
     public void setEventData(String eventData) { this.eventData = eventData; }
     public OutboxStatus getStatus() { return status; }
     public void setStatus(OutboxStatus status) { this.status = status; }
-    public int getAttemps() { return attempts; }
+    public int getAttempts() { return attempts; }
     public void setAttempts(int attempts) { this.attempts = attempts; }
-    public InstantgetNextAttemptAt() { return nextAttemptAt; }
+    public Instant getNextAttemptAt() { return nextAttemptAt; }
     public void setNextAttemptAt(Instant nextAttemptAt) { this.nextAttemptAt = nextAttemptAt; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }

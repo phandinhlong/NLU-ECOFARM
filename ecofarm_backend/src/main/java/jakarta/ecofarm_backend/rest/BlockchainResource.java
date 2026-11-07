@@ -5,6 +5,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -142,7 +143,6 @@ public class BlockchainResource {
         String status;
         String explorerUrl;
 
-        // getters and setters
         public String getTxHash() { return txHash; }
         public void setTxHash(String txHash) { this.txHash = txHash; }
         public Long getBlockNumber() { return blockNumber; }

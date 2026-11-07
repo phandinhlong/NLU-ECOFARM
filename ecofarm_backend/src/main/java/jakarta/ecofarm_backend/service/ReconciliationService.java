@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import jakarta.ecofarm_backend.blockchain.PolygonClient;
 import jakarta.ecofarm_backend.persistence.entities.Anchor;
 import jakarta.ecofarm_backend.persistence.entities.AuditLog;
 import jakarta.ecofarm_backend.persistence.entities.MerkleSnapshot;
@@ -37,10 +38,9 @@ public class ReconciliationService {
         List<ReconciliationItem> items = new ArrayList<>();
 
         for (MerkleSnapshot snapshot : snapshots) {
-            // Find anchor for this snapshot
             List<Anchor> anchors = anchorRepository.findAll();
             Optional<Anchor> anchorOpt = anchors.stream()
-                .filter(a -> /* match by transaction data or some relationship */ true)
+                .filter(a -> true) // stub match
                 .findFirst();
 
             ReconciliationItem item = new ReconciliationItem();
@@ -51,7 +51,6 @@ public class ReconciliationService {
             if (anchorOpt.isPresent()) {
                 Anchor anchor = anchorOpt.get();
                 item.setPrivateRoot(anchor.getTxHash());
-                // In real implementation, verify private root matches DB
                 item.setResult("OK");
             } else {
                 item.setPrivateRoot(null);
@@ -61,11 +60,10 @@ public class ReconciliationService {
             items.add(item);
         }
 
-        // Audit reconciliation run
         int count = snapshotRepository.findAll().size();
         auditLogRepository.persist(new AuditLog(
             null, null, "RECONCILIATION_RUN", "system", System.currentTimeMillis(),
-            new AuditResult(count, items.size()), null
+            new AuditResult((long)count, (long)items.size()), null
         ));
 
         return items;
