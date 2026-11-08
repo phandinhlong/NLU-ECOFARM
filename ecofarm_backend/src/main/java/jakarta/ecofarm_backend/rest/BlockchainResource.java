@@ -21,6 +21,10 @@ import jakarta.ecofarm_backend.persistence.repository.AuditLogRepository;
 import jakarta.ecofarm_backend.persistence.repository.OutboxEventRepository;
 import jakarta.ecofarm_backend.persistence.repository.MerkleSnapshotRepository;
 import jakarta.ecofarm_backend.service.ReconciliationService;
+import jakarta.ecofarm_backend.dto.AnchorStatus;
+import jakarta.ecofarm_backend.dto.PrivateChainStatus;
+import jakarta.ecofarm_backend.dto.PublicChainStatus;
+import jakarta.ecofarm_backend.dto.ReconciliationItem;
 
 @Path("/api/v1")
 @Stateless
@@ -45,12 +49,12 @@ public class BlockchainResource {
 
     @GET
     @Path("/admin/reconciliation")
-    public List<ReconciliationService.ReconciliationItem> getReconciliation(
+    public List<ReconciliationItem> getReconciliation(
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("20") int size,
             @QueryParam("onlyMismatch") @DefaultValue("false") boolean onlyMismatch
     ) {
-        List<ReconciliationService.ReconciliationItem> items = reconciliationService.reconcileAll();
+        List<ReconciliationItem> items = reconciliationService.reconcileAll();
         if (onlyMismatch) {
             items = new ArrayList<>();
         }
@@ -96,62 +100,4 @@ public class BlockchainResource {
         return anchor;
     }
 
-    public static class AnchorStatus {
-        Long batchId;
-        String batchStatus;
-        PrivateChainStatus privateChain;
-        PublicChainStatus publicChain;
-        Integer attempts;
-        String lastError;
-        Long nextAttemptAt;
-
-        public Long getBatchId() { return batchId; }
-        public void setBatchId(Long batchId) { this.batchId = batchId; }
-        public String getBatchStatus() { return batchStatus; }
-        public void setBatchStatus(String batchStatus) { this.batchStatus = batchStatus; }
-        public PrivateChainStatus getPrivateChain() { return privateChain; }
-        public void setPrivateChain(PrivateChainStatus privateChain) { this.privateChain = privateChain; }
-        public PublicChainStatus getPublicChain() { return publicChain; }
-        public void setPublicChain(PublicChainStatus publicChain) { this.publicChain = publicChain; }
-        public Integer getAttempts() { return attempts; }
-        public void setAttempts(Integer attempts) { this.attempts = attempts; }
-        public String getLastError() { return lastError; }
-        public void setLastError(String lastError) { this.lastError = lastError; }
-        public Long getNextAttemptAt() { return nextAttemptAt; }
-        public void setNextAttemptAt(Long nextAttemptAt) { this.nextAttemptAt = nextAttemptAt; }
-    }
-
-    public static class PrivateChainStatus {
-        boolean finalized;
-        String txHash;
-
-        public PrivateChainStatus(boolean finalized, String txHash) {
-            this.finalized = finalized;
-            this.txHash = txHash;
-        }
-
-        public boolean isFinalized() { return finalized; }
-        public void setFinalized(boolean finalized) { this.finalized = finalized; }
-        public String getTxHash() { return txHash; }
-        public void setTxHash(String txHash) { this.txHash = txHash; }
-    }
-
-    public static class PublicChainStatus {
-        String txHash;
-        Long blockNumber;
-        int confirmations;
-        String status;
-        String explorerUrl;
-
-        public String getTxHash() { return txHash; }
-        public void setTxHash(String txHash) { this.txHash = txHash; }
-        public Long getBlockNumber() { return blockNumber; }
-        public void setBlockNumber(Long blockNumber) { this.blockNumber = blockNumber; }
-        public int getConfirmations() { return confirmations; }
-        public void setConfirmations(int confirmations) { this.confirmations = confirmations; }
-        public String getStatus() { return status; }
-        public void setStatus(String status) { this.status = status; }
-        public String getExplorerUrl() { return explorerUrl; }
-        public void setExplorerUrl(String explorerUrl) { this.explorerUrl = explorerUrl; }
-    }
 }
