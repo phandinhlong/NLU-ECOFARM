@@ -17,6 +17,7 @@ import jakarta.ecofarm_backend.persistence.entities.MerkleSnapshot;
 import jakarta.ecofarm_backend.persistence.repository.AuditLogRepository;
 import jakarta.ecofarm_backend.persistence.repository.AnchorRepository;
 import jakarta.ecofarm_backend.persistence.repository.MerkleSnapshotRepository;
+import jakarta.ecofarm_backend.dto.ReconciliationItem;
 
 @ApplicationScoped
 public class ReconciliationService {
@@ -63,7 +64,7 @@ public class ReconciliationService {
         int count = snapshotRepository.findAll().size();
         auditLogRepository.persist(new AuditLog(
             null, null, "RECONCILIATION_RUN", "system", System.currentTimeMillis(),
-            new AuditResult((long)count, (long)items.size()), null
+            "Reconciliation completed: " + count + " snapshots, " + items.size() + " items", null
         ));
 
         return items;
@@ -77,44 +78,4 @@ public class ReconciliationService {
         }
     }
 
-    // DTO
-    public static class ReconciliationItem {
-        Long batchId;
-        String batchCode;
-        String dbRoot;
-        String privateRoot;
-        String publicRoot;
-        String result;
-
-        public Long getBatchId() { return batchId; }
-        public void setBatchId(Long batchId) { this.batchId = batchId; }
-        public String getBatchCode() { return batchCode; }
-        public void setBatchCode(String batchCode) { this.batchCode = batchCode; }
-        public String getDbRoot() { return dbRoot; }
-        public void setDbRoot(String dbRoot) { this.dbRoot = dbRoot; }
-        public String getPrivateRoot() { return privateRoot; }
-        public void setPrivateRoot(String privateRoot) { this.privateRoot = privateRoot; }
-        public String getPublicRoot() { return publicRoot; }
-        public void setPublicRoot(String publicRoot) { this.publicRoot = publicRoot; }
-        public String getResult() { return result; }
-        public void setResult(String result) { this.result = result; }
-    }
-
-    private static class AuditResult {
-        Long snapshotCount;
-        Long itemsProcessed;
-        AuditResult(Long sc, Long ip) {
-            this.snapshotCount = sc;
-            this.itemsProcessed = ip;
-        }
-    }
-
-    private static class AuditReconciliationResult {
-        Long batchId;
-        String result;
-        AuditReconciliationResult(Long batchId, String result) {
-            this.batchId = batchId;
-            this.result = result;
-        }
-    }
 }

@@ -17,6 +17,7 @@ import jakarta.ecofarm_backend.persistence.entities.OutboxEvent;
 import jakarta.ecofarm_backend.persistence.repository.AnchorRepository;
 import jakarta.ecofarm_backend.persistence.repository.AuditLogRepository;
 import jakarta.ecofarm_backend.persistence.repository.OutboxEventRepository;
+import jakarta.ecofarm_backend.dto.AuditError;
 
 @Stateless
 public class BlockchainAnchoringService {
@@ -136,15 +137,4 @@ public class BlockchainAnchoringService {
         }
     }
 
-    // Inner class for audit error
-    private static class AuditError {
-        String message;
-        String batchIdHash;
-        int seq;
-        AuditError(String message, String bid, int seq) {
-            this.message = message;
-            this.batchIdHash = bid;
-            this.seq = seq;
-        }
-    }
 }
