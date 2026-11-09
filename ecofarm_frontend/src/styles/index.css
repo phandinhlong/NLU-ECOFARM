@@ -1,0 +1,329 @@
+:root {
+  /* Colors */
+  --ef-primary: #2f7d4f;
+  --ef-primary-800: #1f3d2c;
+  --ef-primary-700: #2c5440;
+  --ef-bg: #fff;
+  --ef-bg-secondary: #f2f7f3;
+  --ef-text: #cfe3d6;
+  --ef-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* Dark mode overrides */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ef-primary: #3a8f5f;
+    --ef-primary-800: #2a6346;
+    --ef-primary-700: #327654;
+    --ef-bg: #0f2019;
+    --ef-bg-secondary: #162e1d;
+    --ef-text: #8bab8a;
+  }
+}
+
+/* Base resets */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--ef-bg);
+  color: #1a1a1a;
+  margin: 0;
+  padding: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    color: #e0e0e0;
+  }
+}
+
+/* --- Button overrides */
+.btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background-color: var(--ef-primary);
+  border-color: var(--ef-primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--ef-primary-700);
+  border-color: var(--ef-primary-700);
+  transform: translateY(-1px);
+  box-shadow: var(--ef-shadow-lg);
+}
+
+.btn-secondary {
+  background-color: var(--ef-bg-secondary);
+  border-color: var(--ef-primary);
+  color: var(--ef-primary);
+}
+
+.btn-secondary:hover {
+  background-color: var(--ef-primary-800);
+  border-color: var(--ef-primary-800);
+  color: white;
+}
+
+.btn-outline-primary {
+  background-color: transparent;
+  border-color: var(--ef-primary);
+  color: var(--ef-primary);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--ef-primary);
+  border-color: var(--ef-primary);
+  color: white;
+}
+
+/* --- Form inputs --- */
+.form-control {
+  border-radius: 6px;
+  border: 1px solid #d1d1d1;
+  padding: 0.5rem 0.75rem;
+}
+
+.form-control:focus {
+  border-color: var(--ef-primary);
+  box-shadow: 0 0 0 3px rgba(47, 125, 79, 0.1);
+}
+
+/* --- Cards --- */
+.card {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--ef-shadow-lg);
+}
+
+/* --- Badges --- */
+.badge {
+  border-radius: 4px;
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+}
+
+.badge-primary {
+  background-color: var(--ef-primary);
+  color: white;
+}
+
+.badge-secondary {
+  background-color: var(--ef-bg-secondary);
+  color: var(--ef-primary);
+}
+
+/* --- Alerts --- */
+.alert {
+  border: none;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+
+.alert-primary {
+  background-color: rgba(47, 125, 79, 0.1);
+  color: var(--ef-primary-800);
+  border-left: 4px solid var(--ef-primary);
+}
+
+/* --- Nav pills --- */
+.nav-pills .nav-link {
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  color: var(--ef-primary);
+}
+
+.nav-pills .nav-link.active {
+  background-color: var(--ef-primary);
+  color: white;
+}
+
+.nav-pills .nav-link:hover:not(.active) {
+  background-color: var(--ef-bg-secondary);
+}
+
+/* --- Progress bars --- */
+.progress {
+  border-radius: 4px;
+  height: 8px;
+  background-color: var(--ef-bg-secondary);
+}
+
+.progress-bar {
+  background-color: var(--ef-primary);
+  border-radius: 4px;
+}
+
+/* --- Dropdowns --- */
+.dropdown-menu {
+  border: none;
+  border-radius: 8px;
+  box-shadow: var(--ef-shadow-lg);
+  padding: 0.5rem 0;
+}
+
+.dropdown-item {
+  padding: 0.5rem 1rem;
+  color: #333;
+}
+
+.dropdown-item:hover {
+  background-color: var(--ef-bg-secondary);
+  color: var(--ef-primary);
+}
+
+/* --- List groups --- */
+.list-group-item {
+  border: 1px solid #e0e0e0;
+  padding: 0.75rem 1rem;
+}
+
+.list-group-item:hover {
+  background-color: var(--ef-bg-secondary);
+}
+
+/* --- Tables --- */
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table th {
+  background-color: var(--ef-bg-secondary);
+  color: var(--ef-primary-800);
+  font-weight: 600;
+  padding: 1rem;
+  border-bottom: 2px solid var(--ef-primary);
+}
+
+.table td {
+  padding: 1rem;
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background-color: var(--ef-bg-secondary);
+}
+
+/* --- Modals --- */
+.modal-content {
+  border: none;
+  border-radius: 12px;
+  box-shadow: var(--ef-shadow-lg);
+}
+
+.modal-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding: 1.5rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  border-top: 1px solid #e0e0e0;
+  padding: 1.5rem;
+}
+
+/* --- Tooltips --- */
+.tooltip-inner {
+  background-color: var(--ef-primary);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+.tooltip.show {
+  opacity: 1;
+}
+
+/* --- Popovers --- */
+.popover {
+  border: none;
+  border-radius: 8px;
+  box-shadow: var(--ef-shadow-lg);
+}
+
+.popover-header {
+  background-color: var(--ef-bg-secondary);
+  border-bottom: 1px solid #e0e0e0;
+  color: var(--ef-primary-800);
+}
+
+.popover-body {
+  color: #333;
+}
+
+/* --- Tabs --- */
+.nav-tabs .nav-link {
+  border: none;
+  color: var(--ef-primary);
+  padding: 0.75rem 1.25rem;
+}
+
+.nav-tabs .nav-link:hover {
+  border: none;
+  background-color: var(--ef-bg-secondary);
+}
+
+.nav-tabs .nav-link.active {
+  background-color: var(--ef-primary);
+  color: white;
+}
+
+/* --- Pagination --- */
+.page-link {
+  color: var(--ef-primary);
+  border: 1px solid #dee2e6;
+  padding: 0.5rem 0.75rem;
+  margin-left: -1px;
+}
+
+.page-link:hover {
+  background-color: var(--ef-bg-secondary);
+  color: var(--ef-primary-800);
+}
+
+.page-item.active .page-link {
+  background-color: var(--ef-primary);
+  border-color: var(--ef-primary);
+  color: white;
+}
+
+/* --- Close buttons --- */
+.btn-close {
+  background: transparent;
+  opacity: 0.7;
+}
+
+.btn-close:hover {
+  opacity: 1;
+}
+
+/* --- Carousel --- */
+.carousel-control-prev-icon,
+.carousel-control-next-icon {
+  background-size: 60%;
+  filter: brightness(0) saturate(100%) invert(27%) sepia(51%) saturate(2878%) hue-rotate(146deg) brightness(104%) contrast(106%);
+}
+
+/* --- Toast --- */
+.toast {
+  border: none;
+  border-radius: 8px;
+  box-shadow: var(--ef-shadow-lg);
+}
+
+.toast-header {
+  background-color: var(--ef-bg-secondary);
+  border-bottom: 1px solid #e0e0e0;
+}
