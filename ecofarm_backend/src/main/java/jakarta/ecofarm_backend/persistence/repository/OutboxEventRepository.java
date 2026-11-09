@@ -7,6 +7,7 @@ import jakarta.persistence.TypedQuery;
 
 import java.time.Instant;
 import java.util.List;
+
 import jakarta.ecofarm_backend.persistence.entities.OutboxEvent;
 
 @Stateless
@@ -16,7 +17,7 @@ public class OutboxEventRepository {
     private EntityManager em;
 
     public void persist(OutboxEvent event) {
-        em.merge(event);
+        em.persist(event);
     }
 
     public OutboxEvent findById(Long id) {
@@ -26,32 +27,34 @@ public class OutboxEventRepository {
     public List<OutboxEvent> findPending() {
         TypedQuery<OutboxEvent> q = em.createQuery(
             "select e from OutboxEvent e where e.status = 'PENDING' order by e.createdAt asc",
-            OutboxEvent.class
-        );
+            OutboxEvent.class);
         return q.getResultList();
     }
 
     public void incrementAttempts(OutboxEvent event) {
-        event.setAttempts(event.getAttempts() + 1);
-        if (event.getAttempts() >= 5) {
-            event.setStatus(OutboxEvent.OutboxStatus.FAILED);
-        } else {
-            event.setStatus(OutboxEvent.OutboxStatus.PENDING);
-            event.setNextAttemptAt(Instant.now().plusSeconds((1 << event.getAttempts()) * 10));
+        int attempts = event.getAttempts() + 1;
+        event.setAttempts(attempts);
+        event.setStatus(attempts >= 5 ? OutboxEvent.OutboxStatus.FAILED : OutboxEvent.OutboxStatus.PENDING);
+        if (event.getStatus() == OutboxEvent.OutboxStatus.PENDING) {
+            long nextAt = System.currentTimeMillis() + (1L << attempts) * 10000;
+            event.setNextAttemptAt(nextAt);
         }
+        event.setUpdatedAt(System.currentTimeMillis());
         em.merge(event);
     }
 
     public void complete(OutboxEvent event) {
         event.setStatus(OutboxEvent.OutboxStatus.SUCCESS);
-        event.setUpdatedAt(Instant.now());
+        event.setUpdatedAt(System.currentTimeMillis());
         em.merge(event);
     }
 
     public void markFailed(OutboxEvent event, String errorMsg) {
         event.setStatus(OutboxEvent.OutboxStatus.FAILED);
-        event.setUpdatedAt(Instant.now());
-        event.setAttempts(event.getAttempts() + 1);
+        event.setUpdatedAt(System.currentTimeMillis());
+        int attempts = event.getAttempts() + 1;
+        event.setAttempts(attempts);
+        event.setNextAttemptAt(null);
         em.merge(event);
     }
 

@@ -28,13 +28,13 @@ public class OutboxEvent {
     private int attempts;
 
     @Column(name = "next_attempt_at")
-    private Instant nextAttemptAt;
+    private Long nextAttemptAt;
 
     @Column(name = "created_at", nullable = false)
-    private Instant createdAt;
+    private Long createdAt;
 
     @Column(name = "updated_at")
-    private Instant updatedAt;
+    private Long updatedAt;
 
     public enum OutboxStatus { PENDING, PROCESSING, SUCCESS, FAILED }
 
@@ -46,8 +46,8 @@ public class OutboxEvent {
         this.eventData = eventData;
         this.status = OutboxStatus.PENDING;
         this.attempts = 0;
-        this.createdAt = Instant.now();
-        this.updatedAt = Instant.now();
+        this.createdAt = System.currentTimeMillis();
+        this.updatedAt = System.currentTimeMillis();
     }
 
     public Long getId() { return id; }
@@ -62,10 +62,10 @@ public class OutboxEvent {
     public void setStatus(OutboxStatus status) { this.status = status; }
     public int getAttempts() { return attempts; }
     public void setAttempts(int attempts) { this.attempts = attempts; }
-    public Instant getNextAttemptAt() { return nextAttemptAt; }
-    public void setNextAttemptAt(Instant nextAttemptAt) { this.nextAttemptAt = nextAttemptAt; }
-    public Instant getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
-    public Instant getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+    public Long getNextAttemptAt() { return nextAttemptAt; }
+    public void setNextAttemptAt(Long nextAttemptAt) { this.nextAttemptAt = nextAttemptAt; }
+    public Long getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Long createdAt) { this.createdAt = createdAt; }
+    public Long getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(Long updatedAt) { this.updatedAt = updatedAt; }
 }

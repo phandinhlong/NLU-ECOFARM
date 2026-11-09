@@ -17,4 +17,9 @@ public class AuditError {
     public void setBatchIdHash(String batchIdHash) { this.batchIdHash = batchIdHash; }
     public int getSeq() { return seq; }
     public void setSeq(int seq) { this.seq = seq; }
+
+    @Override
+    public String toString() {
+        return "AuditError{message='" + message + "', batchIdHash='" + batchIdHash + "', seq=" + seq + "}";
+    }
 }

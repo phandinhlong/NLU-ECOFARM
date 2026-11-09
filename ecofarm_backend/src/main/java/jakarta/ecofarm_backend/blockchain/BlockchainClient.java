@@ -7,6 +7,6 @@ public interface BlockchainClient {
     void disconnect();
     boolean isConnected();
     String sendTransaction(String data) throws Exception;
-    long getCurrentBlockNumber();
+    long getCurrentBlockNumber() throws IOException;
     int getConfirmations(String txHash) throws Exception;
 }

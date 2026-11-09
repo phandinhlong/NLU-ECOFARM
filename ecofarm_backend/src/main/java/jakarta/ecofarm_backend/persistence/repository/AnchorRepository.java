@@ -6,6 +6,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 
 import java.util.List;
+
 import jakarta.ecofarm_backend.persistence.entities.Anchor;
 
 @Stateless
@@ -15,7 +16,7 @@ public class AnchorRepository {
     private EntityManager em;
 
     public void persist(Anchor anchor) {
-        em.merge(anchor);
+        em.persist(anchor);
     }
 
     public Anchor findById(Long id) {
@@ -38,5 +39,13 @@ public class AnchorRepository {
 
     public List<Anchor> findAll() {
         return em.createQuery("select a from Anchor a", Anchor.class).getResultList();
+    }
+
+    public List<Anchor> findBySnapshotId(Long snapshotId) {
+        TypedQuery<Anchor> q = em.createQuery(
+            "select a from Anchor a where a.snapshotId = :snapshotId",
+            Anchor.class);
+        q.setParameter("snapshotId", snapshotId);
+        return q.getResultList();
     }
 }

@@ -3,12 +3,17 @@ package jakarta.ecofarm_backend.blockchain;
 import java.io.IOException;
 import java.math.BigInteger;
 
-public class PolygonClient implements BlockchainClient {
+import jakarta.ecofarm_backend.config.BlockchainConfig;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
+@ApplicationScoped
+public class PolygonClient implements BlockchainClient {
+    @Inject
+    BlockchainConfig config;
     private boolean connected;
 
-    public PolygonClient(String rpcEndpoint, String chainId) {
-        this.connected = false;
+    public PolygonClient() {
     }
 
     @Override

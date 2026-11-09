@@ -3,16 +3,12 @@ package jakarta.ecofarm_backend.service;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import jakarta.ecofarm_backend.blockchain.PolygonClient;
 import jakarta.ecofarm_backend.persistence.entities.Anchor;
-import jakarta.ecofarm_backend.persistence.entities.AuditLog;
 import jakarta.ecofarm_backend.persistence.entities.MerkleSnapshot;
 import jakarta.ecofarm_backend.persistence.repository.AuditLogRepository;
 import jakarta.ecofarm_backend.persistence.repository.AnchorRepository;
@@ -60,12 +56,6 @@ public class ReconciliationService {
 
             items.add(item);
         }
-
-        int count = snapshotRepository.findAll().size();
-        auditLogRepository.persist(new AuditLog(
-            null, null, "RECONCILIATION_RUN", "system", System.currentTimeMillis(),
-            "Reconciliation completed: " + count + " snapshots, " + items.size() + " items", null
-        ));
 
         return items;
     }

@@ -1,7 +1,7 @@
 package jakarta.ecofarm_backend.persistence.entities;
 
 import jakarta.persistence.*;
-import java.time.Instant;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "audit_logs")
@@ -13,6 +13,13 @@ public class AuditLog {
 
     @Column(name = "actor_id", nullable = true)
     private Long actorId;
+
+    // JPA relation thay cho DB foreign key (users.id)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "actor_id", insertable = false, updatable = false,
+            foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    @JsonIgnore
+    private User actor;
 
     @Column(name = "actor_name", nullable = true)
     private String actorName;
@@ -26,18 +33,18 @@ public class AuditLog {
     @Column(name = "entity_id", nullable = false)
     private Long entityId;
 
-    @Column(columnDefinition = "JSONB")
-    private Object detail;
+    @Column(columnDefinition = "CLOB")
+    private String detail;
 
     @Column(name = "ip_addr")
     private String ipAddr;
 
     @Column(name = "created_at", nullable = false)
-    private Instant createdAt;
+    private Long createdAt;
 
     public AuditLog() {}
 
-    public AuditLog(Long actorId, String actorName, String action, String entity, Long entityId, Object detail, String ipAddr) {
+    public AuditLog(Long actorId, String actorName, String action, String entity, Long entityId, String detail, String ipAddr) {
         this.actorId = actorId;
         this.actorName = actorName;
         this.action = action;
@@ -45,13 +52,16 @@ public class AuditLog {
         this.entityId = entityId;
         this.detail = detail;
         this.ipAddr = ipAddr;
-        this.createdAt = Instant.now();
+        this.createdAt = System.currentTimeMillis();
     }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Long getActorId() { return actorId; }
     public void setActorId(Long actorId) { this.actorId = actorId; }
+    public User getActor() { return actor; }
+    public void setActor(User actor) { this.actor = actor; }
+
     public String getActorName() { return actorName; }
     public void setActorName(String actorName) { this.actorName = actorName; }
     public String getAction() { return action; }
@@ -60,10 +70,10 @@ public class AuditLog {
     public void setEntity(String entity) { this.entity = entity; }
     public Long getEntityId() { return entityId; }
     public void setEntityId(Long entityId) { this.entityId = entityId; }
-    public Object getDetail() { return detail; }
-    public void setDetail(Object detail) { this.detail = detail; }
+    public String getDetail() { return detail; }
+    public void setDetail(String detail) { this.detail = detail; }
     public String getIpAddr() { return ipAddr; }
     public void setIpAddr(String ipAddr) { this.ipAddr = ipAddr; }
-    public Instant getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    public Long getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Long createdAt) { this.createdAt = createdAt; }
 }

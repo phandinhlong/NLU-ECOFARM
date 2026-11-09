@@ -53,7 +53,7 @@ public class BlockchainAnchoringService {
                 try {
                     // Rate limiting
                     rateLimiter.acquire();
-                    
+
                     // Idempotency check: if already processed by another thread, skip
                     if (outboxEventRepository.existsProcessedByBatchIdHashAndSeq(event.getBatchIdHash(), event.getSeq())) {
                         outboxEventRepository.complete(event);
@@ -69,7 +69,7 @@ public class BlockchainAnchoringService {
                         // Add anchor details (snapshotId, chainId, contractAddress)
                         privateAnchor.setStatus("SUCCESS");
                         privateAnchor.setTxHash(txHash);
-                        privateAnchor.setAnchoredAt(Instant.now());
+privateAnchor.setAnchoredAt(System.currentTimeMillis() / 1000);
                         anchorRepository.persist(privateAnchor);
 
                         // Audit log
@@ -79,7 +79,7 @@ public class BlockchainAnchoringService {
                             "OUTBOX_EVENT_ANCHORED",
                             "outboxEvents",
                             event.getId(),
-                            privateAnchor,
+                            privateAnchor.toString(),
                             null
                         );
                         auditLogRepository.persist(log);
@@ -112,7 +112,7 @@ public class BlockchainAnchoringService {
                 "OUTBOX_PROCESS_ERROR",
                 "outboxEvents",
                 event.getId(),
-                new AuditError(errorMsg, event.getBatchIdHash(), event.getSeq()),
+                new AuditError(errorMsg, event.getBatchIdHash(), event.getSeq()).toString(),
                 null
             );
             auditLogRepository.persist(log);
@@ -124,15 +124,15 @@ public class BlockchainAnchoringService {
         if (!"SUCCESS".equals(anchor.getStatus())) return;
         int confirmations = polygonClient.getConfirmations(anchor.getTxHash());
         int required = config.getRequiredConfirmations();
-        
+
         if (confirmations >= required) {
             anchor.setStatus("CONFIRMED_PUBLIC"); // or ACTIVE
-            anchor.setAnchoredAt(Instant.now());
+anchor.setAnchoredAt(System.currentTimeMillis() / 1000);
             anchorRepository.persist(anchor);
-            
+
             // Audit log
             auditLogRepository.persist(new AuditLog(
-                null, null, "PUBLIC_CONFIRMED", "anchors", anchor.getId(), anchor, null
+                null, null, "PUBLIC_CONFIRMED", "anchors", anchor.getId(), anchor.toString(), null
             ));
         }
     }
