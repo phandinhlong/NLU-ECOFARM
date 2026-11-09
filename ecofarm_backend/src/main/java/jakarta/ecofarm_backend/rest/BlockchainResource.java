@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.rest;
 
+import jakarta.ecofarm_backend.persistence.entities.OutboxEvent;
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -20,8 +21,6 @@ import jakarta.ecofarm_backend.dto.PrivateChainStatus;
 import jakarta.ecofarm_backend.dto.PublicChainStatus;
 import jakarta.ecofarm_backend.dto.ReconciliationItem;
 import jakarta.ecofarm_backend.dto.ProofBundle;
-import jakarta.ecofarm_backend.dto.ProofLeaf;
-import jakarta.ecofarm_backend.dto.ProofEvent;
 import jakarta.ecofarm_backend.dto.RecallRequest;
 
 import java.time.Instant;
@@ -176,6 +175,18 @@ public class BlockchainResource {
         bundle.setEvents(new ArrayList<>());
         bundle.setGeneratedAt(Instant.now());
         return bundle;
+    }
+    // dùng đế test publicTxHash gửi lên polygon
+    @POST
+    @Path("/admin/outbox/test")
+    public OutboxEvent createTestOutbox(@QueryParam("data") @DefaultValue("EcoFarm Polygon Test") String data) {
+        OutboxEvent event = new OutboxEvent(
+                "0x" + Long.toHexString(System.currentTimeMillis()),
+                1,
+                data
+        );
+        outboxEventRepository.persist(event);
+        return event;
     }
 
 }
