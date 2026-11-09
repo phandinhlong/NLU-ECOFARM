@@ -30,7 +30,7 @@
     <script>
         window.onload = function() {
             var rootPath = window.location.pathname.substring(0, window.location.pathname.indexOf('/swagger-ui'));
-            var defaultUrl = (rootPath ? rootPath : '') + '/openapi';
+            var defaultUrl = (rootPath ? rootPath : '') + '/openapi.json';
 
             window.ui = SwaggerUIBundle({
                 url: defaultUrl,
@@ -51,4 +51,3 @@
     </script>
 </body>
 </html>
-
