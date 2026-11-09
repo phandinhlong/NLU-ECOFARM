@@ -1,27 +1,15 @@
 <template>
   <div class="d-flex min-vh-100">
-    <BSidebar
-      visible
-      mobile
-      shadow
-      bg-variant="dark"
-      text-variant="white"
-      class="d-flex flex-column p-3" style="width: 220px; min-height: 100vh;">
-      <h1 class="mb-4 text-white" style="font-size: 1.25rem;">EcoFarm</h1>
-      <BNav vertical class="flex-column gap-1">
-        <BNavItem to="/dashboard" active-class="bg-primary text-white">
-          Tổng quan
-        </BNavItem>
-        <BNavItem to="/farms" active-class="bg-primary text-white">
-          Trang trại
-        </BNavItem>
-        <BNavItem to="/greenhouses" active-class="bg-primary text-white">
-          Nhà màng
-        </BNavItem>
+    <aside class="bg-dark text-white p-3 flex-shrink-0" style="width: 220px;">
+      <h1 class="mb-4 fs-5">EcoFarm</h1>
+      <BNav vertical class="gap-1">
+        <BNavItem to="/dashboard" link-class="text-white" active-class="bg-primary">Tổng quan</BNavItem>
+        <BNavItem to="/farms" link-class="text-white" active-class="bg-primary">Trang trại</BNavItem>
+        <BNavItem to="/greenhouses" link-class="text-white" active-class="bg-primary">Nhà màng</BNavItem>
       </BNav>
-    </BSidebar>
+    </aside>
 
-    <main class="main p-4" style="flex: 1;">
+    <main class="flex-grow-1 p-4">
       <RouterView />
     </main>
   </div>
