@@ -8,4 +8,6 @@ public interface UserService {
     Optional<User> findByEmailAndFetchRoles(String email);
     Optional<User> findById(Long id);
     Boolean hasUserByEmail(String email);
+    User save(User user);
+    Optional<User> findByEmail(String email);
 }

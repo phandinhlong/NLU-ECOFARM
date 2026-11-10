@@ -8,4 +8,8 @@ public interface JwtService {
     Boolean validateToken(String token);
 
     String getEmailFromJwtToken(String token);
+
+    String generateAccountActivationToken(String email);
+
+    Boolean hasTokenType(String token, String type);
 }

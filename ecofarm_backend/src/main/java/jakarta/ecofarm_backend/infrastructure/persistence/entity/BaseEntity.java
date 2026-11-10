@@ -2,7 +2,11 @@ package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
 import java.time.Instant;
-import lombok.*;
+import lombok.ToString;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 @ToString
@@ -34,7 +38,6 @@ public class BaseEntity {
 
     @PrePersist
     protected void prePersist() {
-        isActive = true;
         if (this.createdAt == null) createdAt = Instant.now().toEpochMilli();
         if (this.updatedAt == null) updatedAt = Instant.now().toEpochMilli();
     }

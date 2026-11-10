@@ -53,4 +53,26 @@ public class UserRepositoryImpl implements UserRepository {
 
         return count > 0;
     }
+
+    @Override
+    public User save(User user) {
+        if (user.getId() == null) {
+            this.entityManager.persist(user);
+            return user;
+        }
+        return this.entityManager.merge(user);
+    }
+
+    @Override
+    public Optional<User> findByEmail(String email) {
+        return this.entityManager.createQuery(
+                        """
+                        SELECT u
+                        FROM User u
+                        WHERE u.email = :email
+                        """, User.class)
+                .setParameter("email", email)
+                .getResultStream()
+                .findFirst();
+    }
 }

@@ -27,4 +27,14 @@ public class UserServiceImpl implements UserService {
     public Boolean hasUserByEmail(String email) {
         return this.userRepository.hasUserByEmail(email);
     }
+
+    @Override
+    public User save(User user) {
+        return this.userRepository.save(user);
+    }
+
+    @Override
+    public Optional<User> findByEmail(String email) {
+        return this.userRepository.findByEmail(email);
+    }
 }

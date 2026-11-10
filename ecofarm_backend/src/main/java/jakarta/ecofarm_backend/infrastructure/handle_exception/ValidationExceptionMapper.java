@@ -1,7 +1,6 @@
 package jakarta.ecofarm_backend.infrastructure.handle_exception;
 
-import jakarta.ecofarm_backend.common.response.BaseResponse;
-import jakarta.ecofarm_backend.common.response.ConstraintViolationExceptionResponse;
+import jakarta.ecofarm_backend.common.dto.response.ConstraintViolationExceptionResponse;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.ws.rs.core.Context;
