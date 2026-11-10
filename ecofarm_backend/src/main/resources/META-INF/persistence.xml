@@ -1,16 +1,25 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <persistence xmlns="https://jakarta.ee/xml/ns/persistence"
              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence https://jakarta.ee/xml/ns/persistence/persistence_3_2.xsd"
-             version="3.2">
-    <persistence-unit name="default">
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd"
+             version="3.0">
+
+    <persistence-unit name="default" transaction-type="JTA">
+        <!-- WildFly container quản lý EntityManager + JTA transaction -->
         <jta-data-source>java:jboss/datasources/EcofarmDS</jta-data-source>
+
+        <class>jakarta.ecofarm_backend.infrastructure.persistence.entity.User</class>
+        <class>jakarta.ecofarm_backend.infrastructure.persistence.entity.Role</class>
+
+        <exclude-unlisted-classes>false</exclude-unlisted-classes>
+
         <properties>
-            <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQLDialect"/>
-            <property name="hibernate.hbm2ddl.auto" value="update"/>
-            <property name="hibernate.show_sql" value="false"/>
-            <property name="hibernate.cache.use_second_level_cache" value="true"/>
-            <property name="hibernate.cache.region.factory_class" value="org.infinispan.hibernate.cache.v6.InfinispanRegionFactory"/>
+            <!-- Cấu hình Hibernate ORM -->
+            <property name="hibernate.hbm2ddl.auto" value="update"/> <!-- ponytail: this should be 'none' and a proper Liquibase script with all entities; using 'update' for local test until full schema is ready -->
+            <property name="hibernate.show_sql" value="true"/>
+            <property name="hibernate.format_sql" value="true"/>
+            <property name="hibernate.highlight_sql" value="true"/>
         </properties>
     </persistence-unit>
+
 </persistence>

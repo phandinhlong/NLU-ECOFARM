@@ -1,6 +1,6 @@
 package jakarta.ecofarm_backend.common.dto;
 
-import jakarta.ecofarm_backend.infratructure.persistence.entities.Anchor;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 
 import java.util.List;
 
