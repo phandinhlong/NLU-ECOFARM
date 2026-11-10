@@ -1,8 +1,6 @@
 export interface ApiResponse<T = any> {
-  success: boolean
-  message: string
+  isSuccess: boolean
   data: T
-  timestamp: string
 }
 
 export interface PaginatedResponse<T> {

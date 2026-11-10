@@ -12,17 +12,16 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: '/login',
+      name: 'login',
+      component: () => import('@/views/auth/LoginView.vue'),
+      meta: { guestOnly: true, title: 'Đăng nhập' },
+    },
+    {
       path: '/',
       component: () => import('@/layouts/PublicLayout.vue'),
       meta: { guestOnly: true },
-      redirect: '/login',
       children: [
-        {
-          path: 'login',
-          name: 'login',
-          component: () => import('@/views/PlaceholderView.vue'),
-          meta: { title: 'Đăng nhập' },
-        },
         {
           path: 'register',
           name: 'register',
