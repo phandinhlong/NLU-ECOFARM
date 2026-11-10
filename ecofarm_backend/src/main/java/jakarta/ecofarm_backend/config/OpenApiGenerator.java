@@ -26,7 +26,6 @@ public class OpenApiGenerator {
         try {
             ObjectNode root = mapper.createObjectNode();
             root.put("openapi", "3.0.3");
-
             // Info
             ObjectNode info = root.putObject("info");
             info.put("title", "NLU-ECOFARM Backend API");
@@ -40,8 +39,9 @@ public class OpenApiGenerator {
             // Servers
             ArrayNode servers = root.putArray("servers");
             String ctx = (contextPath != null && !contextPath.isBlank()) ? contextPath : "";
+            servers.addObject().put("url", "/").put("description", "Root Path (/)");
             servers.addObject().put("url", ctx + "/api").put("description", "Current Server (/api)");
-            servers.addObject().put("url", "/api").put("description", "Root Path (/api)");
+
 
             // Tags set
             Set<String> tagNames = new LinkedHashSet<>();
