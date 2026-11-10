@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.service;
+package jakarta.ecofarm_backend.modules.blockchain.service;
 
 import jakarta.ejb.Schedule;
 import jakarta.ejb.Singleton;
@@ -9,14 +9,14 @@ import java.util.concurrent.Semaphore;
 
 import jakarta.ecofarm_backend.modules.blockchain.BesuClient;
 import jakarta.ecofarm_backend.config.BlockchainConfig;
-import jakarta.ecofarm_backend.infratructure.persistence.entities.Anchor;
-import jakarta.ecofarm_backend.infratructure.persistence.entities.AuditLog;
-import jakarta.ecofarm_backend.infratructure.persistence.entities.MerkleSnapshot;
-import jakarta.ecofarm_backend.infratructure.persistence.entities.OutboxEvent;
-import jakarta.ecofarm_backend.infratructure.persistence.repository.AnchorRepository;
-import jakarta.ecofarm_backend.infratructure.persistence.repository.AuditLogRepository;
-import jakarta.ecofarm_backend.infratructure.persistence.repository.MerkleSnapshotRepository;
-import jakarta.ecofarm_backend.infratructure.persistence.repository.OutboxEventRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.AuditLog;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.MerkleSnapshot;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.OutboxEvent;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.AnchorRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.AuditLogRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.MerkleSnapshotRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.OutboxEventRepository;
 import jakarta.ecofarm_backend.common.dto.AuditError;
 
 @Singleton

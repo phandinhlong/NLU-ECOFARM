@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.infratructure.persistence.entities;
+package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;

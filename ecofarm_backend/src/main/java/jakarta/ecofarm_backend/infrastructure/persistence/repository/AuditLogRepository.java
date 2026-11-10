@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.infratructure.persistence.repository;
+package jakarta.ecofarm_backend.infrastructure.persistence.repository;
 
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
@@ -8,7 +8,7 @@ import jakarta.persistence.TypedQuery;
 import java.time.Instant;
 import java.util.List;
 
-import jakarta.ecofarm_backend.infratructure.persistence.entities.AuditLog;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.AuditLog;
 
 @Stateless
 public class AuditLogRepository {

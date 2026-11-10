@@ -2,17 +2,16 @@ package jakarta.ecofarm_backend.infrastructure.persistence.repository.impl;
 
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.UserRepository;
-import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
 import java.util.Optional;
 
-@ApplicationScoped
+@Stateless
 public class UserRepositoryImpl implements UserRepository {
 
     @PersistenceContext
-    @jakarta.inject.Inject
     private EntityManager entityManager;
 
     public Optional<User> findByEmailAndFetchRoles(String email) {

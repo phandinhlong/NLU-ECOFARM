@@ -1,0 +1,263 @@
+{
+  "info": {
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "name": "EcoFarm Blockchain API",
+    "description": "EcoFarm blockchain tracking API (requires token)\nBase URL: http://localhost:8080/ecofarm_backend-1.0-SNAPSHOT"
+  },
+  "variable": [
+    {
+      "key": "baseurl",
+      "value": "http://localhost:8080/ecofarm_backend-1.0-SNAPSHOT",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "batchId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "anchorId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "code",
+      "value": "TEST123",
+      "type": "string"
+    },
+    {
+      "key": "reason",
+      "value": "Sản phẩm lỗi cần thu hồi",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (responseCode.code === 200) {",
+                  "    pm.environment.set(\"access_token\", pm.response.json().data.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{email}}\",\"password\":\"{{password}}\"}"
+            },
+            "description": "Get access and refresh tokens via httpOnly cookies",
+            "url": {
+              "raw": "{{baseurl}}/api/v1/auths/login",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "auths", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "description": "Refresh the current access token",
+            "url": {
+              "raw": "{{baseurl}}/api/v1/auths/refresh-token",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "auths", "refresh-token"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "description": "Get current user profile",
+            "url": {
+              "raw": "{{baseurl}}/api/v1/auths/profile",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "auths", "profile"]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication endpoints"
+    },
+    {
+      "name": "Blockchain Admin",
+      "item": [
+        {
+          "name": "Get All Anchors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/admin/anchors",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "admin", "anchors"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Reconciliation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/admin/reconciliation?onlyMismatch={{onlyMismatch}}&page={{page}}&size={{size}}",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "admin", "reconciliation"],
+              "query": [
+                {"key": "onlyMismatch", "value": "{{onlyMismatch}}"},
+                {"key": "page", "value": "{{page}}"},
+                {"key": "size", "value": "{{size}}"}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Batch Anchor Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/anchor-status",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "batches", "{{batchId}}", "anchor-status"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Retry Anchor",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/admin/anchors/{{anchorId}}/retry",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "admin", "anchors", "{{anchorId}}", "retry"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Recall Batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reason\":\"{{reason}}\"}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/recall",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "batches", "{{batchId}}", "recall"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Proof Bundle",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/proof-bundle",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "batches", "{{batchId}}", "proof-bundle"]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Blockchain administration endpoints"
+    },
+    {
+      "name": "Verification",
+      "item": [
+        {
+          "name": "Get Public Trace",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/public/trace/{{code}}",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "public", "trace", "{{code}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Public Trace",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/public/trace/{{code}}/verify",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "public", "trace", "{{code}}", "verify"]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Public verification and tracing endpoints"
+    }
+  ]
+}

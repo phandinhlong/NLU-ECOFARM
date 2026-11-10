@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.rest;
+package jakarta.ecofarm_backend.modules.blockchain.rest;
 
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
@@ -6,15 +6,15 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-import jakarta.ecofarm_backend.infratructure.persistence.entities.Anchor;
-import jakarta.ecofarm_backend.infratructure.persistence.entities.MerkleSnapshot;
-import jakarta.ecofarm_backend.infratructure.persistence.entities.Recall;
-import jakarta.ecofarm_backend.infratructure.persistence.repository.AnchorRepository;
-import jakarta.ecofarm_backend.infratructure.persistence.repository.AuditLogRepository;
-import jakarta.ecofarm_backend.infratructure.persistence.repository.OutboxEventRepository;
-import jakarta.ecofarm_backend.infratructure.persistence.repository.MerkleSnapshotRepository;
-import jakarta.ecofarm_backend.infratructure.persistence.repository.RecallRepository;
-import jakarta.ecofarm_backend.service.ReconciliationService;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.MerkleSnapshot;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Recall;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.AnchorRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.AuditLogRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.OutboxEventRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.MerkleSnapshotRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.RecallRepository;
+import jakarta.ecofarm_backend.modules.blockchain.service.ReconciliationService;
 import jakarta.ecofarm_backend.config.BlockchainConfig;
 import jakarta.ecofarm_backend.common.dto.AnchorStatus;
 import jakarta.ecofarm_backend.common.dto.PrivateChainStatus;
@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-@Path("/api/v1")
+@Path("/v1")
 @Stateless
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)

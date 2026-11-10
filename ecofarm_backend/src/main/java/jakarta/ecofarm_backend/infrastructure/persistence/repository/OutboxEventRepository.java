@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.infratructure.persistence.repository;
+package jakarta.ecofarm_backend.infrastructure.persistence.repository;
 
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
@@ -7,7 +7,7 @@ import jakarta.persistence.TypedQuery;
 
 import java.util.List;
 
-import jakarta.ecofarm_backend.infratructure.persistence.entities.OutboxEvent;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.OutboxEvent;
 
 @Stateless
 public class OutboxEventRepository {

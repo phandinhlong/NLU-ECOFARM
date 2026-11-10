@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.service;
+package jakarta.ecofarm_backend.modules.blockchain.service;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -8,11 +8,11 @@ import java.util.List;
 import java.util.Optional;
 
 import jakarta.ecofarm_backend.modules.blockchain.PolygonClient;
-import jakarta.ecofarm_backend.infratructure.persistence.entities.Anchor;
-import jakarta.ecofarm_backend.infratructure.persistence.entities.MerkleSnapshot;
-import jakarta.ecofarm_backend.infratructure.persistence.repository.AuditLogRepository;
-import jakarta.ecofarm_backend.infratructure.persistence.repository.AnchorRepository;
-import jakarta.ecofarm_backend.infratructure.persistence.repository.MerkleSnapshotRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.MerkleSnapshot;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.AuditLogRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.AnchorRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.MerkleSnapshotRepository;
 import jakarta.ecofarm_backend.common.dto.ReconciliationItem;
 
 @ApplicationScoped

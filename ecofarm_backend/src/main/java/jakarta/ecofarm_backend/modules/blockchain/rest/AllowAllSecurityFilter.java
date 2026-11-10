@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.rest;
+package jakarta.ecofarm_backend.modules.blockchain.rest;
 
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;

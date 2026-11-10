@@ -1,7 +1,6 @@
-package jakarta.ecofarm_backend.infratructure.persistence.entities;
+package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
-import java.time.Instant;
 
 @Entity
 @Table(name = "outbox_events", uniqueConstraints = @UniqueConstraint(columnNames = {"batch_id_hash", "seq"}))
