@@ -1,9 +1,8 @@
 package jakarta.ecofarm_backend.modules.blockchain.rest;
 
-package jakarta.ecofarm_backend.rest;
 
-import jakarta.ecofarm_backend.blockchain.PolygonClient;
-import jakarta.ecofarm_backend.persistence.entities.OutboxEvent;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.OutboxEvent;
+import jakarta.ecofarm_backend.modules.blockchain.PolygonClient;
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
 import jakarta.ecofarm_backend.common.anotation.RequireRoles;
@@ -33,7 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-@Path("/v1")
+@Path("/block-chain")
 @Stateless
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)

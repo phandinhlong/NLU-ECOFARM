@@ -14,7 +14,7 @@ public class BlockchainConfig {
     // Anchor account gas price in wei
     private Long privateGasPrice = 1000000000L;
     // Public chain endpoint (Polygon Amoy)
-    private String publicRpcEndpoint = EnvConfig.getKey("PUBLIC_RPC_ENDPOINT");
+    private String publicRpcEndpoint = EnvConfig.getKey("PUBLIC_RPC_ENDPOINT", "https://polygon-amoy-bor-rpc.publicnode.com");
     // Public chain network ID
     private Integer publicChainId = EnvConfig.getInt("PUBLIC_CHAIN_ID", 80002);
     // Gas price for public chain (wei)

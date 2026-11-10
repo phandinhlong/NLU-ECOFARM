@@ -76,6 +76,10 @@ public class EnvConfig {
         String value = ENV.get(key);
         return value != null ? value : System.getenv(key);
     }
+    public static String getKey(String key, String def) {
+        String value = getKey(key);
+        return value == null || value.isBlank() ? def : value;
+    }
 
     public static int getInt(String key, int defaultValue) {
         String value = getKey(key);

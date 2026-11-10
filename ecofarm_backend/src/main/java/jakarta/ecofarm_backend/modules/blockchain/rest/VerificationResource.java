@@ -17,7 +17,7 @@ import jakarta.ecofarm_backend.infrastructure.persistence.repository.RecallRepos
 
 import java.util.List;
 
-@Path("/v1")
+@Path("/block-chain")
 @Stateless
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)

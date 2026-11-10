@@ -42,19 +42,15 @@ public class AuthTokenInterceptor implements ContainerRequestFilter {
     @Context private HttpServletRequest request;
 
     private static final List<String> PUBLIC_PATHS = List.of(
-            "/api/v1/auths/login"
-            , "/api/v1/auths/refresh"
-            , "/api/v1/openapi"
-            , "/api/v1/health"
-            ,"/api/v1/hello-world"
-            ,"/api/v1/sign-up"
-            ,"/api/v1/auths/activation"
-            ,"/api/v1/auths/sign-up",
-            "/swagger-ui/"
-    ,"/favicon.ico"
-    ,"/doc-api","/swagger-ui"
-    , "/api/v1/public"
-            ,"/api/v1/auths/sign-up");
+            "/api/v1/auths/login",
+            "/api/v1/auths/refresh-token",
+            "/api/v1/auths/sign-up",
+            "/api/v1/auths/activation",
+            "/api/v1/block-chain/public/",
+            "/api/v1/openapi",
+            "/swagger-ui",
+            "/doc-api",
+            "/favicon.ico");
 
     private boolean isPublicEndpoint(ContainerRequestContext ctx) {
         if ("OPTIONS".equalsIgnoreCase(ctx.getMethod())) return true;
