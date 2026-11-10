@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: ecopostgres
+    environment:
+      POSTGRES_DB: ecofarm
+      POSTGRES_USER: ecofarm
+      POSTGRES_PASSWORD: ecofarm123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecofarm -d ecofarm"]
+      interval: 5s
+      retries: 10
+
+  besu-node-1:
+    image: hyperledger/besu:26.11.0
+    container_name: besu-node-1
+    volumes:
+      - ./block_chain/genesis.json:/opt/besu/genesis.json:ro
+      - ./block_chain/node-data-1:/opt/besu/data
+    ports:
+      - "8545:8545"
+      - "30303:30303"
+    command: >
+      --genesis-file=/opt/besu/genesis.json
+      --data-path=/opt/besu/data
+      --rpc-http-enabled
+      --rpc-http-host=0.0.0.0
+      --rpc-http-port=8545
+      --rpc-http-api=ETH,NET,QBFT,WEB3
+      --rpc-http-cors-origins="*"
+      --host-allowlist="*"
+    networks:
+      besu_net:
+        ipv4_address: 172.28.0.11
+
+  besu-node-2:
+    image: hyperledger/besu:26.11.0
+    container_name: besu-node-2
+    volumes:
+      - ./block_chain/genesis.json:/opt/besu/genesis.json:ro
+      - ./block_chain/node-data-2:/opt/besu/data
+    ports:
+      - "8546:8545"
+      - "30304:30303"
+    command: >
+      --genesis-file=/opt/besu/genesis.json
+      --data-path=/opt/besu/data
+      --bootnodes=${BESU_BOOTNODE}
+      --rpc-http-enabled
+      --rpc-http-host=0.0.0.0
+      --rpc-http-port=8545
+      --rpc-http-api=ETH,NET,QBFT,WEB3
+      --rpc-http-cors-origins="*"
+      --host-allowlist="*"
+    networks:
+      besu_net:
+        ipv4_address: 172.28.0.12
+
+  besu-node-3:
+    image: hyperledger/besu:26.11.0
+    container_name: besu-node-3
+    volumes:
+      - ./block_chain/genesis.json:/opt/besu/genesis.json:ro
+      - ./block_chain/node-data-3:/opt/besu/data
+    ports:
+      - "8547:8545"
+      - "30305:30303"
+    command: >
+      --genesis-file=/opt/besu/genesis.json
+      --data-path=/opt/besu/data
+      --bootnodes=${BESU_BOOTNODE}
+      --rpc-http-enabled
+      --rpc-http-host=0.0.0.0
+      --rpc-http-port=8545
+      --rpc-http-api=ETH,NET,QBFT,WEB3
+      --rpc-http-cors-origins="*"
+      --host-allowlist="*"
+    networks:
+      besu_net:
+        ipv4_address: 172.28.0.13
+
+  besu-node-4:
+    image: hyperledger/besu:26.11.0
+    container_name: besu-node-4
+    volumes:
+      - ./block_chain/genesis.json:/opt/besu/genesis.json:ro
+      - ./block_chain/node-data-4:/opt/besu/data
+    ports:
+      - "8548:8545"
+      - "30306:30303"
+    command: >
+      --genesis-file=/opt/besu/genesis.json
+      --data-path=/opt/besu/data
+      --bootnodes=${BESU_BOOTNODE}
+      --rpc-http-enabled
+      --rpc-http-host=0.0.0.0
+      --rpc-http-port=8545
+      --rpc-http-api=ETH,NET,QBFT,WEB3
+      --rpc-http-cors-origins="*"
+      --host-allowlist="*"
+    networks:
+      besu_net:
+        ipv4_address: 172.28.0.14
+
+networks:
+  besu_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  postgres_data:

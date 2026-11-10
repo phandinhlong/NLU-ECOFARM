@@ -12,7 +12,7 @@ target/
 *.iws
 *.iml
 *.ipr
-
+*.env
 ### Eclipse ###
 .apt_generated
 .classpath
@@ -34,6 +34,7 @@ build/
 
 ### VS Code ###
 .vscode/
-
+.env/
+src/.env
 ### Mac OS ###
 .DS_Store
