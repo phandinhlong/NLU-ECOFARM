@@ -27,6 +27,7 @@ public class JwtServiceImpl implements JwtService {
     private static final String CLAIM_TYPE = "type";
     public static final String TYPE_ACCESS = "access";
     public static final String TYPE_REFRESH = "refresh";
+    public static final String TYPE_ACCOUNT_ACTIVATION_TOKEN ="account-activation";
 
     private String secret = "change-me-to-a-long-random-string-at-least-32-chars";
     private String issuer = "my-backend";
@@ -93,6 +94,16 @@ public class JwtServiceImpl implements JwtService {
     @Override
     public String getEmailFromJwtToken(String token) {
         return parseClaims(token).getSubject();
+    }
+
+    @Override
+    public String generateAccountActivationToken(String email) {
+        return buildToken(email,TYPE_ACCOUNT_ACTIVATION_TOKEN , Duration.ofMinutes(accessMinutes));
+    }
+
+    @Override
+    public Boolean hasTokenType(String token, String expectedType) {
+        return parseClaims(token).get(CLAIM_TYPE, String.class).equals(expectedType);
     }
 
 

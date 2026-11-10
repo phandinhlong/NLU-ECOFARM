@@ -1,15 +1,20 @@
 package jakarta.ecofarm_backend.modules.auth;
 
-import jakarta.ecofarm_backend.common.request.LoginRequest;
-import jakarta.ecofarm_backend.common.response.BaseResponse;
-import jakarta.ecofarm_backend.common.response.ProfileResponse;
+import jakarta.ecofarm_backend.common.dto.request.LoginRequest;
+import jakarta.ecofarm_backend.common.dto.request.SignupRequest;
+import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
+import jakarta.ecofarm_backend.common.dto.response.ProfileResponse;
 import jakarta.ecofarm_backend.modules.auth.facade.AuthFacade;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
+
+import java.net.URI;
+
 
 @Path("/v1/auths")
 @Tag(name = "Authentication", description = "Xác thực và phân quyền")
@@ -43,4 +48,20 @@ public class AuthResource {
     public BaseResponse<Boolean> refreshToken(){
         return this.authFacade.refreshToken();
     }
+
+    @POST
+    @Path("/sign-up")
+    public BaseResponse<Boolean> signup(@Valid SignupRequest request){
+        return this.authFacade.signup(request);
+    }
+
+
+    @GET
+    @Path("/activation")
+    public Response activateUser(@QueryParam("token") String token){
+        URI location = this.authFacade.activateUser(token);
+        return Response.seeOther(location).build();
+    }
+
+
 }
