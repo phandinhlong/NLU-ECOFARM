@@ -26,7 +26,13 @@ public class EnvConfig {
         }
     }
     public static String getKey(String key) {
-        return ENV.get(key);
+        String value = ENV.get(key);
+        return value != null ? value : System.getenv(key);
+    }
+
+    public static int getInt(String key, int defaultValue) {
+        String value = getKey(key);
+        return value == null || value.isBlank() ? defaultValue : Integer.parseInt(value.trim());
     }
 
 }

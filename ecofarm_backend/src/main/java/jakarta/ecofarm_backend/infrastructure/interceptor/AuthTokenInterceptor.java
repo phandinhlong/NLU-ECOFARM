@@ -45,6 +45,7 @@ public class AuthTokenInterceptor implements ContainerRequestFilter {
             ,"/api/v1/hello-world"
             ,"/api/v1/sign-up"
             ,"/api/v1/auths/activation"
+            , "/api/v1/public"
             ,"/api/v1/auths/sign-up");
 
     private boolean isPublicEndpoint(ContainerRequestContext ctx) {

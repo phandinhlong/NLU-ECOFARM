@@ -2,7 +2,7 @@
   "info": {
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "name": "EcoFarm Blockchain API",
-    "description": "EcoFarm blockchain tracking API (requires token)\nBase URL: http://localhost:8080/ecofarm_backend-1.0-SNAPSHOT"
+    "description": "API testing collection. Base URL: http://localhost:8080/ecofarm_backend-1.0-SNAPSHOT"
   },
   "variable": [
     {
@@ -13,6 +13,16 @@
     {
       "key": "access_token",
       "value": "",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "a@b.com",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "x",
       "type": "string"
     },
     {
@@ -33,6 +43,21 @@
     {
       "key": "reason",
       "value": "Sản phẩm lỗi cần thu hồi",
+      "type": "string"
+    },
+    {
+      "key": "onlyMismatch",
+      "value": "false",
+      "type": "string"
+    },
+    {
+      "key": "page",
+      "value": "0",
+      "type": "string"
+    },
+    {
+      "key": "size",
+      "value": "20",
       "type": "string"
     }
   ],
@@ -70,11 +95,10 @@
               "mode": "raw",
               "raw": "{\"email\":\"{{email}}\",\"password\":\"{{password}}\"}"
             },
-            "description": "Get access and refresh tokens via httpOnly cookies",
+            "description": "Get access and refresh tokens",
             "url": {
               "raw": "{{baseurl}}/api/v1/auths/login",
-              "host": ["{{baseurl}}"],
-              "path": ["api", "v1", "auths", "login"]
+              "query": []
             }
           },
           "response": []
@@ -96,8 +120,7 @@
             "description": "Refresh the current access token",
             "url": {
               "raw": "{{baseurl}}/api/v1/auths/refresh-token",
-              "host": ["{{baseurl}}"],
-              "path": ["api", "v1", "auths", "refresh-token"]
+              "query": []
             }
           },
           "response": []
@@ -120,8 +143,7 @@
             "description": "Get current user profile",
             "url": {
               "raw": "{{baseurl}}/api/v1/auths/profile",
-              "host": ["{{baseurl}}"],
-              "path": ["api", "v1", "auths", "profile"]
+              "query": []
             }
           },
           "response": []
@@ -139,8 +161,7 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/api/v1/admin/anchors",
-              "host": ["{{baseurl}}"],
-              "path": ["api", "v1", "admin", "anchors"]
+              "query": []
             }
           },
           "response": []
@@ -152,13 +173,7 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/api/v1/admin/reconciliation?onlyMismatch={{onlyMismatch}}&page={{page}}&size={{size}}",
-              "host": ["{{baseurl}}"],
-              "path": ["api", "v1", "admin", "reconciliation"],
-              "query": [
-                {"key": "onlyMismatch", "value": "{{onlyMismatch}}"},
-                {"key": "page", "value": "{{page}}"},
-                {"key": "size", "value": "{{size}}"}
-              ]
+              "query": []
             }
           },
           "response": []
@@ -170,8 +185,7 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/anchor-status",
-              "host": ["{{baseurl}}"],
-              "path": ["api", "v1", "batches", "{{batchId}}", "anchor-status"]
+              "query": []
             }
           },
           "response": []
@@ -183,8 +197,7 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/api/v1/admin/anchors/{{anchorId}}/retry",
-              "host": ["{{baseurl}}"],
-              "path": ["api", "v1", "admin", "anchors", "{{anchorId}}", "retry"]
+              "query": []
             }
           },
           "response": []
@@ -205,8 +218,7 @@
             },
             "url": {
               "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/recall",
-              "host": ["{{baseurl}}"],
-              "path": ["api", "v1", "batches", "{{batchId}}", "recall"]
+              "query": []
             }
           },
           "response": []
@@ -218,8 +230,7 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/proof-bundle",
-              "host": ["{{baseurl}}"],
-              "path": ["api", "v1", "batches", "{{batchId}}", "proof-bundle"]
+              "query": []
             }
           },
           "response": []
@@ -237,8 +248,7 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/api/v1/public/trace/{{code}}",
-              "host": ["{{baseurl}}"],
-              "path": ["api", "v1", "public", "trace", "{{code}}"]
+              "query": []
             }
           },
           "response": []
@@ -250,8 +260,7 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/api/v1/public/trace/{{code}}/verify",
-              "host": ["{{baseurl}}"],
-              "path": ["api", "v1", "public", "trace", "{{code}}", "verify"]
+              "query": []
             }
           },
           "response": []

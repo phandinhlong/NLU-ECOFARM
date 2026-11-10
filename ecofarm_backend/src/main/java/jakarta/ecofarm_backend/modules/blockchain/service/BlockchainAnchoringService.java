@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.Semaphore;
 
 import jakarta.ecofarm_backend.modules.blockchain.BesuClient;
+import jakarta.ecofarm_backend.modules.blockchain.PolygonClient;
 import jakarta.ecofarm_backend.config.BlockchainConfig;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.AuditLog;
@@ -39,6 +40,9 @@ public class BlockchainAnchoringService {
     @Inject
     private BlockchainConfig config;
 
+    @Inject
+    private PolygonClient polygonClient;
+
     // Rate limiter: max 2 blockchain transactions per second (as per FR-LDG-006)
     private final Semaphore rateLimiter = new Semaphore(2);
 
@@ -66,7 +70,7 @@ public class BlockchainAnchoringService {
                         Anchor privateAnchor = new Anchor();
                         privateAnchor.setChainId(Integer.parseInt(config.getPrivateNetworkId()));
                         privateAnchor.setStatus("SUBMITTED");
-                        privateAnchor.setTxHash(txHash);
+                        privateAnchor.setTxHash(PrivateTxHash);
                         privateAnchor.setAnchoredAt(System.currentTimeMillis());
                         MerkleSnapshot snap = snapshotRepository.findLatest();
                         if (snap != null) {
@@ -126,6 +130,23 @@ public class BlockchainAnchoringService {
             // Log error
             System.err.println("Error in processOutbox: " + e.getMessage());
         }
+    }
+
+    // Theo dõi anchor đã gửi lên Polygon; CONFIRMED khi đủ số confirmation
+    private void checkPublicConfirmation(Anchor anchor) throws Exception {
+        if (anchor.getTxHash() == null) return;
+        int confirmations = polygonClient.getConfirmations(anchor.getTxHash());
+        anchor.setConfirmations(confirmations);
+        if (anchor.getBlockNumber() == null) {
+            anchor.setBlockNumber(polygonClient.getCurrentBlockNumber());
+        }
+        if (confirmations >= config.getRequiredConfirmations()) {
+            anchor.setStatus("CONFIRMED");
+            auditLogRepository.persist(new AuditLog(
+                null, null, "PUBLIC_ANCHOR_CONFIRMED", "anchors", anchor.getId(), anchor.toString(), null
+            ));
+        }
+        anchorRepository.persist(anchor);
     }
     @Schedule(second = "*/15", minute = "*", hour = "*", persistent = false)
     public void verifyPublicAnchors() {

@@ -1,8 +1,9 @@
 package jakarta.ecofarm_backend.modules.blockchain.rest;
 
-import jakarta.ecofarm_backend.persistence.entities.OutboxEvent;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.OutboxEvent;
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
+import jakarta.ecofarm_backend.common.anotation.RequireRoles;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -168,6 +169,7 @@ public class BlockchainResource {
 
     @POST
     @Path("/admin/anchors/{anchorId}/retry")
+    @RequireRoles(value = {"QUALITY_CONTROL", "FARMER"})
     public Anchor retryAnchor(@PathParam("anchorId") Long anchorId) {
         Anchor anchor = anchorRepository.findById(anchorId);
         if (anchor == null) {
@@ -184,6 +186,7 @@ public class BlockchainResource {
 
     @POST
     @Path("/batches/{batchId}/recall")
+    @RequireRoles(value = {"QUALITY_CONTROL", "FARMER"})
     public Recall recallBatch(@PathParam("batchId") Long batchId, RecallRequest req) {
         Recall recall = new Recall(batchId, req.getReason(), 1L);
         recallRepository.persist(recall);
@@ -221,6 +224,7 @@ public class BlockchainResource {
     // dùng đế test publicTxHash gửi lên polygon
     @POST
     @Path("/admin/outbox/test")
+    @RequireRoles(value = {"QUALITY_CONTROL", "FARMER"})
     public OutboxEvent createTestOutbox(@QueryParam("data") @DefaultValue("EcoFarm Polygon Test") String data) {
         OutboxEvent event = new OutboxEvent(
                 "0x" + Long.toHexString(System.currentTimeMillis()),
