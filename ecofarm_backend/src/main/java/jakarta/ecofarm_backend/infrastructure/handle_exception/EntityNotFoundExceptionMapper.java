@@ -2,7 +2,7 @@ package jakarta.ecofarm_backend.infrastructure.handle_exception;
 
 
 import jakarta.ecofarm_backend.common.exception.EntityNotFoundException;
-import jakarta.ecofarm_backend.common.response.ExceptionResponse;
+import jakarta.ecofarm_backend.common.dto.response.ExceptionResponse;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;

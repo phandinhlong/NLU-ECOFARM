@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.common.response;
+package jakarta.ecofarm_backend.common.dto.response;
 
 import lombok.*;
 

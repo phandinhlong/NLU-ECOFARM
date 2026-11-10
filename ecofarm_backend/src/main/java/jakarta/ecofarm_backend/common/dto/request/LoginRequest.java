@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.common.request;
+package jakarta.ecofarm_backend.common.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

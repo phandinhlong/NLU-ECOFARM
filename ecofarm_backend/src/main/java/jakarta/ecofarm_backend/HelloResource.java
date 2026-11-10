@@ -1,8 +1,6 @@
 package jakarta.ecofarm_backend;
 
-import jakarta.ecofarm_backend.common.response.BaseResponse;
-import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
+import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
