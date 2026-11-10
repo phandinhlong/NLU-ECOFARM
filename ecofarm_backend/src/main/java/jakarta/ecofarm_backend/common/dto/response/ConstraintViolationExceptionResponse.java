@@ -1,8 +1,7 @@
-package jakarta.ecofarm_backend.common.response;
+package jakarta.ecofarm_backend.common.dto.response;
 
 import lombok.*;
 
-import java.time.Instant;
 import java.util.Map;
 
 @AllArgsConstructor

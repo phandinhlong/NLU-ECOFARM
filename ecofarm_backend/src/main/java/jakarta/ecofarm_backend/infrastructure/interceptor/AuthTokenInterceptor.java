@@ -11,6 +11,7 @@ import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.infrastructure.security.UserSecurityDetailsPrincipal;
 import jakarta.ecofarm_backend.infrastructure.service.JwtService;
 import jakarta.ecofarm_backend.infrastructure.service.UserService;
+import jakarta.ecofarm_backend.infrastructure.service.impl.JwtServiceImpl;
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.Priorities;
@@ -37,7 +38,14 @@ public class AuthTokenInterceptor implements ContainerRequestFilter {
     @Context private HttpServletRequest request;
 
     private static final List<String> PUBLIC_PATHS = List.of(
-            "/api/v1/auths/login", "/api/v1/auths/refresh", "/api/v1/openapi", "/api/v1/health","/api/v1/hello-world");
+            "/api/v1/auths/login"
+            , "/api/v1/auths/refresh"
+            , "/api/v1/openapi"
+            , "/api/v1/health"
+            ,"/api/v1/hello-world"
+            ,"/api/v1/sign-up"
+            ,"/api/v1/auths/activation"
+            ,"/api/v1/auths/sign-up");
 
     private boolean isPublicEndpoint(ContainerRequestContext ctx) {
         if ("OPTIONS".equalsIgnoreCase(ctx.getMethod())) return true;
@@ -58,6 +66,9 @@ public class AuthTokenInterceptor implements ContainerRequestFilter {
         String token = cookie.getValue();
 
         if (!this.jwtService.validateToken(token))
+            throw new JwtInvalidException(ErrorCode.JWT_INVALID);
+
+        if (!this.jwtService.hasTokenType(token, JwtServiceImpl.TYPE_ACCESS))
             throw new JwtInvalidException(ErrorCode.JWT_INVALID);
 
         String email = jwtService.getEmailFromJwtToken(token);

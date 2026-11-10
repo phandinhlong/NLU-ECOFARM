@@ -1,9 +1,11 @@
 package jakarta.ecofarm_backend.modules.auth.facade;
 
-import jakarta.ecofarm_backend.common.request.LoginRequest;
-import jakarta.ecofarm_backend.common.response.BaseResponse;
-import jakarta.ecofarm_backend.common.response.ProfileResponse;
-import jakarta.servlet.http.HttpServletResponse;
+import jakarta.ecofarm_backend.common.dto.request.LoginRequest;
+import jakarta.ecofarm_backend.common.dto.request.SignupRequest;
+import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
+import jakarta.ecofarm_backend.common.dto.response.ProfileResponse;
+
+import java.net.URI;
 
 public interface AuthFacade {
     BaseResponse<Boolean> login(LoginRequest request);
@@ -11,4 +13,8 @@ public interface AuthFacade {
     BaseResponse<ProfileResponse> findProfile();
 
     BaseResponse<Boolean> refreshToken();
+
+    BaseResponse<Boolean> signup(SignupRequest request);
+
+    URI activateUser(String token);
 }
