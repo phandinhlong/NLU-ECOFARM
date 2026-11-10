@@ -169,4 +169,49 @@ public class PolygonClient implements BlockchainClient {
         }
         return data == null ? new byte[0] : data.getBytes(StandardCharsets.UTF_8);
     }
+    public java.util.Map<String, Object> getTransactionInfo(String txHash) throws IOException {
+        ensureConnected();
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("txHash", txHash);
+        result.put("explorerUrl", "https://amoy.polygonscan.com/tx/" + txHash);
+
+        // 1. Đọc thông tin Transaction và decode Payload (Input Data)
+        org.web3j.protocol.core.methods.response.EthTransaction txResp = web3j.ethGetTransactionByHash(txHash).send();
+        if (txResp.getTransaction().isPresent()) {
+            org.web3j.protocol.core.methods.response.Transaction tx = txResp.getTransaction().get();
+            result.put("from", tx.getFrom());
+            result.put("to", tx.getTo());
+            result.put("rawInputHex", tx.getInput());
+
+            // Giải mã chuỗi Hex sang Text UTF-8 gốc ban đầu
+            String inputHex = tx.getInput();
+            if (inputHex != null && inputHex.startsWith("0x") && inputHex.length() > 2) {
+                try {
+                    byte[] bytes = Numeric.hexStringToByteArray(inputHex);
+                    result.put("decodedPayload", new String(bytes, StandardCharsets.UTF_8));
+                } catch (Exception e) {
+                    result.put("decodedPayload", "Lỗi decode: " + e.getMessage());
+                }
+            } else {
+                result.put("decodedPayload", "");
+            }
+        }
+
+        // 2. Đọc trạng thái Mined & số Confirmations từ Receipt
+        org.web3j.protocol.core.methods.response.EthGetTransactionReceipt receiptResp = web3j.ethGetTransactionReceipt(txHash).send();
+        if (receiptResp.getTransactionReceipt().isPresent()) {
+            org.web3j.protocol.core.methods.response.TransactionReceipt receipt = receiptResp.getTransactionReceipt().get();
+            result.put("status", "0x1".equals(receipt.getStatus()) ? "SUCCESS" : "FAILED");
+            result.put("blockNumber", receipt.getBlockNumber() != null ? receipt.getBlockNumber().longValue() : null);
+            result.put("gasUsed", receipt.getGasUsed() != null ? receipt.getGasUsed().longValue() : null);
+
+            long latestBlock = web3j.ethBlockNumber().send().getBlockNumber().longValue();
+            long minedBlock = receipt.getBlockNumber().longValue();
+            result.put("confirmations", Math.max(0L, latestBlock - minedBlock));
+        } else {
+            result.put("status", "PENDING_OR_NOT_FOUND");
+        }
+
+        return result;
+    }
 }

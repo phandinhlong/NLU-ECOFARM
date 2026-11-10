@@ -25,8 +25,9 @@ public class OutboxEventRepository {
 
     public List<OutboxEvent> findPending() {
         TypedQuery<OutboxEvent> q = em.createQuery(
-            "select e from OutboxEvent e where e.status = 'PENDING' order by e.createdAt asc",
-            OutboxEvent.class);
+                "select e from OutboxEvent e where e.status = :status order by e.createdAt asc",
+                OutboxEvent.class);
+        q.setParameter("status", OutboxEvent.OutboxStatus.PENDING);
         return q.getResultList();
     }
 
@@ -59,8 +60,8 @@ public class OutboxEventRepository {
 
     public boolean existsProcessedByBatchIdHashAndSeq(String batchIdHash, int seq) {
         TypedQuery<Long> q = em.createQuery(
-            "select count(e) from OutboxEvent e where e.batchIdHash = :bid and e.seq = :seq and e.status = :status",
-            Long.class);
+                "select count(e) from OutboxEvent e where e.batchIdHash = :bid and e.seq = :seq and e.status = :status",
+                Long.class);
         q.setParameter("bid", batchIdHash);
         q.setParameter("seq", seq);
         q.setParameter("status", OutboxEvent.OutboxStatus.SUCCESS);
