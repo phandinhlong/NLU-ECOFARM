@@ -122,13 +122,14 @@ public class AuthFacadeImpl implements AuthFacade {
     public BaseResponse<ProfileResponse> findProfile() {
         UserSecurityDetailsPrincipal principal = this.currentUser.get();
 
-        User user = this.userService.findById(principal.getId())
+        User user = this.userService.findByEmailAndFetchRoles(principal.getEmail())
                 .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND));
 
         ProfileResponse response = ProfileResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
+                .role(user.getRoles().stream().map(Role::getRoleName).toList())
                 .build();
 
        return BaseResponse.<ProfileResponse>build(response);
@@ -209,7 +210,7 @@ public class AuthFacadeImpl implements AuthFacade {
     @DatabaseTransactional
     public URI activateUser(String token) {
 
-        if ((!this.jwtService.validateToken(token)) || (!this.jwtService.hasTokenType(token, JwtServiceImpl.TYPE_ACCOUNT_ACTIVATION_TOKEN)) )
+        if ( token == null || (!this.jwtService.validateToken(token)) || (!this.jwtService.hasTokenType(token, JwtServiceImpl.TYPE_ACCOUNT_ACTIVATION_TOKEN)) )
             return UriBuilder.fromUri(this.frontendActivationFailureUrl)
                     .queryParam("status", "inactive-user")
                     .build();
