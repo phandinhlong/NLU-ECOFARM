@@ -20,35 +20,8 @@
         <load-on-startup>1</load-on-startup>
     </servlet>
 
-<!--    <filter>-->
-<!--        <filter-name>LoggingFilter</filter-name>-->
-<!--        <filter-class>jakarta.ecofarm_backend.infrastructure.logging.LoggingFilter</filter-class>-->
-<!--    </filter>-->
-<!--    <filter>-->
-<!--        <filter-name>CorsFilter</filter-name>-->
-<!--        <filter-class>jakarta.ecofarm_backend.infrastructure.cors.CorsFilter</filter-class>-->
-<!--    </filter>-->
-<!--    <filter>-->
-<!--        <filter-name>AuthTokenInterceptor</filter-name>-->
-<!--        <filter-class>jakarta.ecofarm_backend.infrastructure.interceptor.AuthTokenInterceptor</filter-class>-->
-<!--    </filter>-->
-
-    <!-- Thứ tự mapping = thứ tự chạy: log -> cors -> auth -->
-<!--    <filter-mapping>-->
-<!--        <filter-name>LoggingFilter</filter-name>-->
-<!--        <url-pattern>/api/*</url-pattern>-->
-<!--    </filter-mapping>-->
-<!--    <filter-mapping>-->
-<!--        <filter-name>CorsFilter</filter-name>-->
-<!--        <url-pattern>/api/*</url-pattern>-->
-<!--    </filter-mapping>-->
-<!--    <filter-mapping>-->
-<!--        <filter-name>AuthTokenInterceptor</filter-name>-->
-<!--        <url-pattern>/api/*</url-pattern>-->
-<!--    </filter-mapping>-->
-
     <servlet-mapping>
         <servlet-name>JerseyServlet</servlet-name>
-        <url-pattern>/api/*</url-pattern>
+        <url-pattern>/*</url-pattern>
     </servlet-mapping>
 </web-app>

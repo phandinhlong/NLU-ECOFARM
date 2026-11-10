@@ -2,6 +2,7 @@ package jakarta.ecofarm_backend.modules.auth.facade.impl;
 
 import jakarta.ecofarm_backend.common.anotation.DatabaseTransactional;
 import jakarta.ecofarm_backend.common.constant.SecurityConstant;
+import jakarta.ecofarm_backend.common.dto.request.ForgotPasswordRequest;
 import jakarta.ecofarm_backend.common.dto.request.SignupRequest;
 import jakarta.ecofarm_backend.common.enums.ErrorCode;
 import jakarta.ecofarm_backend.common.enums.RoleEnum;
@@ -229,6 +230,10 @@ public class AuthFacadeImpl implements AuthFacade {
                 .build();
     }
 
+    @Override
+    public BaseResponse<Boolean> forgotPassword(ForgotPasswordRequest request) {
+        return null;
+    }
 
 
 }

@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.modules.auth;
 
+import jakarta.ecofarm_backend.common.dto.request.ForgotPasswordRequest;
 import jakarta.ecofarm_backend.common.dto.request.LoginRequest;
 import jakarta.ecofarm_backend.common.dto.request.SignupRequest;
 import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
@@ -16,7 +17,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import java.net.URI;
 
 
-@Path("/v1/auths")
+@Path("api/v1/auths")
 @Tag(name = "Authentication", description = "Xác thực và phân quyền")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -61,6 +62,12 @@ public class AuthResource {
     public Response activateUser(@QueryParam("token") String token){
         URI location = this.authFacade.activateUser(token);
         return Response.seeOther(location).build();
+    }
+
+    @POST
+    @Path("/forgot-password")
+    public BaseResponse<Boolean> forgotPassword(@Valid ForgotPasswordRequest request){
+        return this.authFacade.forgotPassword(request);
     }
 
 

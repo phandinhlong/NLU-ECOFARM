@@ -8,7 +8,7 @@ import jakarta.ws.rs.core.MediaType;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
-@Path("/v1/hello-world")
+@Path("/api/v1/hello-world")
 @Tag(name = "System", description = "API hệ thống và kiểm tra tình trạng")
 public class HelloResource {
 
