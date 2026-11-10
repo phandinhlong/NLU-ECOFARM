@@ -7,6 +7,7 @@ import jakarta.ecofarm_backend.common.exception.PermissionDeniedException;
 import jakarta.ecofarm_backend.common.request.LoginRequest;
 import jakarta.ecofarm_backend.common.response.BaseResponse;
 import jakarta.ecofarm_backend.common.response.ProfileResponse;
+import jakarta.ecofarm_backend.common.util.CookieBuilderUtil;
 import jakarta.ecofarm_backend.common.util.CurrentUserUtil;
 import jakarta.ecofarm_backend.common.util.PasswordEncoderUtil;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
@@ -18,6 +19,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.ws.rs.core.Context;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @ApplicationScoped
 public class AuthFacadeImpl implements AuthFacade {
@@ -33,6 +35,17 @@ public class AuthFacadeImpl implements AuthFacade {
 
     @Inject
     private CurrentUserUtil currentUser;
+
+    @Inject
+    private CookieBuilderUtil cookieBuilder;
+
+    @Inject
+    @ConfigProperty(name = "nlu.eco.farm.cookie.access-max-age", defaultValue = "900")
+    private Integer accessMaxAge;
+
+    @Inject
+    @ConfigProperty(name = "nlu.eco.farm.cookie.refresh-max-age", defaultValue = "604800")
+    private Integer refreshMaxAge;
 
 
 
@@ -50,8 +63,11 @@ public class AuthFacadeImpl implements AuthFacade {
         String accessToken = jwtService.generateAccessToken(email);
         String refreshToken = jwtService.generateRefreshToken(email);
 
-        servletResponse.addHeader("Set-Cookie", buildCookie(SecurityConstant.ACCEPT_TOKEN_COOKIE_NAME, accessToken, "/", 15 * 60));
-        servletResponse.addHeader("Set-Cookie", buildCookie(SecurityConstant.REFRESH_TOKEN_COOKIE_NAME, refreshToken, "/", 7 * 24 * 60 * 60));
+        String acceptTokenCookie = this.cookieBuilder.buildCookie(SecurityConstant.ACCEPT_TOKEN_COOKIE_NAME,accessToken,"/",this.accessMaxAge);
+        String refreshTokenCookie = this.cookieBuilder.buildCookie(SecurityConstant.REFRESH_TOKEN_COOKIE_NAME,refreshToken,"/",this.refreshMaxAge);
+
+        servletResponse.addHeader("Set-Cookie", acceptTokenCookie);
+        servletResponse.addHeader("Set-Cookie", refreshTokenCookie);
 
         return BaseResponse.build(true);
     }

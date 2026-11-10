@@ -23,6 +23,5 @@ public class HelloResource {
     public BaseResponse<String> hello() {
         return BaseResponse.build("Hello, World! NLU-ECOFARM Backend is running.",true);
     }
-
 }
 
