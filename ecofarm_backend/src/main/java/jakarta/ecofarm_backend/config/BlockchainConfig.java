@@ -16,7 +16,7 @@ public class BlockchainConfig {
     // Public chain endpoint (Polygon Amoy)
     private String publicRpcEndpoint = EnvConfig.getKey("PUBLIC_RPC_ENDPOINT");
     // Public chain network ID
-    private Integer publicChainId = Integer.valueOf(EnvConfig.getKey("PUBLIC_CHAIN_ID"));
+    private Integer publicChainId = 80002;
     // Gas price for public chain (wei)
     private Long gasPrice = 30000000000L;
     // Confirmation needed before moving to public

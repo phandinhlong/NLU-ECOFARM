@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.rest;
 
+import jakarta.ecofarm_backend.blockchain.PolygonClient;
 import jakarta.ecofarm_backend.persistence.entities.OutboxEvent;
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
@@ -52,10 +53,18 @@ public class BlockchainResource {
     @Inject
     private RecallRepository recallRepository;
 
+    @Inject
+    private PolygonClient polygonClient;
+
+//    @GET
+//    @Path("/admin/anchors")
+//    public List<Anchor> getAllAnchors() {
+//        System.out.println(anchorRepository.findById(1L).getStatus());
+//        return anchorRepository.findAll();
+//    }
     @GET
     @Path("/admin/anchors")
     public List<Anchor> getAllAnchors() {
-        System.out.println(anchorRepository.findById(1L).getStatus());
         return anchorRepository.findAll();
     }
     @GET
@@ -176,7 +185,7 @@ public class BlockchainResource {
         bundle.setGeneratedAt(Instant.now());
         return bundle;
     }
-    // dùng đế test publicTxHash gửi lên polygon
+    // API tạo sự kiện test gửi dữ liệu lên Blockchain (Besu & Polygon)
     @POST
     @Path("/admin/outbox/test")
     public OutboxEvent createTestOutbox(@QueryParam("data") @DefaultValue("EcoFarm Polygon Test") String data) {
@@ -187,6 +196,42 @@ public class BlockchainResource {
         );
         outboxEventRepository.persist(event);
         return event;
+    }
+    // 1. Test kết nối & lấy số Block hiện tại trên mạng Polygon Amoy
+    @GET
+    @Path("/admin/polygon/status")
+    public Map<String, Object> testPolygonStatus() throws Exception {
+        polygonClient.connect();
+        boolean connected = polygonClient.isConnected();
+        long currentBlock = polygonClient.getCurrentBlockNumber();
+        return Map.of(
+                "connected", connected,
+                "chainId", 80002,
+                "currentBlockNumber", currentBlock
+        );
+    }
+    // 2. Test kiểm tra số Confirmations của 1 txHash trên Polygon
+    @GET
+    @Path("/admin/polygon/confirmations/{txHash}")
+    public Map<String, Object> testPolygonConfirmations(@PathParam("txHash") String txHash) throws Exception {
+        int confirmations = polygonClient.getConfirmations(txHash);
+        return Map.of(
+                "txHash", txHash,
+                "confirmations", confirmations,
+                "explorerUrl", "https://amoy.polygonscan.com/tx/" + txHash
+        );
+    }
+    @GET
+    @Path("/admin/transactions/{txHash}")
+    public Response getTransactionDetail(@PathParam("txHash") String txHash) {
+        try {
+            java.util.Map<String, Object> detail = polygonClient.getTransactionInfo(txHash);
+            return Response.ok(detail).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(java.util.Map.of("error", e.getMessage()))
+                    .build();
+        }
     }
 
 }
