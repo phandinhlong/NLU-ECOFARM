@@ -1,29 +1,32 @@
 package jakarta.ecofarm_backend.service;
 
 import jakarta.ejb.Schedule;
-import jakarta.ejb.Stateless;
+import jakarta.ejb.Singleton;
 import jakarta.inject.Inject;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 
-import jakarta.ecofarm_backend.blockchain.BesuClient;
-import jakarta.ecofarm_backend.blockchain.PolygonClient;
+import jakarta.ecofarm_backend.modules.blockchain.BesuClient;
 import jakarta.ecofarm_backend.config.BlockchainConfig;
-import jakarta.ecofarm_backend.persistence.entities.Anchor;
-import jakarta.ecofarm_backend.persistence.entities.AuditLog;
-import jakarta.ecofarm_backend.persistence.entities.OutboxEvent;
-import jakarta.ecofarm_backend.persistence.repository.AnchorRepository;
-import jakarta.ecofarm_backend.persistence.repository.AuditLogRepository;
-import jakarta.ecofarm_backend.persistence.repository.OutboxEventRepository;
-import jakarta.ecofarm_backend.dto.AuditError;
+import jakarta.ecofarm_backend.infratructure.persistence.entities.Anchor;
+import jakarta.ecofarm_backend.infratructure.persistence.entities.AuditLog;
+import jakarta.ecofarm_backend.infratructure.persistence.entities.MerkleSnapshot;
+import jakarta.ecofarm_backend.infratructure.persistence.entities.OutboxEvent;
+import jakarta.ecofarm_backend.infratructure.persistence.repository.AnchorRepository;
+import jakarta.ecofarm_backend.infratructure.persistence.repository.AuditLogRepository;
+import jakarta.ecofarm_backend.infratructure.persistence.repository.MerkleSnapshotRepository;
+import jakarta.ecofarm_backend.infratructure.persistence.repository.OutboxEventRepository;
+import jakarta.ecofarm_backend.common.dto.AuditError;
 
-@Stateless
+@Singleton
 public class BlockchainAnchoringService {
 
     @Inject
     private OutboxEventRepository outboxEventRepository;
+
+    @Inject
+    private MerkleSnapshotRepository snapshotRepository;
 
     @Inject
     private AnchorRepository anchorRepository;
@@ -33,9 +36,6 @@ public class BlockchainAnchoringService {
 
     @Inject
     private BesuClient besuClient;
-
-    @Inject
-    private PolygonClient polygonClient;
 
     @Inject
     private BlockchainConfig config;
@@ -66,10 +66,14 @@ public class BlockchainAnchoringService {
                     if (txHash != null && !txHash.isEmpty()) {
                         // Create anchor record for private chain
                         Anchor privateAnchor = new Anchor();
-                        // Add anchor details (snapshotId, chainId, contractAddress)
-                        privateAnchor.setStatus("SUCCESS");
+                        privateAnchor.setChainId(Integer.parseInt(config.getPrivateNetworkId()));
+                        privateAnchor.setStatus("SUBMITTED");
                         privateAnchor.setTxHash(txHash);
-privateAnchor.setAnchoredAt(System.currentTimeMillis() / 1000);
+                        privateAnchor.setAnchoredAt(System.currentTimeMillis());
+                        MerkleSnapshot snap = snapshotRepository.findLatest();
+                        if (snap != null) {
+                            privateAnchor.setSnapshotId(snap.getId());
+                        }
                         anchorRepository.persist(privateAnchor);
 
                         // Audit log
@@ -119,22 +123,33 @@ privateAnchor.setAnchoredAt(System.currentTimeMillis() / 1000);
         } catch (Exception ex) { /* ignore audit error during error handling */ }
     }
 
-    // Simulate consumption of confirmed FP from public chain (FR-LDG-003)
-    public void checkPublicConfirmation(Anchor anchor) throws Exception {
-        if (!"SUCCESS".equals(anchor.getStatus())) return;
-        int confirmations = polygonClient.getConfirmations(anchor.getTxHash());
-        int required = config.getRequiredConfirmations();
-
-        if (confirmations >= required) {
-            anchor.setStatus("CONFIRMED_PUBLIC"); // or ACTIVE
-anchor.setAnchoredAt(System.currentTimeMillis() / 1000);
-            anchorRepository.persist(anchor);
-
-            // Audit log
-            auditLogRepository.persist(new AuditLog(
-                null, null, "PUBLIC_CONFIRMED", "anchors", anchor.getId(), anchor.toString(), null
-            ));
+    // Poll submitted anchors on the private Besu chain; flip to CONFIRMED once confirmed (FR-LDG-003)
+    @Schedule(second = "0/5", minute = "*", hour = "*", persistent = false, info = "checkConfirmations")
+    public void checkConfirmations() {
+        try {
+            int required = config.getRequiredConfirmations();
+            for (Anchor anchor : anchorRepository.findByStatus("SUBMITTED")) {
+                if (anchor.getTxHash() == null) continue;
+                try {
+                    int confirmations = besuClient.getConfirmations(anchor.getTxHash());
+                    anchor.setConfirmations(confirmations);
+                    if (anchor.getBlockNumber() == null) {
+                        anchor.setBlockNumber(besuClient.getCurrentBlockNumber());
+                    }
+                    if (confirmations >= required) {
+                        anchor.setStatus("CONFIRMED");
+                        anchor.setAnchoredAt(System.currentTimeMillis());
+                        auditLogRepository.persist(new AuditLog(
+                            null, null, "ANCHOR_CONFIRMED", "anchors", anchor.getId(), anchor.toString(), null
+                        ));
+                    }
+                    anchorRepository.persist(anchor);
+                } catch (Exception inner) {
+                    System.err.println("checkConfirmations: anchor " + anchor.getId() + " failed: " + inner);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error in checkConfirmations: " + e.getMessage());
         }
     }
-
 }

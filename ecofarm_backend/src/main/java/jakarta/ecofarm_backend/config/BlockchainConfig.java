@@ -10,7 +10,7 @@ public class BlockchainConfig {
     // Private chain network ID
     private String privateNetworkId = "1337";
     // Anchor account private key (funded in genesis alloc, non-validator)
-    private String privateAccountKey = "0x0000000000000000000000000000000000000000000000000000000000000001";
+    private String privateAccountKey = "0xa177b9cd2324c7d1b0af9b0df547c5cc4873f45035a7f031ceeff504135e02a3";
     // Anchor account gas price in wei
     private Long privateGasPrice = 1000000000L;
     // Public chain endpoint (Polygon Amoy)

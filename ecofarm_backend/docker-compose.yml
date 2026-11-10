@@ -35,6 +35,9 @@ services:
       --rpc-http-api=ETH,NET,QBFT,WEB3
       --rpc-http-cors-origins="*"
       --host-allowlist="*"
+    networks:
+      besu_net:
+        ipv4_address: 172.28.0.11
 
   besu-node-2:
     image: hyperledger/besu:26.11.0
@@ -55,6 +58,9 @@ services:
       --rpc-http-api=ETH,NET,QBFT,WEB3
       --rpc-http-cors-origins="*"
       --host-allowlist="*"
+    networks:
+      besu_net:
+        ipv4_address: 172.28.0.12
 
   besu-node-3:
     image: hyperledger/besu:26.11.0
@@ -75,6 +81,9 @@ services:
       --rpc-http-api=ETH,NET,QBFT,WEB3
       --rpc-http-cors-origins="*"
       --host-allowlist="*"
+    networks:
+      besu_net:
+        ipv4_address: 172.28.0.13
 
   besu-node-4:
     image: hyperledger/besu:26.11.0
@@ -95,6 +104,17 @@ services:
       --rpc-http-api=ETH,NET,QBFT,WEB3
       --rpc-http-cors-origins="*"
       --host-allowlist="*"
+    networks:
+      besu_net:
+        ipv4_address: 172.28.0.14
+
+networks:
+  besu_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
 
 volumes:
   postgres_data:
