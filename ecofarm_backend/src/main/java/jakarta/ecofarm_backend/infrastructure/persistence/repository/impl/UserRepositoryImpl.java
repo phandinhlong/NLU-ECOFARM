@@ -40,4 +40,18 @@ public class UserRepositoryImpl implements UserRepository {
                 .getResultStream()
                 .findFirst();
     }
+
+    @Override
+    public Boolean hasUserByEmail(String email) {
+        Long count = this.entityManager.createQuery(
+                        """
+                        SELECT COUNT(u)
+                        FROM User u
+                        WHERE LOWER(u.email) = LOWER(:email)
+                        """, Long.class)
+                .setParameter("email", email)
+                .getSingleResult();
+
+        return count > 0;
+    }
 }

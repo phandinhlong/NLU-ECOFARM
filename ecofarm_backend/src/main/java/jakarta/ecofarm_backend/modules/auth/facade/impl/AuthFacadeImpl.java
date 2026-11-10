@@ -3,6 +3,7 @@ package jakarta.ecofarm_backend.modules.auth.facade.impl;
 import jakarta.ecofarm_backend.common.constant.SecurityConstant;
 import jakarta.ecofarm_backend.common.enums.ErrorCode;
 import jakarta.ecofarm_backend.common.exception.EntityNotFoundException;
+import jakarta.ecofarm_backend.common.exception.JwtInvalidException;
 import jakarta.ecofarm_backend.common.exception.PermissionDeniedException;
 import jakarta.ecofarm_backend.common.request.LoginRequest;
 import jakarta.ecofarm_backend.common.response.BaseResponse;
@@ -17,9 +18,14 @@ import jakarta.ecofarm_backend.infrastructure.service.UserService;
 import jakarta.ecofarm_backend.modules.auth.facade.AuthFacade;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.ws.rs.core.Context;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+
+import java.util.Arrays;
+import java.util.Optional;
 
 @ApplicationScoped
 public class AuthFacadeImpl implements AuthFacade {
@@ -32,6 +38,9 @@ public class AuthFacadeImpl implements AuthFacade {
 
     @Context
     private HttpServletResponse servletResponse;
+
+    @Context
+    private HttpServletRequest servletRequest;
 
     @Inject
     private CurrentUserUtil currentUser;
@@ -50,7 +59,7 @@ public class AuthFacadeImpl implements AuthFacade {
 
 
     @Override
-    public BaseResponse<Boolean> login( LoginRequest request) {
+    public BaseResponse<Boolean> login(LoginRequest request) {
 
         String email = request.getEmail();
 
@@ -63,10 +72,12 @@ public class AuthFacadeImpl implements AuthFacade {
         String accessToken = jwtService.generateAccessToken(email);
         String refreshToken = jwtService.generateRefreshToken(email);
 
-        String acceptTokenCookie = this.cookieBuilder.buildCookie(SecurityConstant.ACCEPT_TOKEN_COOKIE_NAME,accessToken,"/",this.accessMaxAge);
-        String refreshTokenCookie = this.cookieBuilder.buildCookie(SecurityConstant.REFRESH_TOKEN_COOKIE_NAME,refreshToken,"/",this.refreshMaxAge);
+        String accessTokenCookie = cookieBuilder.buildCookie(
+                SecurityConstant.ACCESS_TOKEN_COOKIE_NAME, accessToken, "/", accessMaxAge);
+        String refreshTokenCookie = cookieBuilder.buildCookie(
+                SecurityConstant.REFRESH_TOKEN_COOKIE_NAME, refreshToken, "/", refreshMaxAge);
 
-        servletResponse.addHeader("Set-Cookie", acceptTokenCookie);
+        servletResponse.addHeader("Set-Cookie", accessTokenCookie);
         servletResponse.addHeader("Set-Cookie", refreshTokenCookie);
 
         return BaseResponse.build(true);
@@ -86,6 +97,34 @@ public class AuthFacadeImpl implements AuthFacade {
                 .build();
 
        return BaseResponse.<ProfileResponse>build(response);
+    }
+
+    @Override
+    public BaseResponse<Boolean> refreshToken() {
+        Optional<Cookie> cookieOpt = Arrays.stream(this.servletRequest.getCookies())
+                .filter(c ->c.getName().equals(SecurityConstant.REFRESH_TOKEN_COOKIE_NAME))
+                .findFirst();
+
+        if (cookieOpt.isEmpty())
+            throw new JwtInvalidException(ErrorCode.JWT_INVALID);
+
+        String refreshToken = cookieOpt.get().getValue();
+
+        if (!this.jwtService.validateToken(refreshToken))
+            throw new JwtInvalidException(ErrorCode.JWT_INVALID);
+
+        String email = this.jwtService.getEmailFromJwtToken(refreshToken);
+
+        if (!this.userService.hasUserByEmail(email))
+            throw new EntityNotFoundException(ErrorCode.USER_NOT_FOUND);
+
+        String accessToken = jwtService.generateAccessToken(email);
+        String acceptTokenCookie = this.cookieBuilder
+                .buildCookie(SecurityConstant.ACCESS_TOKEN_COOKIE_NAME,accessToken,"/",this.accessMaxAge);
+
+        servletResponse.addHeader("Set-Cookie", acceptTokenCookie);
+
+        return BaseResponse.build(true);
     }
 
     private String buildCookie(String name, String value, String path, int maxAgeSeconds) {

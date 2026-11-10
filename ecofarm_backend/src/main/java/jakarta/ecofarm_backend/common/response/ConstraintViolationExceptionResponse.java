@@ -12,4 +12,5 @@ import java.util.Map;
 @Builder
 public class ConstraintViolationExceptionResponse {
     private Map<String, String> details;
+    private Boolean isSuccess;
 }

@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.infrastructure.handle_exception;
 
+import jakarta.ecofarm_backend.common.response.BaseResponse;
 import jakarta.ecofarm_backend.common.response.ConstraintViolationExceptionResponse;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -31,7 +32,7 @@ public class ValidationExceptionMapper implements ExceptionMapper<ConstraintViol
         }
 
         ConstraintViolationExceptionResponse exceptionResponse =
-                ConstraintViolationExceptionResponse.builder().details(details).build();
+                ConstraintViolationExceptionResponse.builder().details(details).isSuccess(false).build();
 
         return Response.status(400).type(MediaType.APPLICATION_JSON).entity(exceptionResponse).build();
     }

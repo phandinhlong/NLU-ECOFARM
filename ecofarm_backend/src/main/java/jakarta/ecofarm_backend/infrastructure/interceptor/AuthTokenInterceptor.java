@@ -50,7 +50,7 @@ public class AuthTokenInterceptor implements ContainerRequestFilter {
     public void filter(ContainerRequestContext ctx) throws IOException {
         if (isPublicEndpoint(ctx)) return;
 
-        Cookie cookie = ctx.getCookies().get(SecurityConstant.ACCEPT_TOKEN_COOKIE_NAME);
+        Cookie cookie = ctx.getCookies().get(SecurityConstant.ACCESS_TOKEN_COOKIE_NAME);
         if (cookie == null) {
             throw new JwtInvalidException(ErrorCode.JWT_INVALID);
         }

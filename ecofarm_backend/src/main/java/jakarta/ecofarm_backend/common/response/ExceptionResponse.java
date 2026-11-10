@@ -1,13 +1,13 @@
 package jakarta.ecofarm_backend.common.response;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 
 @Builder
 @Getter
-@RequiredArgsConstructor
+@AllArgsConstructor
+@NoArgsConstructor
 public class ExceptionResponse {
-    private final Integer code;
-    private final String message;
+    private Integer code;
+    private String message;
+    private Boolean isSuccess;
 }

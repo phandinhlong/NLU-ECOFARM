@@ -9,4 +9,6 @@ public interface AuthFacade {
     BaseResponse<Boolean> login(LoginRequest request);
 
     BaseResponse<ProfileResponse> findProfile();
+
+    BaseResponse<Boolean> refreshToken();
 }

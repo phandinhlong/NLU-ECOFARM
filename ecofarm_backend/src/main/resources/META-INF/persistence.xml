@@ -28,7 +28,7 @@
             <property name="hibernate.highlight_sql" value="true"/>
 
             <!-- Cấu hình Connection Pool -->
-            <property name="hibernate.connection.pool_size" value="10"/>
+            <property name="hibernate.connection.pool_size" value="9"/>
         </properties>
     </persistence-unit>
 

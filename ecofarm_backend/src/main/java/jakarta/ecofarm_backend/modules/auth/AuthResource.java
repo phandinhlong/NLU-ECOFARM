@@ -38,4 +38,9 @@ public class AuthResource {
         return this.authFacade.login(request);
     }
 
+    @POST
+    @Path("/refresh-token")
+    public BaseResponse<Boolean> refreshToken(){
+        return this.authFacade.refreshToken();
+    }
 }

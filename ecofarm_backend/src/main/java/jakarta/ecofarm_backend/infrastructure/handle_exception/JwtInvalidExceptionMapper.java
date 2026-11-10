@@ -12,7 +12,7 @@ public class JwtInvalidExceptionMapper implements ExceptionMapper<JwtInvalidExce
 
     @Override
     public Response toResponse(JwtInvalidException e) {
-        ExceptionResponse exceptionResponse = ExceptionResponse.builder().code(e.getCode()).message(e.getMessage()).build();
+        ExceptionResponse exceptionResponse = ExceptionResponse.builder().code(e.getCode()).isSuccess(false).message(e.getMessage()).build();
 
         return Response.status(Response.Status.BAD_REQUEST)
                 .type(MediaType.APPLICATION_JSON)

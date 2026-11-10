@@ -11,7 +11,7 @@ import jakarta.ws.rs.ext.Provider;
 public class PermissionDeniedExceptionMapper  implements ExceptionMapper<PermissionDeniedException> {
     @Override
     public Response toResponse(PermissionDeniedException e) {
-        ExceptionResponse exceptionResponse = ExceptionResponse.builder().code(e.getCode()).message(e.getMessage()).build();
+        ExceptionResponse exceptionResponse = ExceptionResponse.builder().code(e.getCode()).message(e.getMessage()).isSuccess(false).build();
 
         return Response.status(Response.Status.BAD_REQUEST)
                 .type(MediaType.APPLICATION_JSON)
