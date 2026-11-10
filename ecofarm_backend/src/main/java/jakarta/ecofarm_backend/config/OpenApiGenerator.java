@@ -26,7 +26,6 @@ public class OpenApiGenerator {
         try {
             ObjectNode root = mapper.createObjectNode();
             root.put("openapi", "3.0.3");
-
             // Info
             ObjectNode info = root.putObject("info");
             info.put("title", "NLU-ECOFARM Backend API");
