@@ -2,7 +2,6 @@ import axios from 'axios'
 import type { AxiosInstance } from 'axios'
 import type { ApiResponse } from '@/api/types/common'
 import router from '@/router'
-import {API_V1} from "@/api/constants.ts";
 
 const applyInterceptors = (instance: AxiosInstance) => {
   instance.interceptors.request.use(
@@ -25,7 +24,9 @@ const applyInterceptors = (instance: AxiosInstance) => {
       return response
     },
     (error) => {
-      if (error.response?.status === 401) {
+        const isAuthRequest = error.config?.url?.includes('/auth/login')
+
+        if (error.response?.status === 401 && !isAuthRequest) {
         const currentPath = router.currentRoute.value.fullPath
         router.push({
           name: 'login',
@@ -34,6 +35,7 @@ const applyInterceptors = (instance: AxiosInstance) => {
       }
 
       const message =
+        error.response?.data?.message ||
         error.response?.data ||
         error.message ||
         'An unexpected error occurred'

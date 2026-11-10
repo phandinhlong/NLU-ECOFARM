@@ -1,18 +1,24 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { authService } from '@/api/services'
 import { useUserStore } from '@/stores'
-import { useRouter } from 'vue-router'
-import type { LoginRequest, RegisterRequest } from '@/api/types/auth'
+import { useRoute, useRouter } from 'vue-router'
+import type { LoginRequest, ProfileResponse, RegisterRequest } from '@/api/types/auth'
 
 export const useLoginMutation = () => {
-  const userStore = useUserStore()
   const router = useRouter()
+  const route = useRoute()
+  const userStore = useUserStore()
 
-  return useMutation({
-    mutationFn: (data: LoginRequest) => authService.login(data),
-    onSuccess: (response) => {
-      userStore.setUser(response.data.data.user)
-      router.push('/dashboard')
+  return useMutation<ProfileResponse, Error, LoginRequest>({
+    mutationFn: async (data: LoginRequest) => {
+      await authService.login(data)
+      const profile = await authService.getProfile()
+      userStore.setUser(profile.data.data)
+      return profile.data.data
+    },
+    onSuccess: () => {
+      const redirect = route.query.redirect
+      router.push(typeof redirect === 'string' ? redirect : '/dashboard')
     },
   })
 }
@@ -40,19 +46,5 @@ export const useLogoutMutation = () => {
       queryClient.clear()
       router.push('/login')
     },
-  })
-}
-
-export const useCurrentUser = () => {
-  const userStore = useUserStore()
-
-  return useQuery({
-    queryKey: ['currentUser'],
-    queryFn: async () => {
-      const response = await authService.getCurrentUser()
-      return response.data.data.user
-    },
-    staleTime: Infinity,
-    enabled: !userStore.isAuthenticated,
   })
 }

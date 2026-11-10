@@ -67,20 +67,6 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
-  const token = localStorage.getItem('accessToken')
-
-  if (to.meta.requiresAuth && !token) {
-    return { name: 'login', query: { redirect: to.fullPath } }
-  }
-
-  if (to.meta.guestOnly && token) {
-    return { name: 'dashboard' }
-  }
-
-  return true
-})
-
 router.afterEach((to) => {
   document.title = to.meta.title ? `${to.meta.title} | EcoFarm` : 'EcoFarm'
 })

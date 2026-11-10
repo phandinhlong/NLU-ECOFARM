@@ -1,13 +1,16 @@
 export interface LoginRequest {
-  username: string
+  email: string
   password: string
 }
 
-export interface LoginResponse {
-  token: string
-  refreshToken: string
-  user: User
+export interface ProfileResponse {
+  id: number
+  email: string
+  fullName: string
+  role: string[]
 }
+
+export type User = ProfileResponse
 
 export interface RegisterRequest {
   username: string
@@ -18,13 +21,4 @@ export interface RegisterRequest {
 
 export interface RegisterResponse {
   user: User
-}
-
-export interface User {
-  id: string
-  username: string
-  email: string
-  fullName: string
-  role: string
-  createdAt: string
 }

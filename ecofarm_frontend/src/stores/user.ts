@@ -1,37 +1,22 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import type { User } from '@/api/types/auth'
 
 export const useUserStore = defineStore('user', () => {
-  const currentUser = ref<User | null>(null)
-  const accessToken = ref<string | null>(localStorage.getItem('accessToken'))
+  const user = ref<User | null>(null)
 
-  const isAuthenticated = computed(() => currentUser.value !== null || accessToken.value !== null)
-
-  const setUser = (user: User | null) => {
-    currentUser.value = user
+  const setUser = (value: User | null) => {
+    user.value = value
   }
 
-  const setToken = (token: string | null) => {
-    accessToken.value = token
-    if (token) {
-      localStorage.setItem('accessToken', token)
-    } else {
-      localStorage.removeItem('accessToken')
-    }
-  }
 
   const clearUser = () => {
-    currentUser.value = null
-    setToken(null)
+    user.value = null
   }
 
   return {
-    currentUser,
-    accessToken,
-    isAuthenticated,
+    user,
     setUser,
-    setToken,
     clearUser,
   }
 })
