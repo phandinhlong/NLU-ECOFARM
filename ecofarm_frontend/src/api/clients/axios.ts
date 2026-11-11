@@ -1,7 +1,23 @@
 import axios from 'axios'
-import type { AxiosInstance } from 'axios'
+import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
 import type { ApiResponse } from '@/api/types/common'
+import { API_V1 } from '@/api/constants'
 import router from '@/router'
+
+type RetryConfig = InternalAxiosRequestConfig & { _retry?: boolean }
+
+let refreshPromise: Promise<unknown> | null = null
+
+const isAuthUrl = (url?: string) =>
+  url?.includes('/auths/login') || url?.includes('/auths/refresh-token')
+
+const redirectToLogin = () => {
+  const currentPath = router.currentRoute.value.fullPath
+  router.push({
+    name: 'login',
+    query: { redirect: currentPath !== '/login' ? currentPath : undefined },
+  })
+}
 
 const applyInterceptors = (instance: AxiosInstance) => {
   instance.interceptors.request.use(
@@ -23,15 +39,27 @@ const applyInterceptors = (instance: AxiosInstance) => {
 
       return response
     },
-    (error) => {
-        const isAuthRequest = error.config?.url?.includes('/auth/login')
+    async (error) => {
+      const config = error.config as RetryConfig | undefined
+      const isRefreshable =
+        error.response?.status === 401 && config && !config._retry && !isAuthUrl(config.url)
 
-        if (error.response?.status === 401 && !isAuthRequest) {
-        const currentPath = router.currentRoute.value.fullPath
-        router.push({
-          name: 'login',
-          query: { redirect: currentPath !== '/login' ? currentPath : undefined },
-        })
+      if (isRefreshable) {
+        config._retry = true
+
+        try {
+          refreshPromise ??= instance
+            .post(`${API_V1}/auths/refresh-token`)
+            .finally(() => {
+              refreshPromise = null
+            })
+          await refreshPromise
+          return instance(config)
+        } catch {
+          redirectToLogin()
+        }
+      } else if (error.response?.status === 401 && !isAuthUrl(config?.url)) {
+        redirectToLogin()
       }
 
       const message =

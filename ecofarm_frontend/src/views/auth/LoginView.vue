@@ -1,17 +1,36 @@
 <script setup lang="ts">
-import {computed, reactive, ref, watch} from 'vue'
+import {reactive, ref, watch} from 'vue'
 import BrandHeader from '@/components/common/BrandHeader.vue'
 import { useLoginMutation } from '@/composables/useAuth'
 import type { LoginRequest } from '@/api/types/auth'
 import '../../styles/login.css'
 
 const form = reactive<LoginRequest>({ email: '', password: '' })
+const errors = reactive({ email: '', password: '' })
 const showPassword = ref(false)
 
-const { mutate: login, isPending, isError, error, reset} = useLoginMutation()
-const errorMessage = computed(() => error.value?.message)
+const { mutate: login, isPending, isError, reset} = useLoginMutation()
+const errorMessage = "Lỗi hệ thống";
 
-const submit = () => login(form)
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const validate = () => {
+  errors.email = !form.email
+      ? 'Vui lòng nhập email'
+      : !emailRegex.test(form.email) ? 'Email không hợp lệ' : ''
+  errors.password = !form.password
+      ? 'Vui lòng nhập mật khẩu'
+      : form.password.length < 6 ? 'Mật khẩu phải có ít nhất 6 ký tự' : ''
+  return !errors.email && !errors.password
+}
+
+const submit = () => {
+  if (!validate()) return
+  login(form)
+}
+
+watch(() => form.email, () => { errors.email = '' })
+watch(() => form.password, () => { errors.password = '' })
 
 watch(form, () => {
   if (isError.value) reset();
@@ -20,14 +39,6 @@ watch(form, () => {
 
 <template>
   <div class="login-page d-flex flex-column justify-content-between min-vh-100 position-relative bg-body-secondary text-body">
-    <header class="position-absolute top-0 end-0 p-4">
-      <div class="d-flex align-items-center gap-1 font-monospace small">
-        <button type="button" class="btn p-0 border-0 text-body">VN</button>
-        <span class="text-body-tertiary">|</span>
-        <button type="button" class="btn p-0 border-0 fw-bold text-primary">EN</button>
-      </div>
-    </header>
-
     <main class="flex-grow-1 d-flex align-items-center justify-content-center w-100 px-3 py-4">
       <div class="card w-100 p-4 p-sm-5 bg-body border-0 shadow" style="max-width: 420px">
         <BrandHeader title="Đăng nhập" subtitle="Hệ thống truy xuất nguồn gốc dưa lưới" />
@@ -45,6 +56,7 @@ watch(form, () => {
                 type="text"
                 required
             />
+            <p v-if="errors.email" class="small text-danger mt-2 mb-0">{{ errors.email }}</p>
           </div>
 
           <div>
@@ -78,6 +90,7 @@ watch(form, () => {
                 </svg>
               </button>
             </div>
+            <p v-if="errors.password" class="small text-danger mt-2 mb-0">{{ errors.password }}</p>
             <p v-if="isError" class="font-monospace small text-danger mt-2 mb-0">{{ errorMessage }}</p>
           </div>
 
