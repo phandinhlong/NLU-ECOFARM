@@ -1,0 +1,85 @@
+{
+  "info": {
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "name": "EcoFarm Blockchain API"
+  },
+  "variable": [
+    { "key": "baseurl", "value": "http://localhost:8080" },
+    { "key": "batchId", "value": "1" },
+    { "key": "anchorId", "value": "1" },
+    { "key": "reason", "value": "Sản phẩm lỗi cần thu hồi" }
+  ],
+  "item": [
+    {
+      "name": "GET admin reconsist",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseurl}}/api/v1/admin/reconciliation?onlyMismatch=false&page=0&size=20",
+          "host": ["{{baseurl}}"],
+          "path": ["api", "v1", "admin", "reconciliation"],
+          "query": [
+            { "key": "onlyMismatch", "value": "false" },
+            { "key": "page", "value": "0" },
+            { "key": "size", "value": "20" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET batch anchor-status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/anchor-status",
+          "host": ["{{baseurl}}"],
+          "path": ["api", "v1", "batches", "{{batchId}}", "anchor-status"]
+        }
+      }
+    },
+    {
+      "name": "POST retry anchor",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseurl}}/api/v1/admin/anchors/{{anchorId}}/retry",
+          "host": ["{{baseurl}}"],
+          "path": ["api", "v1", "admin", "anchors", "{{anchorId}}", "retry"]
+        }
+      }
+    },
+    {
+      "name": "POST recall batch",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"reason\":\"{{reason}}\"}"
+        },
+        "url": {
+          "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/recall",
+          "host": ["{{baseurl}}"],
+          "path": ["api", "v1", "batches", "{{batchId}}", "recall"]
+        }
+      }
+    },
+    {
+      "name": "GET proof-bundle",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/proof-bundle",
+          "host": ["{{baseurl}}"],
+          "path": ["api", "v1", "batches", "{{batchId}}", "proof-bundle"]
+        }
+      }
+    }
+  ]
+}

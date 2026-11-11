@@ -6,13 +6,14 @@ import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
 import jakarta.ecofarm_backend.common.dto.response.ProfileResponse;
 
 import java.net.URI;
+import java.util.Map;
 
 public interface AuthFacade {
-    BaseResponse<Boolean> login(LoginRequest request);
+    BaseResponse<Map<String, String>> login(LoginRequest request);
 
-    BaseResponse<ProfileResponse> findProfile();
+    BaseResponse<ProfileResponse> findProfile(String email);
 
-    BaseResponse<Boolean> refreshToken();
+    BaseResponse<Map<String, String>> refreshTokens(String refreshToken);
 
     BaseResponse<Boolean> signup(SignupRequest request);
 

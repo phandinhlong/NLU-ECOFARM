@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS roles (
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
     updated_at BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
-    role_name VARCHAR(50) NOT NULL UNIQUE
+    code VARCHAR(50) NOT NULL UNIQUE
 );
 
 -- 2. Bảng users
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
     updated_at BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
     full_name VARCHAR(255),
-    email VARCHAR(255) NOT NULL UNIQUE,
+    username VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL
 );
 
@@ -36,18 +36,18 @@ CREATE TABLE IF NOT EXISTS user_roles (
 );
 
 -- Index tối ưu truy vấn
-CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
 CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles (user_id);
 CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles (role_id);
 
 -- Dữ liệu mẫu ban đầu (Seed data)
-INSERT INTO roles (role_name) 
-VALUES ('USER') 
-ON CONFLICT (role_name) DO NOTHING;
+INSERT INTO roles (code)
+VALUES ('USER')
+ON CONFLICT (code) DO NOTHING;
 
 
 -- 4. Thêm tài khoản mẫu: systemadmin@gmail.com (Mật khẩu: admin123)
-INSERT INTO users (full_name, email, password_hash, is_active, version, created_at, updated_at)
+INSERT INTO users (full_name, username, password_hash, is_active, version, created_at, updated_at)
 VALUES (
     'System Admin',
     'systemadmin@gmail.com',
@@ -57,11 +57,11 @@ VALUES (
     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT
 )
-ON CONFLICT (email) DO NOTHING;
+ON CONFLICT (username) DO NOTHING;
 
 -- Gán quyền cho systemadmin@gmail.com
 INSERT INTO user_roles (user_id, role_id)
 SELECT u.id, r.id 
-FROM users u, roles r 
-WHERE u.email = 'systemadmin@gmail.com' AND r.role_name = 'USER'
+FROM users u, roles r
+WHERE u.username = 'systemadmin@gmail.com' AND r.code = 'USER'
 ON CONFLICT DO NOTHING;
