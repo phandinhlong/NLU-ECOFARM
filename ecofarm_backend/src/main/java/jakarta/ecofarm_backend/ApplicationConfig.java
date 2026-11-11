@@ -3,5 +3,5 @@ package jakarta.ecofarm_backend;
 import jakarta.ws.rs.ApplicationPath;
 import jakarta.ws.rs.core.Application;
 
-@ApplicationPath("/api/v1")
+@ApplicationPath("/api")
 public class ApplicationConfig extends Application {}

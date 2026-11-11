@@ -2,8 +2,30 @@
   "info": {
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "name": "EcoFarm Blockchain API",
-    "description": "API testing collection. Base URL: http://localhost:8080/ecofarm_backend-1.0-SNAPSHOT"
+    "description": "API testing collection for NLU-ECOFARM backend. Base URL: http://localhost:8080/ecofarm_backend-1.0-SNAPSHOT"
   },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const path = pm.request.url.getPath();",
+          "const isPublicAuth = path.endsWith('/auths/login') || path.endsWith('/auths/sign-up') || path.endsWith('/auths/activation');",
+          "if (!isPublicAuth && !pm.request.headers.has('Cookie')) {",
+          "    const accessToken = pm.collectionVariables.get('access_token');",
+          "    const refreshToken = pm.collectionVariables.get('refresh_token');",
+          "    const cookies = [];",
+          "    if (accessToken) cookies.push(`access_token=${accessToken}`);",
+          "    if (refreshToken) cookies.push(`refresh_token=${refreshToken}`);",
+          "    if (cookies.length > 0) {",
+          "        pm.request.headers.upsert({ key: 'Cookie', value: cookies.join('; ') });",
+          "    }",
+          "}"
+        ]
+      }
+    }
+  ],
   "variable": [
     {
       "key": "baseurl",
@@ -16,13 +38,28 @@
       "type": "string"
     },
     {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "email",
-      "value": "a@b.com",
+      "value": "systemadmin@gmail.com",
       "type": "string"
     },
     {
       "key": "password",
-      "value": "x",
+      "value": "admin123",
+      "type": "string"
+    },
+    {
+      "key": "fullName",
+      "value": "EcoFarm User",
+      "type": "string"
+    },
+    {
+      "key": "activationToken",
+      "value": "",
       "type": "string"
     },
     {
@@ -38,6 +75,11 @@
     {
       "key": "code",
       "value": "TEST123",
+      "type": "string"
+    },
+    {
+      "key": "txHash",
+      "value": "0x0000000000000000000000000000000000000000000000000000000000000000",
       "type": "string"
     },
     {
@@ -64,7 +106,71 @@
   "item": [
     {
       "name": "Authentication",
+      "description": "Authentication endpoints (/api/v1/auths)",
       "item": [
+        {
+          "name": "Sign Up",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"{{fullName}}\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"confirmPassword\": \"{{password}}\"\n}"
+            },
+            "description": "Register a new user account",
+            "url": {
+              "raw": "{{baseurl}}/api/v1/auths/sign-up",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auths",
+                "sign-up"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Activate User",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "description": "Activate user account using activation token",
+            "url": {
+              "raw": "{{baseurl}}/api/v1/auths/activation?token={{activationToken}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auths",
+                "activation"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{activationToken}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
         {
           "name": "Login",
           "event": [
@@ -72,8 +178,12 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (responseCode.code === 200) {",
-                  "    pm.environment.set(\"access_token\", pm.response.json().data.accessToken);",
+                  "if (pm.response.code === 200) {",
+                  "    const res = pm.response.json();",
+                  "    if (res && res.data) {",
+                  "        if (res.data.accessToken) pm.collectionVariables.set('access_token', res.data.accessToken);",
+                  "        if (res.data.refreshToken) pm.collectionVariables.set('refresh_token', res.data.refreshToken);",
+                  "    }",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -93,34 +203,60 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"email\":\"{{email}}\",\"password\":\"{{password}}\"}"
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
             },
-            "description": "Get access and refresh tokens",
+            "description": "Authenticate user and store access_token & refresh_token in collection variables and cookies",
             "url": {
               "raw": "{{baseurl}}/api/v1/auths/login",
-              "query": []
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auths",
+                "login"
+              ]
             }
           },
           "response": []
         },
         {
           "name": "Refresh Token",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const res = pm.response.json();",
+                  "    if (res && res.data && res.data.accessToken) {",
+                  "        pm.collectionVariables.set('access_token', res.data.accessToken);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}"
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
             },
-            "description": "Refresh the current access token",
+            "method": "POST",
+            "header": [],
+            "description": "Refresh access_token using refresh_token cookie",
             "url": {
               "raw": "{{baseurl}}/api/v1/auths/refresh-token",
-              "query": []
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auths",
+                "refresh-token"
+              ]
             }
           },
           "response": []
@@ -129,30 +265,31 @@
           "name": "Get Profile",
           "request": {
             "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{access_token}}",
-                  "type": "string"
-                }
-              ]
+              "type": "noauth"
             },
             "method": "GET",
             "header": [],
-            "description": "Get current user profile",
+            "description": "Get current user profile (requires access_token cookie)",
             "url": {
               "raw": "{{baseurl}}/api/v1/auths/profile",
-              "query": []
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auths",
+                "profile"
+              ]
             }
           },
           "response": []
         }
-      ],
-      "description": "Authentication endpoints"
+      ]
     },
     {
       "name": "Blockchain Admin",
+      "description": "Blockchain administration endpoints (/api/v1/block-chain)",
       "item": [
         {
           "name": "Get All Anchors",
@@ -160,8 +297,17 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/api/v1/admin/anchors",
-              "query": []
+              "raw": "{{baseurl}}/api/v1/block-chain/admin/anchors",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "block-chain",
+                "admin",
+                "anchors"
+              ]
             }
           },
           "response": []
@@ -172,8 +318,31 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/api/v1/admin/reconciliation?onlyMismatch={{onlyMismatch}}&page={{page}}&size={{size}}",
-              "query": []
+              "raw": "{{baseurl}}/api/v1/block-chain/admin/reconciliation?onlyMismatch={{onlyMismatch}}&page={{page}}&size={{size}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "block-chain",
+                "admin",
+                "reconciliation"
+              ],
+              "query": [
+                {
+                  "key": "onlyMismatch",
+                  "value": "{{onlyMismatch}}"
+                },
+                {
+                  "key": "page",
+                  "value": "{{page}}"
+                },
+                {
+                  "key": "size",
+                  "value": "{{size}}"
+                }
+              ]
             }
           },
           "response": []
@@ -184,8 +353,18 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/anchor-status",
-              "query": []
+              "raw": "{{baseurl}}/api/v1/block-chain/batches/{{batchId}}/anchor-status",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "block-chain",
+                "batches",
+                "{{batchId}}",
+                "anchor-status"
+              ]
             }
           },
           "response": []
@@ -196,8 +375,19 @@
             "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/api/v1/admin/anchors/{{anchorId}}/retry",
-              "query": []
+              "raw": "{{baseurl}}/api/v1/block-chain/admin/anchors/{{anchorId}}/retry",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "block-chain",
+                "admin",
+                "anchors",
+                "{{anchorId}}",
+                "retry"
+              ]
             }
           },
           "response": []
@@ -214,11 +404,21 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"reason\":\"{{reason}}\"}"
+              "raw": "{\n  \"reason\": \"{{reason}}\"\n}"
             },
             "url": {
-              "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/recall",
-              "query": []
+              "raw": "{{baseurl}}/api/v1/block-chain/batches/{{batchId}}/recall",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "block-chain",
+                "batches",
+                "{{batchId}}",
+                "recall"
+              ]
             }
           },
           "response": []
@@ -229,17 +429,122 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/proof-bundle",
-              "query": []
+              "raw": "{{baseurl}}/api/v1/block-chain/batches/{{batchId}}/proof-bundle",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "block-chain",
+                "batches",
+                "{{batchId}}",
+                "proof-bundle"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Test Outbox",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/block-chain/admin/outbox/test?data=EcoFarm%20Polygon%20Test",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "block-chain",
+                "admin",
+                "outbox",
+                "test"
+              ],
+              "query": [
+                {
+                  "key": "data",
+                  "value": "EcoFarm%20Polygon%20Test"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Polygon Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/block-chain/admin/polygon/status",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "block-chain",
+                "admin",
+                "polygon",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Polygon Confirmations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/block-chain/admin/polygon/confirmations/{{txHash}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "block-chain",
+                "admin",
+                "polygon",
+                "confirmations",
+                "{{txHash}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Transaction Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/block-chain/admin/transactions/{{txHash}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "block-chain",
+                "admin",
+                "transactions",
+                "{{txHash}}"
+              ]
             }
           },
           "response": []
         }
-      ],
-      "description": "Blockchain administration endpoints"
+      ]
     },
     {
       "name": "Verification",
+      "description": "Public verification and tracing endpoints (/api/v1/block-chain/public)",
       "item": [
         {
           "name": "Get Public Trace",
@@ -247,8 +552,18 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/api/v1/public/trace/{{code}}",
-              "query": []
+              "raw": "{{baseurl}}/api/v1/block-chain/public/trace/{{code}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "block-chain",
+                "public",
+                "trace",
+                "{{code}}"
+              ]
             }
           },
           "response": []
@@ -259,14 +574,24 @@
             "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/api/v1/public/trace/{{code}}/verify",
-              "query": []
+              "raw": "{{baseurl}}/api/v1/block-chain/public/trace/{{code}}/verify",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "block-chain",
+                "public",
+                "trace",
+                "{{code}}",
+                "verify"
+              ]
             }
           },
           "response": []
         }
-      ],
-      "description": "Public verification and tracing endpoints"
+      ]
     }
   ]
 }
