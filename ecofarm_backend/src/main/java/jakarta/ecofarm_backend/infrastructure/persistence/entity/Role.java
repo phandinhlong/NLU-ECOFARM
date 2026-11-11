@@ -14,7 +14,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Role extends BaseEntity {
-    @Column(name = "code", nullable = false, unique = true)
+    @Column(name = "role_name", nullable = false, unique = true)
     @Enumerated(value = EnumType.STRING)
     private RoleEnum roleName;
 }

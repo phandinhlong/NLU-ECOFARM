@@ -32,8 +32,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-@Path("/block-chain")
+@Path("/v1/block-chain")
 @Stateless
+@RequireRoles(value = {"ADMIN", "QUALITY_CONTROL", "FARMER"})
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class BlockchainResource {
@@ -179,7 +180,6 @@ public class BlockchainResource {
 
     @POST
     @Path("/admin/anchors/{anchorId}/retry")
-    @RequireRoles(value = {"QUALITY_CONTROL", "FARMER"})
     public Anchor retryAnchor(@PathParam("anchorId") Long anchorId) {
         Anchor anchor = anchorRepository.findById(anchorId);
         if (anchor == null) {
@@ -196,7 +196,6 @@ public class BlockchainResource {
 
     @POST
     @Path("/batches/{batchId}/recall")
-    @RequireRoles(value = {"QUALITY_CONTROL", "FARMER"})
     public Recall recallBatch(@PathParam("batchId") Long batchId, RecallRequest req) {
         Recall recall = new Recall(batchId, req.getReason(), 1L);
         recallRepository.persist(recall);
@@ -234,7 +233,6 @@ public class BlockchainResource {
     // API tạo sự kiện test gửi dữ liệu lên Blockchain (Besu & Polygon)
     @POST
     @Path("/admin/outbox/test")
-    @RequireRoles(value = {"QUALITY_CONTROL", "FARMER"})
     public OutboxEvent createTestOutbox(@QueryParam("data") @DefaultValue("EcoFarm Polygon Test") String data) {
         OutboxEvent event = new OutboxEvent(
                 "0x" + Long.toHexString(System.currentTimeMillis()),
