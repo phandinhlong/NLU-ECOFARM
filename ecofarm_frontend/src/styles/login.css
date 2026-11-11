@@ -1,0 +1,33 @@
+.login-page {
+    --bs-body-bg: var(--ef-bg);
+    --bs-body-color: var(--ef-text);
+    --bs-secondary-bg: var(--ef-bg-secondary);
+    --bs-secondary-color: #717785;
+    --bs-tertiary-color: #c1c6d5;
+    --bs-primary: var(--ef-primary);
+    --bs-primary-rgb: 50, 139, 250;
+    --bs-primary-bg-subtle: #d6e3ff;
+    --bs-danger-rgb: 186, 26, 26;
+    --bs-danger-bg-subtle: rgba(255, 218, 214, 0.25);
+    --bs-box-shadow: var(--ef-shadow-lg);
+    --bs-font-monospace: 'JetBrains Mono', monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+    .login-page {
+        --bs-primary-rgb: 88, 166, 255;
+        --bs-primary-bg-subtle: #24558a;
+    }
+}
+
+.login-page .form-control:focus {
+    box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb), 0.25);
+}
+
+.login-page .card:hover {
+    transform: none;
+}
+
+.fs-xs {
+    font-size: 0.75rem;
+}
