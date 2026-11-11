@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.modules.auth.facade.impl;
 
+import jakarta.ecofarm_backend.common.anotation.DatabaseTransactional;
 import jakarta.ecofarm_backend.common.dto.request.LoginRequest;
 import jakarta.ecofarm_backend.common.dto.request.SignupRequest;
 import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
@@ -106,7 +107,7 @@ public class AuthFacadeImpl implements AuthFacade {
     }
 
     @Override
-    @Transactional
+    @DatabaseTransactional
     public BaseResponse<Boolean> signup(SignupRequest request) {
         if (!request.getPassword().equals(request.getConfirmPassword()))
             throw new PermissionDeniedException(ErrorCode.PASSWORD_NOT_MATCH);
@@ -145,7 +146,7 @@ public class AuthFacadeImpl implements AuthFacade {
     }
 
     @Override
-    @Transactional
+    @DatabaseTransactional
     public URI activateUser(String token) {
         if (token == null || (!this.jwtService.validateToken(token))
                 || (!this.jwtService.hasTokenType(token, JwtServiceImpl.TYPE_ACCOUNT_ACTIVATION_TOKEN)))
