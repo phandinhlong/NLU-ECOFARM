@@ -14,6 +14,8 @@ const registerForm = reactive<RegisterRequest>({
 })
 const registerErrors = reactive({ fullName: '', email: '', password: '', confirmPassword: '', role: '' })
 const registerSuccess = ref(false)
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 const { mutate: register, isPending, isError, reset } = useRegisterMutation()
 const errorMessage = 'Lỗi hệ thống'
@@ -106,29 +108,67 @@ watch(registerForm, () => {
 
       <div>
         <label class="form-label small fw-medium mb-1" for="registerPassword">Mật khẩu</label>
-        <BFormInput
-            id="registerPassword"
-            v-model="registerForm.password"
-            class="border-0 shadow-sm small"
-            name="password"
-            placeholder="Nhập mật khẩu"
-            type="password"
-            required
-        />
+        <div class="position-relative">
+          <BFormInput
+              id="registerPassword"
+              v-model="registerForm.password"
+              class="border-0 shadow-sm small pe-5"
+              name="password"
+              placeholder="Nhập mật khẩu"
+              :type="showPassword ? 'text' : 'password'"
+              required
+          />
+          <button
+              class="btn border-0 position-absolute top-0 end-0 h-100 d-flex align-items-center pe-3 text-body-secondary"
+              type="button"
+              aria-label="Hiện hoặc ẩn mật khẩu"
+              @click="showPassword = !showPassword"
+          >
+            <svg v-if="showPassword" width="20" height="20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path>
+              <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path>
+              <path d="M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path>
+              <line x1="2" x2="22" y1="2" y2="22"></line>
+            </svg>
+            <svg v-else width="20" height="20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
         <p v-if="registerErrors.password" class="small text-danger mt-2 mb-0">{{ registerErrors.password }}</p>
       </div>
 
       <div>
         <label class="form-label small fw-medium mb-1" for="confirmPassword">Xác nhận mật khẩu</label>
-        <BFormInput
-            id="confirmPassword"
-            v-model="registerForm.confirmPassword"
-            class="border-0 shadow-sm small"
-            name="confirmPassword"
-            placeholder="Nhập lại mật khẩu"
-            type="password"
-            required
-        />
+        <div class="position-relative">
+          <BFormInput
+              id="confirmPassword"
+              v-model="registerForm.confirmPassword"
+              class="border-0 shadow-sm small pe-5"
+              name="confirmPassword"
+              placeholder="Nhập lại mật khẩu"
+              :type="showConfirmPassword ? 'text' : 'password'"
+              required
+          />
+          <button
+              class="btn border-0 position-absolute top-0 end-0 h-100 d-flex align-items-center pe-3 text-body-secondary"
+              type="button"
+              aria-label="Hiện hoặc ẩn mật khẩu"
+              @click="showConfirmPassword = !showConfirmPassword"
+          >
+            <svg v-if="showConfirmPassword" width="20" height="20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path>
+              <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path>
+              <path d="M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path>
+              <line x1="2" x2="22" y1="2" y2="22"></line>
+            </svg>
+            <svg v-else width="20" height="20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
         <p v-if="registerErrors.confirmPassword" class="small text-danger mt-2 mb-0">{{ registerErrors.confirmPassword }}</p>
       </div>
 

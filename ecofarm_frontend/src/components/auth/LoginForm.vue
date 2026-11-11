@@ -95,7 +95,7 @@ watch(form, () => {
       <p v-if="isError" class="font-monospace small text-danger mt-2 mb-0">{{ errorMessage }}</p>
     </div>
 
-    <div class="pt-1">
+    <div class="pt-1 text-end">
       <a class="small fw-medium link-primary link-underline-opacity-0 link-underline-opacity-100-hover" href="#">
         Quên mật khẩu?
       </a>
