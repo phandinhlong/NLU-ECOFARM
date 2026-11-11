@@ -20,7 +20,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import java.net.URI;
 import java.util.Map;
 
-@Path("/auths")
+@Path("/v1/auths")
 @Tag(name = "Authentication", description = "Xác thực và phân quyền")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -59,12 +59,14 @@ public class AuthResource {
     public Response login(@Valid LoginRequest request) {
         BaseResponse<Map<String, String>> result = this.authFacade.login(request);
         Map<String, String> tokens = result.getData();
+        String accessToken = tokens.get("accessToken");
+        String refreshToken = tokens.get("refreshToken");
 
         return Response.ok(result)
                 .header("Set-Cookie", cookieBuilder.buildCookie(
-                        SecurityConstant.ACCESS_TOKEN_COOKIE_NAME, tokens.get("accessToken"), "/", accessMaxAge))
+                        SecurityConstant.ACCESS_TOKEN_COOKIE_NAME, accessToken, "/", accessMaxAge))
                 .header("Set-Cookie", cookieBuilder.buildCookie(
-                        SecurityConstant.REFRESH_TOKEN_COOKIE_NAME, tokens.get("refreshToken"), "/", refreshMaxAge))
+                        SecurityConstant.REFRESH_TOKEN_COOKIE_NAME, refreshToken, "/", refreshMaxAge))
                 .build();
     }
 
