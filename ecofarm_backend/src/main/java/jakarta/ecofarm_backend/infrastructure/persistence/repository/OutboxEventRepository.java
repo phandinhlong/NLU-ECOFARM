@@ -68,4 +68,13 @@ public class OutboxEventRepository {
         Long count = q.getSingleResult();
         return count > 0;
     }
+
+    public int findNextSeqByBatchIdHash(String batchIdHash) {
+        Integer maxSeq = em.createQuery(
+                        "select max(e.seq) from OutboxEvent e where e.batchIdHash = :bid",
+                        Integer.class)
+                .setParameter("bid", batchIdHash)
+                .getSingleResult();
+        return maxSeq != null ? maxSeq + 1 : 1;
+    }
 }

@@ -45,6 +45,10 @@ public class Batch {
     @Column(name = "is_active")
     private Boolean active;
 
+    @Version
+    @Column(name = "version")
+    private Integer version;
+
     @Column(name = "created_at")
     private Long createdAt;
 
@@ -75,6 +79,8 @@ public class Batch {
     public void setActivatedAt(Long activatedAt) { this.activatedAt = activatedAt; }
     public Boolean getActive() { return active; }
     public void setActive(Boolean active) { this.active = active; }
+    public Integer getVersion() { return version; }
+    public void setVersion(Integer version) { this.version = version; }
     public Long getCreatedAt() { return createdAt; }
     public void setCreatedAt(Long createdAt) { this.createdAt = createdAt; }
     public Long getUpdatedAt() { return updatedAt; }
