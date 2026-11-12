@@ -17,6 +17,7 @@ import jakarta.ecofarm_backend.common.dto.TraceMetrics;
 import jakarta.ecofarm_backend.common.dto.VerifyResult;
 import jakarta.ecofarm_backend.common.util.MerkleUtil;
 import jakarta.ecofarm_backend.config.BlockchainConfig;
+import jakarta.ecofarm_backend.modules.blockchain.AnchorReadCache;
 import jakarta.ecofarm_backend.modules.blockchain.PolygonClient;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
@@ -69,6 +70,9 @@ public class PublicTraceResource {
 
     @Inject
     private PolygonClient polygonClient;
+
+    @Inject
+    private AnchorReadCache anchorReadCache;
 
     @Inject
     @ConfigProperty(name = "nlu.eco.farm.public.explorer.base-url",
@@ -168,24 +172,38 @@ public class PublicTraceResource {
         String computedRoot = MerkleUtil.buildRoot(leaves);
         result.setComputedRoot(computedRoot);
 
-        try {
-            Map<String, Object> txInfo = polygonClient.getTransactionInfo(confirmedAnchor.getTxHash());
-            Object payload = txInfo.get("decodedPayload");
-            String onChainRoot = payload == null ? null : payload.toString();
-            if (onChainRoot == null || onChainRoot.isBlank()) {
-                result.setResult("UNAVAILABLE");
-                result.setMessage("Không đọc được dữ liệu neo trên chuỗi (giao dịch chưa được mine hoặc không tồn tại trên Polygon Amoy).");
-                return result;
+        String txHash = confirmedAnchor.getTxHash();
+        String onChainRoot = anchorReadCache.getPayload(txHash);
+        boolean stale = false;
+        if (onChainRoot == null || onChainRoot.isBlank()) {
+            try {
+                Map<String, Object> txInfo = polygonClient.getTransactionInfo(txHash);
+                Object payload = txInfo.get("decodedPayload");
+                onChainRoot = payload == null ? null : payload.toString();
+                if (onChainRoot != null && !onChainRoot.isBlank()) {
+                    anchorReadCache.put(txHash, onChainRoot);
+                }
+            } catch (Exception e) {
+                onChainRoot = anchorReadCache.getPayloadAllowStale(txHash);
+                if (onChainRoot == null || onChainRoot.isBlank()) {
+                    result.setResult("UNAVAILABLE");
+                    result.setMessage("Không thể xác thực lúc này (Polygon RPC lỗi): " + e.getMessage());
+                    return result;
+                }
+                stale = true;
             }
-            result.setOnChainRoot(onChainRoot);
-            result.setResult(rootsMatch(computedRoot, onChainRoot) ? "MATCH" : "MISMATCH");
-            result.setMessage("MATCH".equals(result.getResult())
-                    ? "Dữ liệu trên chuỗi khớp với hành trình của lô hàng."
-                    : "Dữ liệu trên chuỗi KHÔNG khớp với hành trình của lô hàng.");
-        } catch (Exception e) {
-            result.setResult("UNAVAILABLE");
-            result.setMessage("Không thể xác thực lúc này (Polygon RPC lỗi): " + e.getMessage());
         }
+        if (onChainRoot == null || onChainRoot.isBlank()) {
+            result.setResult("UNAVAILABLE");
+            result.setMessage("Không đọc được dữ liệu neo trên chuỗi (giao dịch chưa được mine hoặc không tồn tại trên Polygon Amoy).");
+            return result;
+        }
+        result.setOnChainRoot(onChainRoot);
+        result.setResult(rootsMatch(computedRoot, onChainRoot) ? "MATCH" : "MISMATCH");
+        result.setMessage((stale ? "(Polygon RPC lỗi, dùng dữ liệu neo đã lưu trong cache) " : "")
+                + ("MATCH".equals(result.getResult())
+                ? "Dữ liệu trên chuỗi khớp với hành trình của lô hàng."
+                : "Dữ liệu trên chuỗi KHÔNG khớp với hành trình của lô hàng."));
         return result;
     }
 
