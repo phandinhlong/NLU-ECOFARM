@@ -46,6 +46,34 @@ public final class MerkleUtil {
         return Numeric.toHexString(level.get(0));
     }
 
+    public static List<String> buildProof(List<String> leaves, int index) {
+        if (leaves == null || leaves.isEmpty() || index < 0 || index >= leaves.size()) {
+            return List.of();
+        }
+        List<byte[]> level = new ArrayList<>();
+        for (String leaf : leaves) {
+            level.add(leafBytes(leaf));
+        }
+        List<String> proof = new ArrayList<>();
+        int idx = index;
+        while (level.size() > 1) {
+            List<byte[]> next = new ArrayList<>();
+            for (int i = 0; i < level.size(); i += 2) {
+                byte[] left = level.get(i);
+                byte[] right = (i + 1 < level.size()) ? level.get(i + 1) : left;
+                next.add(Hash.sha3(concat(left, right)));
+                if (i == idx) {
+                    proof.add(Numeric.toHexString(right));
+                } else if (i + 1 == idx) {
+                    proof.add(Numeric.toHexString(left));
+                }
+            }
+            idx /= 2;
+            level = next;
+        }
+        return proof;
+    }
+
     public static byte[] leafBytes(String leaf) {
         if (leaf != null && leaf.startsWith("0x") && leaf.length() > 2 && leaf.length() % 2 == 0) {
             try {

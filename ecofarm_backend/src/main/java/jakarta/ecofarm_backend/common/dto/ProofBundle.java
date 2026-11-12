@@ -16,6 +16,7 @@ public class ProofBundle {
     private List<ProofEvent> events;
     private Anchor anchor;
     private long generatedAt;
+    private String selfCheckScript;
 
     public ProofBundle() {}
 
@@ -97,5 +98,13 @@ public class ProofBundle {
 
     public void setGeneratedAt(long generatedAt) {
         this.generatedAt = generatedAt;
+    }
+
+    public String getSelfCheckScript() {
+        return selfCheckScript;
+    }
+
+    public void setSelfCheckScript(String selfCheckScript) {
+        this.selfCheckScript = selfCheckScript;
     }
 }

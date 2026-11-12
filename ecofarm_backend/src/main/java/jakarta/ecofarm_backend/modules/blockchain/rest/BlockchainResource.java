@@ -11,13 +11,17 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.CultivationEvent;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.MerkleSnapshot;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Recall;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.AnchorRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.AuditLogRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.BatchRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.OutboxEventRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.MerkleSnapshotRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.RecallRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.TraceLookupRepository;
 import jakarta.ecofarm_backend.modules.blockchain.service.ReconciliationService;
 import jakarta.ecofarm_backend.config.BlockchainConfig;
 import jakarta.ecofarm_backend.common.dto.AnchorStatus;
@@ -25,12 +29,18 @@ import jakarta.ecofarm_backend.common.dto.PrivateChainStatus;
 import jakarta.ecofarm_backend.common.dto.PublicChainStatus;
 import jakarta.ecofarm_backend.common.dto.ReconciliationItem;
 import jakarta.ecofarm_backend.common.dto.ProofBundle;
+import jakarta.ecofarm_backend.common.dto.ProofEvent;
+import jakarta.ecofarm_backend.common.dto.ProofLeaf;
 import jakarta.ecofarm_backend.common.dto.RecallRequest;
+import jakarta.ecofarm_backend.common.util.MerkleUtil;
 
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Path("/v1/block-chain")
 @Stateless
@@ -62,6 +72,12 @@ public class BlockchainResource {
 
     @Inject
     private PolygonClient polygonClient;
+
+    @Inject
+    private BatchRepository batchRepository;
+
+    @Inject
+    private TraceLookupRepository traceLookupRepository;
 
 //    @GET
 //    @Path("/admin/anchors")
@@ -205,23 +221,43 @@ public class BlockchainResource {
     @GET
     @Path("/batches/{batchId}/proof-bundle")
     public ProofBundle getProofBundle(@PathParam("batchId") Long batchId) {
-        MerkleSnapshot snapshot = snapshotRepository.findByBatchId(batchId);
-        ProofBundle bundle = new ProofBundle();
-        bundle.setBatchCode("BATCH-" + batchId);
-        bundle.setBatchIdHash("0x" + Long.toHexString(batchId));
-        bundle.setHashAlgorithm("keccak256");
-        bundle.setCanonicalization("RFC8785");
-        bundle.setSalt("0xfaceb00c");
+        Batch batch = batchRepository.findById(batchId)
+                .orElseThrow(() -> new WebApplicationException(Response.Status.NOT_FOUND));
 
-        if (snapshot != null) {
-            bundle.setMerkleRoot(snapshot.getMerkleRoot());
-        } else {
-            bundle.setMerkleRoot("0xdeadbeefcafe1234");
+        ProofBundle bundle = new ProofBundle();
+        bundle.setBatchCode(batch.getBatchCode());
+        bundle.setBatchIdHash(MerkleUtil.keccak256Hex(batch.getBatchCode().getBytes(StandardCharsets.UTF_8)));
+        bundle.setHashAlgorithm("keccak256");
+        bundle.setCanonicalization("UTF-8");
+        bundle.setSalt(batch.getSaltEnc() == null ? null : String.format("0x%016x", batch.getSaltEnc()));
+        bundle.setEvents(buildAnonymizedEvents(batchId));
+        bundle.setSelfCheckScript(SELF_CHECK_SCRIPT);
+
+        MerkleSnapshot snapshot = snapshotRepository.findByBatchId(batchId);
+        if (snapshot == null) {
+            bundle.setMerkleRoot(null);
+            bundle.setLeaves(new ArrayList<>());
+            bundle.setGeneratedAt(System.currentTimeMillis());
+            return bundle;
         }
 
-        bundle.setLeaves(new ArrayList<>());
-        bundle.setEvents(new ArrayList<>());
-        if (snapshot != null) {
+        bundle.setMerkleRoot(snapshot.getMerkleRoot());
+        List<String> leafStrings = MerkleUtil.parseLeaves(snapshotRepository.findLeavesJson(snapshot.getId()));
+        List<ProofLeaf> proofLeaves = new ArrayList<>();
+        for (int i = 0; i < leafStrings.size(); i++) {
+            ProofLeaf leaf = new ProofLeaf();
+            leaf.setSeq(i + 1);
+            leaf.setEventHash(leafStrings.get(i));
+            leaf.setLeaf(leafStrings.get(i));
+            leaf.setProof(MerkleUtil.buildProof(leafStrings, i));
+            proofLeaves.add(leaf);
+        }
+        bundle.setLeaves(proofLeaves);
+
+        Optional<Anchor> confirmed = anchorRepository.findLatestConfirmedBySnapshotId(snapshot.getId());
+        if (confirmed.isPresent()) {
+            bundle.setAnchor(confirmed.get());
+        } else {
             List<Anchor> anchors = anchorRepository.findBySnapshotId(snapshot.getId());
             if (!anchors.isEmpty()) {
                 bundle.setAnchor(anchors.get(anchors.size() - 1));
@@ -230,6 +266,92 @@ public class BlockchainResource {
         bundle.setGeneratedAt(System.currentTimeMillis());
         return bundle;
     }
+
+    // Khử thông tin cá nhân: chỉ giữ seq, loại sự kiện, hash và thời điểm ghi nhận
+    private List<ProofEvent> buildAnonymizedEvents(Long batchId) {
+        return traceLookupRepository.findCultivationEventsByBatchId(batchId).stream()
+                .sorted(Comparator.comparing(CultivationEvent::getSeq,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(event -> {
+                    ProofEvent proofEvent = new ProofEvent();
+                    proofEvent.setSeq(event.getSeq());
+                    proofEvent.setEventType(event.getEventType());
+                    Map<String, Object> payload = new java.util.LinkedHashMap<>();
+                    payload.put("eventHash", event.getEventHash());
+                    payload.put("recordedAt", event.getRecordedAt());
+                    proofEvent.setPayload(payload);
+                    return proofEvent;
+                })
+                .toList();
+    }
+
+    private static final String SELF_CHECK_SCRIPT = """
+            // EcoFarm - Script tu kiem tra goi bang chung (proof bundle)
+            // Dung: node verify-proof.js <proof-bundle.json>
+            // Yeu cau: npm install ethers
+            const fs = require('fs');
+            const { keccak256, toUtf8Bytes, hexlify, concat, getBytes } = require('ethers');
+
+            function leafBytes(leaf) {
+              if (typeof leaf === 'string' && leaf.startsWith('0x') && leaf.length % 2 === 0) {
+                return getBytes(leaf);
+              }
+              return toUtf8Bytes(String(leaf));
+            }
+
+            function hashPair(leftHex, rightHex) {
+              return keccak256(concat([getBytes(leftHex), getBytes(rightHex)]));
+            }
+
+            function computeRoot(leaves) {
+              if (!leaves || leaves.length === 0) return null;
+              let level = leaves.map(leafBytes).map(hexlify);
+              while (level.length > 1) {
+                const next = [];
+                for (let i = 0; i < level.length; i += 2) {
+                  const right = i + 1 < level.length ? level[i + 1] : level[i];
+                  next.push(hashPair(level[i], right));
+                }
+                level = next;
+              }
+              return level[0];
+            }
+
+            function verifyProof(leaf, proof, root, index) {
+              let hash = leafBytes(leaf);
+              let idx = index;
+              for (const siblingHex of proof) {
+                const sibling = getBytes(siblingHex);
+                hash = getBytes(keccak256(concat([
+                  idx % 2 === 0 ? hash : sibling,
+                  idx % 2 === 0 ? sibling : hash
+                ])));
+                idx = Math.floor(idx / 2);
+              }
+              return hexlify(hash).toLowerCase() === String(root).toLowerCase();
+            }
+
+            const bundle = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+            if (!bundle.leaves || bundle.leaves.length === 0) {
+              console.error('Proof bundle khong co leaves.');
+              process.exit(2);
+            }
+            const root = computeRoot(bundle.leaves.map(l => l.leaf));
+            console.log('Batch code     :', bundle.batchCode);
+            console.log('Salt           :', bundle.salt);
+            console.log('Computed root  :', root);
+            console.log('Bundle root    :', bundle.merkleRoot);
+            const rootMatch = root !== null && root.toLowerCase() === String(bundle.merkleRoot).toLowerCase();
+            console.log('Root match     :', rootMatch);
+            let allProofsOk = true;
+            bundle.leaves.forEach((l, i) => {
+              const ok = verifyProof(l.leaf, l.proof || [], bundle.merkleRoot, i);
+              if (!ok) allProofsOk = false;
+              console.log('Leaf #' + i + ' (' + l.eventHash + ') proof: ' + (ok ? 'OK' : 'FAILED'));
+            });
+            process.exit(rootMatch && allProofsOk ? 0 : 1);
+            """;
+
     // API tạo sự kiện test gửi dữ liệu lên Blockchain (Besu & Polygon)
     @POST
     @Path("/admin/outbox/test")
