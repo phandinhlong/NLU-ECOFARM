@@ -36,6 +36,7 @@ import jakarta.ecofarm_backend.infrastructure.persistence.repository.BatchReposi
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.MerkleSnapshotRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.RecallRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.TraceLookupRepository;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.List;
 import java.util.Map;
@@ -68,6 +69,11 @@ public class PublicTraceResource {
 
     @Inject
     private PolygonClient polygonClient;
+
+    @Inject
+    @ConfigProperty(name = "nlu.eco.farm.public.explorer.base-url",
+            defaultValue = "https://amoy.polygonscan.com/tx/")
+    private String explorerBaseUrl;
 
     @GET
     @Path("/{code}")
@@ -147,6 +153,15 @@ public class PublicTraceResource {
             result.setMessage("Chưa có giao dịch neo chuỗi nào được xác nhận cho lô hàng này.");
             return result;
         }
+        Anchor confirmedAnchor = anchor.get();
+        result.setTxHash(confirmedAnchor.getTxHash());
+        result.setBlockNumber(confirmedAnchor.getBlockNumber());
+        result.setAnchoredAt(confirmedAnchor.getAnchoredAt());
+        String explorerUrl = confirmedAnchor.getExplorerUrl();
+        if (explorerUrl == null || explorerUrl.isBlank()) {
+            explorerUrl = explorerBaseUrl + confirmedAnchor.getTxHash();
+        }
+        result.setExplorerUrl(explorerUrl);
 
         List<String> leaves = MerkleUtil.parseLeaves(
                 merkleSnapshotRepository.findLeavesJson(snapshot.getId()));
@@ -154,7 +169,7 @@ public class PublicTraceResource {
         result.setComputedRoot(computedRoot);
 
         try {
-            Map<String, Object> txInfo = polygonClient.getTransactionInfo(anchor.get().getTxHash());
+            Map<String, Object> txInfo = polygonClient.getTransactionInfo(confirmedAnchor.getTxHash());
             Object payload = txInfo.get("decodedPayload");
             String onChainRoot = payload == null ? null : payload.toString();
             if (onChainRoot == null || onChainRoot.isBlank()) {
