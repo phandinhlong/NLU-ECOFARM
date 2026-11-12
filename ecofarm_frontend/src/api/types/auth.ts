@@ -13,12 +13,8 @@ export interface ProfileResponse {
 export type User = ProfileResponse
 
 export interface RegisterRequest {
-  username: string
+  fullName: string
   email: string
   password: string
-  fullName: string
-}
-
-export interface RegisterResponse {
-  user: User
+  confirmPassword: string
 }

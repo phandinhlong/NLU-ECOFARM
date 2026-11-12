@@ -18,6 +18,18 @@ const router = createRouter({
       meta: { guestOnly: true, title: 'Đăng nhập' },
     },
     {
+      path: '/activation/success',
+      name: 'activation-success',
+      component: () => import('@/views/ActivationSuccess.vue'),
+      meta: { title: 'Kích hoạt thành công' },
+    },
+    {
+      path: '/activation/failure',
+      name: 'activation-failure',
+      component: () => import('@/views/ActivationFailure.vue'),
+      meta: { title: 'Kích hoạt thất bại' },
+    },
+    {
       path: '/',
       component: () => import('@/layouts/PublicLayout.vue'),
       meta: { guestOnly: true },
