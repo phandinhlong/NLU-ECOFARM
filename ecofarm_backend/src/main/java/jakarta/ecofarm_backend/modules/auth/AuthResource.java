@@ -10,8 +10,11 @@ import jakarta.ecofarm_backend.common.util.CookieBuilderUtil;
 import jakarta.ecofarm_backend.infrastructure.service.JwtService;
 import jakarta.ecofarm_backend.modules.auth.facade.AuthFacade;
 import jakarta.inject.Inject;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -30,6 +33,12 @@ public class AuthResource {
     @Inject
     private AuthFacade authFacade;
 
+    @Context
+    private HttpServletRequest servletRequest;
+
+    @Context
+    private HttpServletResponse servletResponse;
+
 
     @GET
     @Path("/profile")
@@ -44,13 +53,13 @@ public class AuthResource {
             description = "Authenticates the user's credentials and sets the access token and refresh token in HttpOnly cookies."
     )
     public BaseResponse<Boolean> login(@Valid LoginRequest request) {
-        return this.authFacade.login(request);
+        return this.authFacade.login(request, servletResponse);
     }
 
     @POST
     @Path("/refresh-token")
     public BaseResponse<Boolean> refreshToken(){
-        return this.authFacade.refreshToken();
+        return this.authFacade.refreshToken(servletRequest, servletResponse);
     }
 
     @POST
