@@ -13,7 +13,6 @@ import jakarta.ecofarm_backend.common.exception.EntityNotFoundException;
 import jakarta.ecofarm_backend.common.exception.JwtInvalidException;
 import jakarta.ecofarm_backend.common.exception.PermissionDeniedException;
 import jakarta.ecofarm_backend.common.util.CookieBuilderUtil;
-import jakarta.ecofarm_backend.common.util.CurrentUserUtil;
 import jakarta.ecofarm_backend.common.util.PasswordEncoderUtil;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Role;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
@@ -26,19 +25,13 @@ import jakarta.ecofarm_backend.infrastructure.service.impl.JwtServiceImpl;
 import jakarta.ecofarm_backend.modules.auth.facade.AuthFacade;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.transaction.Transactional;
-import jakarta.servlet.http.Cookie;
 import jakarta.ws.rs.core.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.net.URI;
-import java.util.Arrays;
 import java.util.Map;
-import java.util.Optional;
 
 @ApplicationScoped
 public class AuthFacadeImpl implements AuthFacade {
@@ -57,17 +50,6 @@ public class AuthFacadeImpl implements AuthFacade {
 
     @Inject
     private CookieBuilderUtil cookieBuilder;
-
-    @Inject
-//    @Context
-    private HttpServletResponse servletResponse;
-
-//    @Context
-    @Inject
-    private HttpServletRequest servletRequest;
-
-    @Inject
-    private CurrentUserUtil currentUser;
 
     @Inject
     @ConfigProperty(name = "nlu.eco.farm.backend.activate.user.api.url", defaultValue = "http://localhost:8080")
@@ -109,7 +91,7 @@ public class AuthFacadeImpl implements AuthFacade {
     private static final Logger log = LogManager.getLogger(AuthFacadeImpl.class);
 
     @Override
-    public BaseResponse<Boolean> login(LoginRequest request) {
+    public BaseResponse<Map<String, String>> login(LoginRequest request) {
 
         String email = request.getEmail();
 
@@ -125,27 +107,15 @@ public class AuthFacadeImpl implements AuthFacade {
         String accessToken = jwtService.generateAccessToken(email);
         String refreshToken = jwtService.generateRefreshToken(email);
 
-        String accessTokenCookie = cookieBuilder.buildCookie(
-                SecurityConstant.ACCESS_TOKEN_COOKIE_NAME, accessToken, "/", accessMaxAge);
-        String refreshTokenCookie = cookieBuilder.buildCookie(
-                SecurityConstant.REFRESH_TOKEN_COOKIE_NAME, refreshToken, "/", refreshMaxAge);
-
-        servletResponse.addHeader("Set-Cookie", accessTokenCookie);
-        servletResponse.addHeader("Set-Cookie", refreshTokenCookie);
-
-        return BaseResponse.build(true);
+        return BaseResponse.build(Map.of(
+                "accessToken", accessToken,
+                "refreshToken", refreshToken));
     }
 
     @Override
-    public BaseResponse<Boolean> refreshToken() {
-        Optional<Cookie> cookieOpt = Arrays.stream(this.servletRequest.getCookies())
-                .filter(c ->c.getName().equals(SecurityConstant.REFRESH_TOKEN_COOKIE_NAME))
-                .findFirst();
-
-        if (cookieOpt.isEmpty())
+    public BaseResponse<Map<String, String>> refreshToken(String refreshToken) {
+        if (refreshToken == null)
             throw new JwtInvalidException(ErrorCode.JWT_INVALID);
-
-        String refreshToken = cookieOpt.get().getValue();
 
         if (!this.jwtService.validateToken(refreshToken))
             throw new JwtInvalidException(ErrorCode.JWT_INVALID);
@@ -159,19 +129,13 @@ public class AuthFacadeImpl implements AuthFacade {
             throw new EntityNotFoundException(ErrorCode.USER_NOT_FOUND);
 
         String accessToken = jwtService.generateAccessToken(email);
-        String acceptTokenCookie = this.cookieBuilder
-                .buildCookie(SecurityConstant.ACCESS_TOKEN_COOKIE_NAME,accessToken,"/",this.accessMaxAge);
 
-        servletResponse.addHeader("Set-Cookie", acceptTokenCookie);
-
-        return BaseResponse.build(true);
+        return BaseResponse.build(Map.of("accessToken", accessToken));
     }
 
     @Override
-    public BaseResponse<ProfileResponse> findProfile() {
-        UserSecurityDetailsPrincipal principal = this.currentUser.get();
-
-        User user = this.userService.findByEmailAndFetchRoles(principal.getEmail())
+    public BaseResponse<ProfileResponse> findProfile(String email) {
+        User user = this.userService.findByEmailAndFetchRoles(email)
                 .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND));
 
         ProfileResponse response = ProfileResponse.builder()

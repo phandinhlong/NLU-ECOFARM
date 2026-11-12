@@ -12,16 +12,15 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AppLoadingSkeleton: typeof import('./src/components/common/AppLoadingSkeleton.vue')['default']
+    BAlert: typeof import('bootstrap-vue-next/components/BAlert')['BAlert']
     BButton: typeof import('bootstrap-vue-next/components/BButton')['BButton']
     BCard: typeof import('bootstrap-vue-next/components/BCard')['BCard']
     BContainer: typeof import('bootstrap-vue-next/components/BContainer')['BContainer']
-    BFormCheckbox: typeof import('bootstrap-vue-next/components/BFormCheckbox')['BFormCheckbox']
     BFormInput: typeof import('bootstrap-vue-next/components/BFormInput')['BFormInput']
     BFormSelect: typeof import('bootstrap-vue-next/components/BFormSelect')['BFormSelect']
+    BModal: typeof import('bootstrap-vue-next/components/BModal')['BModal']
     BNav: typeof import('bootstrap-vue-next/components/BNav')['BNav']
     BNavItem: typeof import('bootstrap-vue-next/components/BNav')['BNavItem']
-    BPlaceholder: typeof import('bootstrap-vue-next/components/BPlaceholder')['BPlaceholder']
-    BPlaceholderButton: typeof import('bootstrap-vue-next/components/BPlaceholder')['BPlaceholderButton']
     BrandHeader: typeof import('./src/components/common/BrandHeader.vue')['default']
     BSpinner: typeof import('bootstrap-vue-next/components/BSpinner')['BSpinner']
     LoginForm: typeof import('./src/components/auth/LoginForm.vue')['default']
