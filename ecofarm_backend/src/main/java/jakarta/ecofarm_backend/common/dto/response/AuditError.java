@@ -1,5 +1,10 @@
-package jakarta.ecofarm_backend.common.dto;
+package jakarta.ecofarm_backend.common.dto.response;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter
+@Getter
 public class AuditError {
     String message;
     String batchIdHash;
@@ -10,13 +15,6 @@ public class AuditError {
         this.batchIdHash = batchIdHash;
         this.seq = seq;
     }
-
-    public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
-    public String getBatchIdHash() { return batchIdHash; }
-    public void setBatchIdHash(String batchIdHash) { this.batchIdHash = batchIdHash; }
-    public int getSeq() { return seq; }
-    public void setSeq(int seq) { this.seq = seq; }
 
     @Override
     public String toString() {
