@@ -16,7 +16,10 @@ public enum ErrorCode {
     PERMISSION_DENIED(1008, "Permission denied"),
     CODE_EXISTS(1009, "Mã danh mục đã tồn tại"),
     CATALOG_CODE_LOCKED(1010, "Không thể đổi mã khi đã có lô tham chiếu"),
-    VERSION_CONFLICT(1011, "Dữ liệu đã bị thay đổi bởi người khác, vui lòng tải lại");
+    VERSION_CONFLICT(1011, "Dữ liệu đã bị thay đổi bởi người khác, vui lòng tải lại"),
+    INVALID_DATE(1012, "Ngày hiệu lực không hợp lệ"),
+    GREENHOUSE_NOT_FOUND(1013, "Nhà màng không tồn tại"),
+    CERT_NO_EXISTS(1014, "Số chứng nhận đã tồn tại");
 
     private final Integer code;
     private final String message;

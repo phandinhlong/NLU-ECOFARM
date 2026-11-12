@@ -32,6 +32,14 @@ const canManageCatalog = computed(() =>
         >
           Giống dưa
         </BNavItem>
+        <BNavItem
+          v-if="canManageCatalog"
+          to="/certificates"
+          link-class="text-white"
+          active-class="bg-primary"
+        >
+          Chứng nhận
+        </BNavItem>
       </BNav>
     </aside>
 

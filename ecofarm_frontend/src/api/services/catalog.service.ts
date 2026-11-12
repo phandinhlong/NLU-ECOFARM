@@ -2,6 +2,9 @@ import axios from '@/api/clients/axios'
 import type { ApiResponse } from '@/api/types/common'
 import type {
   CatalogQuery,
+  Certificate,
+  CertificateInput,
+  CertificateQuery,
   Greenhouse,
   GreenhouseInput,
   PageResponse,
@@ -31,4 +34,10 @@ export const catalogService = {
 
   updateVariety: (id: number, data: VarietyInput) =>
     axios.put<ApiResponse<Variety>>(`${API_V1}/varieties/${id}`, data),
+
+  listCertificates: (params: CertificateQuery) =>
+    axios.get<ApiResponse<PageResponse<Certificate>>>(`${API_V1}/certificates`, { params }),
+
+  createCertificate: (data: CertificateInput) =>
+    axios.post<ApiResponse<Certificate>>(`${API_V1}/certificates`, data),
 }
