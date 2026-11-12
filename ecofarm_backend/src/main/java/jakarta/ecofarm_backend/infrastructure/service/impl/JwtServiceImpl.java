@@ -28,10 +28,12 @@ public class JwtServiceImpl implements JwtService {
     public static final String TYPE_ACCESS = "access";
     public static final String TYPE_REFRESH = "refresh";
     public static final String TYPE_ACCOUNT_ACTIVATION_TOKEN ="account-activation";
+    public static final String TYPE_FORGOT_PASSWORD_TOKEN ="forgot-password";
 
     private String secret = "change-me-to-a-long-random-string-at-least-32-chars";
     private String issuer = "my-backend";
     private long accessMinutes = 15;
+    private long forgotPasswordTokenExpirationMinutes = 5;
     private long refreshDays = 7;
 
     private SecretKey key;
@@ -104,6 +106,11 @@ public class JwtServiceImpl implements JwtService {
     @Override
     public Boolean hasTokenType(String token, String expectedType) {
         return parseClaims(token).get(CLAIM_TYPE, String.class).equals(expectedType);
+    }
+
+    @Override
+    public String generateForgotPasswordToken(String email) {
+        return buildToken(email,TYPE_FORGOT_PASSWORD_TOKEN , Duration.ofMinutes(this.forgotPasswordTokenExpirationMinutes));
     }
 
 

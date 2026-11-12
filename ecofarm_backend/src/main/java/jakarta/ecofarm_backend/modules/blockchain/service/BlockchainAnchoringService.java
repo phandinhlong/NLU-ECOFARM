@@ -128,7 +128,7 @@ public class BlockchainAnchoringService {
 //            System.err.println("Error in processOutbox: " + e.getMessage());
 //        }
 //    }
-    @Schedule(second = "*/2", minute = "*", hour = "*", persistent = false)
+//    @Schedule(second = "*/2", minute = "*", hour = "*", persistent = false)
     public void processOutbox() {
         try {
             List<OutboxEvent> pending = outboxEventRepository.findPending();
