@@ -41,4 +41,11 @@ public class MerkleSnapshotRepository {
         List<MerkleSnapshot> all = findAll();
         return all.isEmpty() ? null : all.get(all.size() - 1);
     }
+
+    public String findLeavesJson(Long snapshotId) {
+        Object result = em.createNativeQuery("SELECT leaves FROM merkle_snapshots WHERE id = :id")
+                .setParameter("id", snapshotId)
+                .getSingleResult();
+        return result == null ? null : result.toString();
+    }
 }

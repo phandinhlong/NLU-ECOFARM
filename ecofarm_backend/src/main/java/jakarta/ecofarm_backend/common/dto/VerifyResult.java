@@ -9,6 +9,7 @@ public class VerifyResult {
     Long anchoredAt;
     String explorerUrl;
     boolean recalled;
+    String recallReason;
     long checkedAt;
     String message;
 
@@ -44,6 +45,8 @@ public class VerifyResult {
     public void setExplorerUrl(String explorerUrl) { this.explorerUrl = explorerUrl; }
     public boolean isRecalled() { return recalled; }
     public void setRecalled(boolean recalled) { this.recalled = recalled; }
+    public String getRecallReason() { return recallReason; }
+    public void setRecallReason(String recallReason) { this.recallReason = recallReason; }
     public long getCheckedAt() { return checkedAt; }
     public void setCheckedAt(long checkedAt) { this.checkedAt = checkedAt; }
     public String getMessage() { return message; }

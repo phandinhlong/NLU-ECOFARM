@@ -14,7 +14,10 @@ import jakarta.ecofarm_backend.common.dto.RecallInfo;
 import jakarta.ecofarm_backend.common.dto.ShipmentInfo;
 import jakarta.ecofarm_backend.common.dto.TimelineEvent;
 import jakarta.ecofarm_backend.common.dto.TraceMetrics;
+import jakarta.ecofarm_backend.common.dto.VerifyResult;
+import jakarta.ecofarm_backend.common.util.MerkleUtil;
 import jakarta.ecofarm_backend.config.BlockchainConfig;
+import jakarta.ecofarm_backend.modules.blockchain.PolygonClient;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Certificate;
@@ -63,15 +66,13 @@ public class PublicTraceResource {
     @Inject
     private BlockchainConfig blockchainConfig;
 
+    @Inject
+    private PolygonClient polygonClient;
+
     @GET
     @Path("/{code}")
     public PublicTrace getPublicTrace(@PathParam("code") String code) {
-        QrCode qrCode = traceRepository.findQrCodeByCode(code)
-                .orElseThrow(() -> new WebApplicationException(Response.Status.NOT_FOUND));
-        ProductPackage productPackage = traceRepository.findPackageById(qrCode.getPackageId())
-                .orElseThrow(() -> new WebApplicationException(Response.Status.NOT_FOUND));
-        Batch batch = batchRepository.findById(productPackage.getBatchId())
-                .orElseThrow(() -> new WebApplicationException(Response.Status.NOT_FOUND));
+        Batch batch = resolveBatch(code);
 
         PublicTrace trace = new PublicTrace();
         trace.setCode(code);
@@ -117,6 +118,78 @@ public class PublicTraceResource {
         trace.setRecall(buildRecall(batch.getId()));
 
         return trace;
+    }
+
+    @POST
+    @Path("/{code}/verify")
+    public VerifyResult verifyTrace(@PathParam("code") String code) {
+        Batch batch = resolveBatch(code);
+
+        VerifyResult result = new VerifyResult();
+        result.setCheckedAt(System.currentTimeMillis());
+
+        List<Recall> recalls = recallRepository.findByBatchId(batch.getId());
+        result.setRecalled(!recalls.isEmpty());
+        if (!recalls.isEmpty()) {
+            result.setRecallReason(recalls.get(0).getReason());
+        }
+
+        MerkleSnapshot snapshot = merkleSnapshotRepository.findByBatchId(batch.getId());
+        if (snapshot == null) {
+            result.setResult("UNAVAILABLE");
+            result.setMessage("Lô hàng chưa có dữ liệu neo chuỗi (chưa tạo Merkle snapshot).");
+            return result;
+        }
+
+        Optional<Anchor> anchor = anchorRepository.findLatestConfirmedBySnapshotId(snapshot.getId());
+        if (anchor.isEmpty()) {
+            result.setResult("UNAVAILABLE");
+            result.setMessage("Chưa có giao dịch neo chuỗi nào được xác nhận cho lô hàng này.");
+            return result;
+        }
+
+        List<String> leaves = MerkleUtil.parseLeaves(
+                merkleSnapshotRepository.findLeavesJson(snapshot.getId()));
+        String computedRoot = MerkleUtil.buildRoot(leaves);
+        result.setComputedRoot(computedRoot);
+
+        try {
+            Map<String, Object> txInfo = polygonClient.getTransactionInfo(anchor.get().getTxHash());
+            Object payload = txInfo.get("decodedPayload");
+            String onChainRoot = payload == null ? null : payload.toString();
+            if (onChainRoot == null || onChainRoot.isBlank()) {
+                result.setResult("UNAVAILABLE");
+                result.setMessage("Không đọc được dữ liệu neo trên chuỗi (giao dịch chưa được mine hoặc không tồn tại trên Polygon Amoy).");
+                return result;
+            }
+            result.setOnChainRoot(onChainRoot);
+            result.setResult(rootsMatch(computedRoot, onChainRoot) ? "MATCH" : "MISMATCH");
+            result.setMessage("MATCH".equals(result.getResult())
+                    ? "Dữ liệu trên chuỗi khớp với hành trình của lô hàng."
+                    : "Dữ liệu trên chuỗi KHÔNG khớp với hành trình của lô hàng.");
+        } catch (Exception e) {
+            result.setResult("UNAVAILABLE");
+            result.setMessage("Không thể xác thực lúc này (Polygon RPC lỗi): " + e.getMessage());
+        }
+        return result;
+    }
+
+    private Batch resolveBatch(String code) {
+        QrCode qrCode = traceRepository.findQrCodeByCode(code)
+                .orElseThrow(() -> new WebApplicationException(Response.Status.NOT_FOUND));
+        ProductPackage productPackage = traceRepository.findPackageById(qrCode.getPackageId())
+                .orElseThrow(() -> new WebApplicationException(Response.Status.NOT_FOUND));
+        return batchRepository.findById(productPackage.getBatchId())
+                .orElseThrow(() -> new WebApplicationException(Response.Status.NOT_FOUND));
+    }
+
+    private static boolean rootsMatch(String computedRoot, String onChainRoot) {
+        if (computedRoot == null || onChainRoot == null) return false;
+        String a = computedRoot.trim();
+        String b = onChainRoot.trim();
+        if (a.startsWith("0x") || a.startsWith("0X")) a = a.substring(2);
+        if (b.startsWith("0x") || b.startsWith("0X")) b = b.substring(2);
+        return a.equalsIgnoreCase(b);
     }
 
     private List<TimelineEvent> buildTimeline(Long batchId) {
