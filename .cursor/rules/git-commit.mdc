@@ -1,0 +1,69 @@
+---
+description: Quy định về commit và push — mọi commit phải mang danh tính GitHub của 23130205-dev, không thêm trailer Cursor, không tự push lên remote.
+alwaysApply: true
+---
+
+# Commit & Push Rules
+
+## 1. Danh tính commit
+
+Mọi commit tạo ra phải mang **author và committer** là:
+
+- Name: `23130205-dev`
+- Email: `23130205@st.hcmuaf.edu.vn`
+
+Email này đã đăng ký với tài khoản GitHub `23130205-dev`, nên GitHub Insights
+sẽ tính commit về đúng nick của Ngân. Không dùng email/tên khác
+(không dùng `cursoragent@cursor.com`, `23130188@...`, hay tên bất kỳ của thành viên khác).
+
+Trước khi commit, nếu chưa chắc git đang dùng đúng danh tính:
+
+```bash
+git config user.name && git config user.email
+```
+
+## 2. Không thêm trailer Cursor
+
+Cursor tự chèn `--trailer "Co-authored-by: Cursor <cursoragent@cursor.com>"` vào
+**mọi** lệnh `git commit`. Trailer này khiến GitHub Insights hiện thêm một
+contributor tên `cursoragent` — không mong muốn.
+
+Cách tránh (dùng cách này):
+
+- Tạo message trong file rồi commit bằng `git commit -F <file>`, **không** dùng
+  `git commit -m "..." -m "..."` (Cursor chèn trailer vào lệnh dạng `-m`).
+- Nếu lệnh commit đã chứa sẵn chuỗi `co-authored-by: cursor`, Cursor sẽ tự bỏ qua
+  việc chèn thêm — nhưng **không** tự thêm trailer này vào commit.
+
+Hook `prepare-commit-msg` đã được cài ở `~/.git-hooks` để gỡ trailer như một lớp
+an toàn thứ hai. Vẫn nên viết commit đúng cách để không phụ thuộc vào hook.
+
+## 3. Không tự push lên remote
+
+**Không chạy `git push`, `git push --force`, hay `git push origin ...` trừ khi
+Ngân yêu cầu rõ ràng trong tin nhắn đó.**
+
+Lý do: đẩy code lên GitHub là hành động nhìn thấy được và khó hoàn tác. Agent
+đã tự ý push một lần và việc này đã gây ra một đợt viết lại lịch sử git đầy rủi ro.
+
+Khi cần push, hãy hỏi Ngân trước, hoặc để Ngân tự chạy:
+
+```bash
+git push                      # Ngân chạy trực tiếp từ terminal của họ
+```
+
+Hook `pre-push` sẽ chặn push đến từ agent (biến môi trường `CURSOR_AGENT`).
+Nếu thật sự cần push và Ngân đã đồng ý trong tin nhắn, dùng:
+
+```bash
+CURSOR_AGENT_ALLOW_PUSH=1 git push
+```
+
+## 4. Kiểm tra trước khi commit
+
+```bash
+git status --short
+git log -1 --format="%an <%ae> | %B"
+```
+
+Sau khi commit, xác nhận message **không** chứa `cursoragent` và author đúng nick.

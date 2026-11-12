@@ -8,6 +8,7 @@ import jakarta.ecofarm_backend.common.dto.response.ProfileResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.SecurityContext;
 
 import java.net.URI;
 import java.util.Map;
@@ -15,7 +16,7 @@ import java.util.Map;
 public interface AuthFacade {
     BaseResponse<Boolean> login(LoginRequest request, HttpServletResponse servletResponse);
 
-    BaseResponse<ProfileResponse> findProfile();
+    BaseResponse<ProfileResponse> findProfile(SecurityContext securityContext);
 
     BaseResponse<Boolean> refreshToken(HttpServletRequest servletRequest, HttpServletResponse servletResponse);
 

@@ -17,6 +17,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.SecurityContext;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
@@ -42,8 +43,8 @@ public class AuthResource {
 
     @GET
     @Path("/profile")
-    public BaseResponse<ProfileResponse> findProfile(){
-        return this.authFacade.findProfile();
+    public BaseResponse<ProfileResponse> findProfile(@Context SecurityContext securityContext){
+        return this.authFacade.findProfile(securityContext);
     }
 
     @POST

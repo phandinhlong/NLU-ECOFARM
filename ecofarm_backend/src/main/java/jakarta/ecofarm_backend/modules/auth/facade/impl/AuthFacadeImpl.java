@@ -13,7 +13,6 @@ import jakarta.ecofarm_backend.common.exception.EntityNotFoundException;
 import jakarta.ecofarm_backend.common.exception.JwtInvalidException;
 import jakarta.ecofarm_backend.common.exception.PermissionDeniedException;
 import jakarta.ecofarm_backend.common.util.CookieBuilderUtil;
-import jakarta.ecofarm_backend.common.util.CurrentUserUtil;
 import jakarta.ecofarm_backend.common.util.PasswordEncoderUtil;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Role;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
@@ -57,9 +56,6 @@ public class AuthFacadeImpl implements AuthFacade {
 
     @Inject
     private CookieBuilderUtil cookieBuilder;
-
-    @Inject
-    private CurrentUserUtil currentUser;
 
     @Inject
     @ConfigProperty(name = "nlu.eco.farm.backend.activate.user.api.url", defaultValue = "http://localhost:8080")
@@ -160,8 +156,8 @@ public class AuthFacadeImpl implements AuthFacade {
     }
 
     @Override
-    public BaseResponse<ProfileResponse> findProfile() {
-        UserSecurityDetailsPrincipal principal = this.currentUser.get();
+    public BaseResponse<ProfileResponse> findProfile(SecurityContext securityContext) {
+        UserSecurityDetailsPrincipal principal = (UserSecurityDetailsPrincipal) securityContext.getUserPrincipal();
 
         User user = this.userService.findByEmailAndFetchRoles(principal.getEmail())
                 .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND));

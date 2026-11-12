@@ -1,0 +1,577 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-ecofarm-ver-trace-verify",
+		"name": "NLU-ECOFARM - VER Tra cuu & Xac thuc",
+		"description": "Test cho phần VER – Tra cứu và xác thực (FR-VER-001..007).\n\nBase URL: http://localhost:8080/ecofarm_backend-1.0-SNAPSHOT\n\nLƯU Ý QUAN TRỌNG:\n- Tài khoản test: systemadmin@gmail.com / admin123 (được Liquibase seed khi app chạy lần đầu với DB portable; có role USER + QUALITY_CONTROL + FARMER).\n- Endpoint /public/... KHÔNG cần đăng nhập; endpoint /api/v1/block-chain/... CẦN đăng nhập (cookie access_token) + role ADMIN/QUALITY_CONTROL/FARMER.\n- Dữ liệu seed trong DB portable là demo: Merkle root là giả (0x1111..., 0x2222...) nên kết quả verify thường là MISMATCH hoặc UNAVAILABLE — đây là kết quả đúng với dữ liệu hiện có, không phải lỗi.\n- Verify gọi Polygon RPC (Amoy): cần mạng; nếu RPC lỗi sẽ trả UNAVAILABLE kèm message.\n- Mã QR có sẵn: ECOFARM-QR-000001, -000002 (lô BATCH-2026-001), ECOFARM-QR-000003, -000004 (lô BATCH-2026-002).\n- Rate limit /public: tối đa 30 request/60s cho mỗi IP, vượt quá trả 429.\n- Folder AUTH: test đăng nhập / đăng ký / profile sau khi fix lỗi 500 CurrentUserUtil. Chạy request số 1 (Login) trước để Postman lưu cookie.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080/ecofarm_backend-1.0-SNAPSHOT",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Login - lay cookie quyen (dung truoc khi test phan quyen)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Login thanh cong', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test('Co set cookie access_token', function () {",
+							"    const cookies = pm.response.headers.all().filter(h => h.key === 'Set-Cookie');",
+							"    const joined = cookies.map(c => c.value).join('; ');",
+							"    pm.expect(joined).to.include('access_token');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"systemadmin@gmail.com\",\n  \"password\": \"admin123\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/auths/login",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"auths",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2. FR-VER-001/002 - Tra cuu hanh trinh (khong can dang nhap)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('HTTP 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"const body = pm.response.json();",
+							"pm.test('Tra ve code + batch + blockchain + recall', function () {",
+							"    pm.expect(body.code).to.eql('ECOFARM-QR-000001');",
+							"    pm.expect(body.batch).to.be.an('object');",
+							"    pm.expect(body.blockchain).to.be.an('object');",
+							"    pm.expect(body.recall).to.be.an('object');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/public/trace/ECOFARM-QR-000001",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"public",
+						"trace",
+						"ECOFARM-QR-000001"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "3. FR-VER-003/004 - Xac thuc tren chuoi (khong can dang nhap)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('HTTP 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"const body = pm.response.json();",
+							"pm.test('Ket qua thuoc MATCH/MISMATCH/UNAVAILABLE', function () {",
+							"    pm.expect(['MATCH', 'MISMATCH', 'UNAVAILABLE']).to.include(body.result);",
+							"});",
+							"pm.test('Co txHash + explorerUrl + checkedAt', function () {",
+							"    pm.expect(body.checkedAt).to.be.a('number');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "{{baseUrl}}/public/trace/ECOFARM-QR-000001/verify",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"public",
+						"trace",
+						"ECOFARM-QR-000001",
+						"verify"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "4. FR-VER-006 - Goi bang chung proof bundle (CAN dang nhap + role)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('HTTP 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"const body = pm.response.json();",
+							"pm.test('Day du cac thanh phan proof bundle', function () {",
+							"    pm.expect(body.batchCode).to.eql('BATCH-2026-001');",
+							"    pm.expect(body.batchIdHash).to.match(/^0x[0-9a-f]{64}$/i);",
+							"    pm.expect(body.salt).to.be.a('string');",
+							"    pm.expect(body.leaves).to.be.an('array');",
+							"    pm.expect(body.events).to.be.an('array');",
+							"    pm.expect(body.selfCheckScript).to.include('keccak256');",
+							"});",
+							"pm.test('Su kien da khu thong tin ca nhan (khong co recordedBy)', function () {",
+							"    const raw = pm.response.text();",
+							"    pm.expect(raw).to.not.include('recordedBy');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/block-chain/batches/1/proof-bundle",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"block-chain",
+						"batches",
+						"1",
+						"proof-bundle"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "5. KIEM TRA PHAN QUYEN - proof bundle khi CHUA dang nhap (phai bi tu choi)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Bi tu choi (khong phai 200)', function () {",
+							"    pm.expect(pm.response.code).to.not.eql(200);",
+							"    pm.expect(pm.response.code).to.be.oneOf([400, 401, 403]);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Cookie",
+						"value": "access_token=token-gia-tri-sai-de-mo-phong-chua-dang-nhap",
+						"description": "Ghi đè cookie để mô phỏng chưa đăng nhập (Postman vẫn tự gửi cookie jar nếu đã login)."
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/block-chain/batches/1/proof-bundle",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"block-chain",
+						"batches",
+						"1",
+						"proof-bundle"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "6. Tra cuu ma QR khong ton tai (phai tra 404)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('HTTP 404', function () {",
+							"    pm.response.to.have.status(404);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/public/trace/QR-KHONG-TON-TAI",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"public",
+						"trace",
+						"QR-KHONG-TON-TAI"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "7. Verify lo BATCH-2026-002 (QR-000003) - xem truong hop MISMATCH/UNAVAILABLE",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "{{baseUrl}}/public/trace/ECOFARM-QR-000003/verify",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"public",
+						"trace",
+						"ECOFARM-QR-000003",
+						"verify"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "8. FR-VER-005 - Test rate limit (chay request so 2 lien tuc 31 lan trong 60s -> request 31 bi 429)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/public/trace/ECOFARM-QR-000002",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"public",
+						"trace",
+						"ECOFARM-QR-000002"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "AUTH - Login / Profile / Dang ky (test sau khi fix)",
+			"description": "Test luong dang nhap / dang ky sau khi fix GET /profile (bo CurrentUserUtil, SecurityContext truyen tu tang resource).\n\nTHU TU CHAY:\n1. Chay request so 1 (Login) truoc - Postman tu luu cookie access_token/refresh_token vao cookie jar.\n2. Chay A1 GET /profile -> ky vong HTTP 200 (can redeploy WAR moi qua IntelliJ truoc khi test).\n3. A3 dang ky bang email that cua ban -> nhan mail kich hoat (check ca Spam/Junk).\n4. Copy token tu link trong email, dan vao A4 de kich hoat tai khoan.\n5. A6 de kiem tra phan quyen: xoa cookie cua localhost trong Postman truoc, ky vong bi chan (HTTP 400).\n\nLUU Y:\n- Neu /profile van bi 400/401 du da Login: bat cookie jar (Postman Settings > General > Save cookies) roi chay lai request so 1.\n- A4 tra 303 redirect ve trang frontend (5174). Neu Postman dang follow redirect thi se thay trang frontend thay vi JSON.\n- A7 forgot-password dang co bug logic nguoc tren nhanh nay (email da ton tai -> tra EMAIL_ALREADY_EXISTS). Day la code phan auth cua nguoi khac lam, chua sua - chi test de xem phan hoi.",
+			"item": [
+				{
+					"name": "A1. GET /profile - sau khi Login (request so 1) va da redeploy WAR moi",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('HTTP 200 - dang nhap thanh cong', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"const body = pm.response.json();",
+									"pm.test('data.email = systemadmin@gmail.com', function () {",
+									"    pm.expect(body.data.email).to.eql('systemadmin@gmail.com');",
+									"});",
+									"pm.test('data.role la mang khac rong', function () {",
+									"    pm.expect(body.data.role).to.be.an('array').that.is.not.empty;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auths/profile",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auths",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2. Login - tai khoan cua ban (sua email + password truoc khi chay)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('HTTP 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('isSuccess = true', function () {",
+									"    pm.expect(pm.response.json().isSuccess).to.eql(true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"23130205@st.hcmuaf.edu.vn\",\n  \"password\": \"NhapMatKhauCuaBan\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auths/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auths",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A3. Dang ky - sua email that cua ban truoc khi chay (nhan mail kich hoat)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('HTTP 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('isSuccess = true', function () {",
+									"    pm.expect(pm.response.json().isSuccess).to.eql(true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fullName\": \"Test User\",\n  \"email\": \"nhap-email-that-cua-ban@gmail.com\",\n  \"password\": \"Test@123456\",\n  \"confirmPassword\": \"Test@123456\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auths/sign-up",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auths",
+								"sign-up"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A4. Kich hoat tai khoan - dan token lay tu link trong email",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auths/activation?token=DAN_TOKEN_TU_EMAIL",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auths",
+								"activation"
+							],
+							"query": [
+								{
+									"key": "token",
+									"value": "DAN_TOKEN_TU_EMAIL"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A5. Refresh token - lay access_token moi bang refresh_token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('HTTP 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Co set cookie access_token moi', function () {",
+									"    const cookies = pm.response.headers.all().filter(h => h.key === 'Set-Cookie');",
+									"    const joined = cookies.map(c => c.value).join('; ');",
+									"    pm.expect(joined).to.include('access_token');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auths/refresh-token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auths",
+								"refresh-token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A6. GET /profile khi CHUA dang nhap - ky vong bi chan (xoa cookie localhost truoc)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('HTTP 400 - bi chan vi chua co cookie hop le', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"pm.test('isSuccess = false', function () {",
+									"    pm.expect(pm.response.json().isSuccess).to.eql(false);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auths/profile",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auths",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A7. Forgot password - LUU Y: dang co bug logic nguoc tren nhanh nay (xem mo ta folder)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"23130205@st.hcmuaf.edu.vn\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auths/forgot-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auths",
+								"forgot-password"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
