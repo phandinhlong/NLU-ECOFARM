@@ -50,7 +50,9 @@ public class AuthTokenInterceptor implements ContainerRequestFilter {
             "/api/v1/openapi",
             "/swagger-ui",
             "/doc-api",
-            "/favicon.ico");
+            "/favicon.ico",
+            "/api/v1/auths/forgot-password",
+            "/api/v1/auths/reset-password");
 
     private boolean isPublicEndpoint(ContainerRequestContext ctx) {
         if ("OPTIONS".equalsIgnoreCase(ctx.getMethod())) return true;

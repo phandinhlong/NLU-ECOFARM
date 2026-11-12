@@ -1,6 +1,7 @@
 package jakarta.ecofarm_backend.modules.auth;
 
 import jakarta.ecofarm_backend.common.constant.SecurityConstant;
+import jakarta.ecofarm_backend.common.dto.request.ForgotPasswordRequest;
 import jakarta.ecofarm_backend.common.dto.request.LoginRequest;
 import jakarta.ecofarm_backend.common.dto.request.SignupRequest;
 import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
@@ -29,25 +30,11 @@ public class AuthResource {
     @Inject
     private AuthFacade authFacade;
 
-    @Inject
-    private JwtService jwtService;
-
-    @Inject
-    private CookieBuilderUtil cookieBuilder;
-
-    @Inject
-    @ConfigProperty(name = "nlu.eco.farm.cookie.access-max-age", defaultValue = "900")
-    private Integer accessMaxAge;
-
-    @Inject
-    @ConfigProperty(name = "nlu.eco.farm.cookie.refresh-max-age", defaultValue = "604800")
-    private Integer refreshMaxAge;
 
     @GET
     @Path("/profile")
-    public BaseResponse<ProfileResponse> findProfile(
-            @CookieParam(SecurityConstant.ACCESS_TOKEN_COOKIE_NAME) String accessToken) {
-        return this.authFacade.findProfile(this.jwtService.getEmailFromJwtToken(accessToken));
+    public BaseResponse<ProfileResponse> findProfile(){
+        return this.authFacade.findProfile();
     }
 
     @POST
@@ -56,29 +43,14 @@ public class AuthResource {
             summary = "User login",
             description = "Authenticates the user's credentials and sets the access token and refresh token in HttpOnly cookies."
     )
-    public Response login(@Valid LoginRequest request) {
-        BaseResponse<Map<String, String>> result = this.authFacade.login(request);
-        Map<String, String> tokens = result.getData();
-        String accessToken = tokens.get("accessToken");
-        String refreshToken = tokens.get("refreshToken");
-
-        return Response.ok(result)
-                .header("Set-Cookie", cookieBuilder.buildCookie(
-                        SecurityConstant.ACCESS_TOKEN_COOKIE_NAME, accessToken, "/", accessMaxAge))
-                .header("Set-Cookie", cookieBuilder.buildCookie(
-                        SecurityConstant.REFRESH_TOKEN_COOKIE_NAME, refreshToken, "/", refreshMaxAge))
-                .build();
+    public BaseResponse<Boolean> login(@Valid LoginRequest request) {
+        return this.authFacade.login(request);
     }
 
     @POST
     @Path("/refresh-token")
-    public Response refreshToken(@CookieParam(SecurityConstant.REFRESH_TOKEN_COOKIE_NAME) String refreshToken) {
-        BaseResponse<Map<String, String>> result = this.authFacade.refreshTokens(refreshToken);
-
-        return Response.ok(result)
-                .header("Set-Cookie", cookieBuilder.buildCookie(
-                        SecurityConstant.ACCESS_TOKEN_COOKIE_NAME, result.getData().get("accessToken"), "/", accessMaxAge))
-                .build();
+    public BaseResponse<Boolean> refreshToken(){
+        return this.authFacade.refreshToken();
     }
 
     @POST
@@ -93,4 +65,19 @@ public class AuthResource {
         URI location = this.authFacade.activateUser(token);
         return Response.seeOther(location).build();
     }
+
+    @POST
+    @Path("/forgot-password")
+    public BaseResponse<Boolean> forgotPassword(@Valid ForgotPasswordRequest request){
+        return this.authFacade.forgotPassword(request);
+    }
+
+
+    @GET
+    @Path("/forgot-password/verify-token")
+    public Response verifyForgotPassword(@QueryParam("token") String token) {
+        return this.authFacade.verifyForgotPassword(token);
+    }
+
+
 }
