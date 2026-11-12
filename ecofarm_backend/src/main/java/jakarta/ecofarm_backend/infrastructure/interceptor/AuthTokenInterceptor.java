@@ -47,6 +47,7 @@ public class AuthTokenInterceptor implements ContainerRequestFilter {
             "/api/v1/auths/sign-up",
             "/api/v1/auths/activation",
             "/api/v1/block-chain/public/",
+            "/public/",
             "/api/v1/openapi",
             "/swagger-ui",
             "/doc-api",
