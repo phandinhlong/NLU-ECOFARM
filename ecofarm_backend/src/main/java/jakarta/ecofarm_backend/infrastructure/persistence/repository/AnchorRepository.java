@@ -6,6 +6,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 
 import java.util.List;
+import java.util.Optional;
 
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 
@@ -47,5 +48,16 @@ public class AnchorRepository {
             Anchor.class);
         q.setParameter("snapshotId", snapshotId);
         return q.getResultList();
+    }
+
+    public Optional<Anchor> findLatestConfirmedBySnapshotId(Long snapshotId) {
+        return em.createQuery(
+                "select a from Anchor a where a.snapshotId = :snapshotId and a.status = 'CONFIRMED' "
+                        + "order by a.id desc",
+                Anchor.class)
+                .setParameter("snapshotId", snapshotId)
+                .setMaxResults(1)
+                .getResultStream()
+                .findFirst();
     }
 }

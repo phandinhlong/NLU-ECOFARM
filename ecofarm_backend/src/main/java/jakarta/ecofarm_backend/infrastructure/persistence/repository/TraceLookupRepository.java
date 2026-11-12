@@ -8,10 +8,13 @@ import java.util.List;
 import java.util.Optional;
 
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Certificate;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.CultivationEvent;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.EventAttachment;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Greenhouse;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.ProductPackage;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.QcRecord;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.QrCode;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Shipment;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Variety;
 
 @Stateless
@@ -53,5 +56,35 @@ public class TraceLookupRepository {
                         Certificate.class)
                 .setParameter("greenhouseId", greenhouseId)
                 .getResultList();
+    }
+
+    public List<CultivationEvent> findCultivationEventsByBatchId(Long batchId) {
+        return em.createQuery(
+                        "SELECT e FROM CultivationEvent e WHERE e.batchId = :batchId "
+                                + "AND e.status IN ('CONFIRMED', 'APPROVED') "
+                                + "ORDER BY e.recordedAt DESC, e.id DESC",
+                        CultivationEvent.class)
+                .setParameter("batchId", batchId)
+                .getResultList();
+    }
+
+    public List<EventAttachment> findAttachmentsByEventIds(List<Long> eventIds) {
+        if (eventIds == null || eventIds.isEmpty()) return List.of();
+        return em.createQuery(
+                        "SELECT a FROM EventAttachment a WHERE a.eventId IN :eventIds ORDER BY a.id",
+                        EventAttachment.class)
+                .setParameter("eventIds", eventIds)
+                .getResultList();
+    }
+
+    public Optional<Shipment> findLatestShipmentByBatchId(Long batchId) {
+        return em.createQuery(
+                        "SELECT s FROM Shipment s WHERE s.batchId = :batchId "
+                                + "ORDER BY s.shippedAt DESC, s.id DESC",
+                        Shipment.class)
+                .setParameter("batchId", batchId)
+                .setMaxResults(1)
+                .getResultStream()
+                .findFirst();
     }
 }

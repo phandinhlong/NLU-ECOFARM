@@ -7,21 +7,37 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import jakarta.ecofarm_backend.common.dto.BatchInfo;
+import jakarta.ecofarm_backend.common.dto.BlockchainStatus;
 import jakarta.ecofarm_backend.common.dto.CertificateInfo;
 import jakarta.ecofarm_backend.common.dto.PublicTrace;
+import jakarta.ecofarm_backend.common.dto.RecallInfo;
+import jakarta.ecofarm_backend.common.dto.ShipmentInfo;
+import jakarta.ecofarm_backend.common.dto.TimelineEvent;
 import jakarta.ecofarm_backend.common.dto.TraceMetrics;
+import jakarta.ecofarm_backend.config.BlockchainConfig;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Certificate;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.CultivationEvent;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.EventAttachment;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Greenhouse;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.MerkleSnapshot;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.ProductPackage;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.QcRecord;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.QrCode;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Recall;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Shipment;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Variety;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.AnchorRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.BatchRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.MerkleSnapshotRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.RecallRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.TraceLookupRepository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Path("/trace")
 @Stateless
@@ -34,6 +50,18 @@ public class PublicTraceResource {
 
     @Inject
     private BatchRepository batchRepository;
+
+    @Inject
+    private MerkleSnapshotRepository merkleSnapshotRepository;
+
+    @Inject
+    private AnchorRepository anchorRepository;
+
+    @Inject
+    private RecallRepository recallRepository;
+
+    @Inject
+    private BlockchainConfig blockchainConfig;
 
     @GET
     @Path("/{code}")
@@ -83,7 +111,76 @@ public class PublicTraceResource {
             trace.setMetrics(metrics);
         }
 
+        trace.setTimeline(buildTimeline(batch.getId()));
+        trace.setShipment(buildShipment(batch.getId()));
+        trace.setBlockchain(buildBlockchainStatus(batch.getId()));
+        trace.setRecall(buildRecall(batch.getId()));
+
         return trace;
+    }
+
+    private List<TimelineEvent> buildTimeline(Long batchId) {
+        List<CultivationEvent> events = traceRepository.findCultivationEventsByBatchId(batchId);
+        if (events.isEmpty()) return List.of();
+
+        List<Long> eventIds = events.stream().map(CultivationEvent::getId).toList();
+        Map<Long, List<EventAttachment>> attachmentsByEvent = traceRepository
+                .findAttachmentsByEventIds(eventIds)
+                .stream()
+                .collect(Collectors.groupingBy(EventAttachment::getEventId));
+
+        return events.stream().map(event -> {
+            TimelineEvent item = new TimelineEvent();
+            item.setOccurredAt(event.getRecordedAt());
+            item.setEventType(event.getEventType());
+            item.setTitle(event.getEventType());
+            item.setDescription(event.getEventType() + " #" + event.getSeq());
+            List<EventAttachment> attachments = attachmentsByEvent.get(event.getId());
+            if (attachments != null && !attachments.isEmpty()) {
+                item.setPhotoUrl(attachments.get(0).getFileKey());
+            }
+            return item;
+        }).toList();
+    }
+
+    private ShipmentInfo buildShipment(Long batchId) {
+        Optional<Shipment> shipment = traceRepository.findLatestShipmentByBatchId(batchId);
+        if (shipment.isEmpty()) return null;
+        ShipmentInfo info = new ShipmentInfo();
+        info.setDestination(shipment.get().getDestination());
+        info.setShippedAt(shipment.get().getShippedAt());
+        return info;
+    }
+
+    private BlockchainStatus buildBlockchainStatus(Long batchId) {
+        MerkleSnapshot snapshot = merkleSnapshotRepository.findByBatchId(batchId);
+        if (snapshot == null) {
+            return new BlockchainStatus(false, null, null, null, null, null);
+        }
+        Optional<Anchor> anchor = anchorRepository.findLatestConfirmedBySnapshotId(snapshot.getId());
+        if (anchor.isEmpty()) {
+            return new BlockchainStatus(false, null, snapshot.getMerkleRoot(), null, null, null);
+        }
+        Anchor a = anchor.get();
+        Integer chainId = a.getChainId();
+        boolean isPublic = blockchainConfig.getPublicChainId() != null
+                && blockchainConfig.getPublicChainId().equals(chainId);
+        String chainName = isPublic ? "Polygon Amoy" : "Private Chain (Besu)";
+        return new BlockchainStatus(true, chainName, snapshot.getMerkleRoot(),
+                a.getTxHash(), a.getAnchoredAt(), a.getExplorerUrl());
+    }
+
+    private RecallInfo buildRecall(Long batchId) {
+        List<Recall> recalls = recallRepository.findByBatchId(batchId);
+        if (recalls.isEmpty()) {
+            RecallInfo info = new RecallInfo();
+            info.setRecalled(false);
+            return info;
+        }
+        RecallInfo info = new RecallInfo();
+        info.setRecalled(true);
+        info.setReason(recalls.get(0).getReason());
+        return info;
     }
 
     private CertificateInfo toCertificateInfo(Certificate certificate) {
