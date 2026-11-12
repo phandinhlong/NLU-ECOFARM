@@ -4,4 +4,6 @@ public interface EmailService {
     void send(String to, String subject, String content);
 
     void sendActiveUserEmail(String to, String backendActivateUserUrl );
+
+    void sendForgotPasswordEmail(String to, String backendActivateUserUrl );
 }
