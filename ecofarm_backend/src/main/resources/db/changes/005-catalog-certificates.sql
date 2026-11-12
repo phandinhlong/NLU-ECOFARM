@@ -21,23 +21,59 @@ CREATE UNIQUE INDEX IF NOT EXISTS certificates_cert_no_key ON certificates (cert
 --rollback DROP INDEX IF EXISTS certificates_cert_no_key;
 --rollback DROP TABLE IF EXISTS certificates;
 
---changeset ecofarm:006-catalog-id-sequences-portable
+--changeset ecofarm:006-catalog-id-sequence-green-houses splitStatements:false
 --validCheckSum: ANY
---comment: public_portable.sql không có sequence cho id của green_houses/varieties/certificates, bổ sung để JPA IDENTITY insert được trên DB import từ dump
-CREATE SEQUENCE IF NOT EXISTS green_houses_id_seq;
-SELECT setval('green_houses_id_seq', COALESCE((SELECT MAX(id) FROM green_houses), 1), true);
-ALTER TABLE green_houses ALTER COLUMN id SET DEFAULT nextval('green_houses_id_seq');
+--comment: public_portable.sql không có sequence cho id green_houses; bỏ qua nếu cột là IDENTITY (do Hibernate tạo) hoặc đã có default
+DO $$
+DECLARE
+    v_identity BOOLEAN;
+    v_has_default BOOLEAN;
+BEGIN
+    SELECT (is_identity = 'YES'), (column_default IS NOT NULL)
+      INTO v_identity, v_has_default
+      FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'green_houses' AND column_name = 'id';
+    IF FOUND AND v_identity = false AND v_has_default = false THEN
+        CREATE SEQUENCE IF NOT EXISTS green_houses_id_seq;
+        PERFORM setval('green_houses_id_seq', COALESCE((SELECT MAX(id) FROM green_houses), 1), true);
+        EXECUTE 'ALTER TABLE green_houses ALTER COLUMN id SET DEFAULT nextval(''green_houses_id_seq'')';
+    END IF;
+END $$;
 
-CREATE SEQUENCE IF NOT EXISTS varieties_id_seq;
-SELECT setval('varieties_id_seq', COALESCE((SELECT MAX(id) FROM varieties), 1), true);
-ALTER TABLE varieties ALTER COLUMN id SET DEFAULT nextval('varieties_id_seq');
+--changeset ecofarm:007-catalog-id-sequence-varieties splitStatements:false
+--validCheckSum: ANY
+--comment: public_portable.sql không có sequence cho id varieties; bỏ qua nếu cột là IDENTITY hoặc đã có default
+DO $$
+DECLARE
+    v_identity BOOLEAN;
+    v_has_default BOOLEAN;
+BEGIN
+    SELECT (is_identity = 'YES'), (column_default IS NOT NULL)
+      INTO v_identity, v_has_default
+      FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'varieties' AND column_name = 'id';
+    IF FOUND AND v_identity = false AND v_has_default = false THEN
+        CREATE SEQUENCE IF NOT EXISTS varieties_id_seq;
+        PERFORM setval('varieties_id_seq', COALESCE((SELECT MAX(id) FROM varieties), 1), true);
+        EXECUTE 'ALTER TABLE varieties ALTER COLUMN id SET DEFAULT nextval(''varieties_id_seq'')';
+    END IF;
+END $$;
 
-CREATE SEQUENCE IF NOT EXISTS certificates_id_seq;
-SELECT setval('certificates_id_seq', COALESCE((SELECT MAX(id) FROM certificates), 1), true);
-ALTER TABLE certificates ALTER COLUMN id SET DEFAULT nextval('certificates_id_seq');
---rollback ALTER TABLE certificates ALTER COLUMN id DROP DEFAULT;
---rollback DROP SEQUENCE IF EXISTS certificates_id_seq;
---rollback ALTER TABLE varieties ALTER COLUMN id DROP DEFAULT;
---rollback DROP SEQUENCE IF EXISTS varieties_id_seq;
---rollback ALTER TABLE green_houses ALTER COLUMN id DROP DEFAULT;
---rollback DROP SEQUENCE IF EXISTS green_houses_id_seq;
+--changeset ecofarm:008-catalog-id-sequence-certificates splitStatements:false
+--validCheckSum: ANY
+--comment: public_portable.sql không có sequence cho id certificates; bỏ qua nếu cột là IDENTITY hoặc đã có default
+DO $$
+DECLARE
+    v_identity BOOLEAN;
+    v_has_default BOOLEAN;
+BEGIN
+    SELECT (is_identity = 'YES'), (column_default IS NOT NULL)
+      INTO v_identity, v_has_default
+      FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'certificates' AND column_name = 'id';
+    IF FOUND AND v_identity = false AND v_has_default = false THEN
+        CREATE SEQUENCE IF NOT EXISTS certificates_id_seq;
+        PERFORM setval('certificates_id_seq', COALESCE((SELECT MAX(id) FROM certificates), 1), true);
+        EXECUTE 'ALTER TABLE certificates ALTER COLUMN id SET DEFAULT nextval(''certificates_id_seq'')';
+    END IF;
+END $$;
