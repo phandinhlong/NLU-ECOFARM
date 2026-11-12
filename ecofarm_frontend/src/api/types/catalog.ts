@@ -22,6 +22,26 @@ export interface GreenhouseInput {
   version?: number
 }
 
+export interface Variety {
+  id: number
+  code: string
+  name: string
+  daysPollinationToHarvest: number | null
+  minBrix: number | null
+  minIsolationDays: number | null
+  version: number
+  batchCount: number
+}
+
+export interface VarietyInput {
+  code: string
+  name: string
+  daysPollinationToHarvest?: number | null
+  minBrix?: number | null
+  minIsolationDays?: number | null
+  version?: number
+}
+
 export interface PageResponse<T> {
   content: T[]
   page: number

@@ -24,6 +24,14 @@ const canManageCatalog = computed(() =>
         >
           Nhà màng
         </BNavItem>
+        <BNavItem
+          v-if="canManageCatalog"
+          to="/varieties"
+          link-class="text-white"
+          active-class="bg-primary"
+        >
+          Giống dưa
+        </BNavItem>
       </BNav>
     </aside>
 

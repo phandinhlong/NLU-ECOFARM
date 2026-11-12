@@ -69,6 +69,12 @@ const router = createRouter({
           component: () => import('@/views/catalog/GreenhouseView.vue'),
           meta: { title: 'Nhà màng' },
         },
+        {
+          path: 'varieties',
+          name: 'varieties',
+          component: () => import('@/views/catalog/VarietyView.vue'),
+          meta: { title: 'Giống dưa' },
+        },
       ],
     },
     {

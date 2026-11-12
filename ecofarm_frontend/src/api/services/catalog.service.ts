@@ -5,6 +5,8 @@ import type {
   Greenhouse,
   GreenhouseInput,
   PageResponse,
+  Variety,
+  VarietyInput,
 } from '@/api/types/catalog'
 import { API_V1 } from '@/api/constants'
 
@@ -20,4 +22,13 @@ export const catalogService = {
 
   updateGreenhouse: (id: number, data: GreenhouseInput) =>
     axios.put<ApiResponse<Greenhouse>>(`${API_V1}/greenhouses/${id}`, data),
+
+  listVarieties: (params: CatalogQuery) =>
+    axios.get<ApiResponse<PageResponse<Variety>>>(`${API_V1}/varieties`, { params }),
+
+  createVariety: (data: VarietyInput) =>
+    axios.post<ApiResponse<Variety>>(`${API_V1}/varieties`, data),
+
+  updateVariety: (id: number, data: VarietyInput) =>
+    axios.put<ApiResponse<Variety>>(`${API_V1}/varieties/${id}`, data),
 }
