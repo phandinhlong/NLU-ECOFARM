@@ -77,6 +77,9 @@ public class GreenhouseResource {
         }
 
         boolean codeChanged = !greenhouse.getCode().equals(request.getCode());
+        if (codeChanged && greenhouseRepository.countBatches(id) > 0) {
+            throw new ConflictException(ErrorCode.CATALOG_CODE_LOCKED);
+        }
         if (codeChanged && greenhouseRepository.existsByCodeAndIdNot(request.getCode(), id)) {
             throw new ConflictException(ErrorCode.CODE_EXISTS);
         }

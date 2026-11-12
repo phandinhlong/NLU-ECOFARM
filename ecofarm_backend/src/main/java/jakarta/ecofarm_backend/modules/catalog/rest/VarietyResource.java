@@ -76,6 +76,9 @@ public class VarietyResource {
         }
 
         boolean codeChanged = !variety.getCode().equals(request.getCode());
+        if (codeChanged && varietyRepository.countBatches(id) > 0) {
+            throw new ConflictException(ErrorCode.CATALOG_CODE_LOCKED);
+        }
         if (codeChanged && varietyRepository.existsByCodeAndIdNot(request.getCode(), id)) {
             throw new ConflictException(ErrorCode.CODE_EXISTS);
         }

@@ -25,6 +25,7 @@ const page = computed<PageResponse<Variety>>(
     data.value ?? { content: [], page: 0, size: 10, totalElements: 0, totalPages: 0 },
 )
 const totalPages = computed(() => page.value.totalPages || 1)
+const isCodeLocked = computed(() => editing.value != null && editing.value.batchCount > 0)
 
 const resetForm = () => {
   form.code = ''
@@ -180,7 +181,10 @@ const goToPage = (next: number) => {
       <form class="d-flex flex-column gap-3" novalidate @submit.prevent="submit">
         <div>
           <label class="form-label small fw-medium mb-1" for="v-code">Mã giống</label>
-          <BFormInput id="v-code" v-model="form.code" required maxlength="32" />
+          <BFormInput id="v-code" v-model="form.code" required maxlength="32" :disabled="isCodeLocked" />
+          <p v-if="isCodeLocked" class="small text-body-secondary mt-2 mb-0">
+            Không thể đổi mã khi giống đã có lô tham chiếu.
+          </p>
         </div>
         <div>
           <label class="form-label small fw-medium mb-1" for="v-name">Tên giống</label>

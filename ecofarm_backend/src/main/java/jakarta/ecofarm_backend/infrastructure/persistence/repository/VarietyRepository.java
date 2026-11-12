@@ -16,7 +16,7 @@ public class VarietyRepository {
 
     public List<Variety> findPage(int page, int size, String q) {
         StringBuilder jpql = new StringBuilder("""
-                SELECT v, (SELECT COUNT(b) FROM Batch b WHERE b.varietyId = v.id AND b.active = true)
+                SELECT v, (SELECT COUNT(b) FROM Batch b WHERE b.varietyId = v.id)
                 FROM Variety v
                 WHERE v.active = true
                 """);
@@ -78,7 +78,7 @@ public class VarietyRepository {
 
     public long countBatches(Long varietyId) {
         TypedQuery<Long> query = em.createQuery(
-                "SELECT COUNT(b) FROM Batch b WHERE b.varietyId = :varietyId AND b.active = true",
+                "SELECT COUNT(b) FROM Batch b WHERE b.varietyId = :varietyId",
                 Long.class);
         query.setParameter("varietyId", varietyId);
         return query.getSingleResult();
