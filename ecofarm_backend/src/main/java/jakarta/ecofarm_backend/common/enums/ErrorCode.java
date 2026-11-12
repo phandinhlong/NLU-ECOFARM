@@ -13,7 +13,10 @@ public enum ErrorCode {
     PASSWORD_NOT_MATCH(1005, "Confirm password does not match"),
     EMAIL_ALREADY_EXISTS(1006, "Email already exists"),
     ROLE_NOT_FOUND(1007, "Role not found"),
-    PERMISSION_DENIED(1008, "Permission denied");
+    PERMISSION_DENIED(1008, "Permission denied"),
+    CODE_EXISTS(1009, "Mã danh mục đã tồn tại"),
+    CATALOG_CODE_LOCKED(1010, "Không thể đổi mã khi đã có lô tham chiếu"),
+    VERSION_CONFLICT(1011, "Dữ liệu đã bị thay đổi bởi người khác, vui lòng tải lại");
 
     private final Integer code;
     private final String message;

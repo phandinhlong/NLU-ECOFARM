@@ -11,5 +11,6 @@
     </changeSet>
     <include file="db/changes/000-hello-liquibase.sql"/>
     <include file="db/changes/002-seed-test-roles.sql"/>
+    <include file="db/changes/003-catalog-greenhouses.sql"/>
 
 </databaseChangeLog>

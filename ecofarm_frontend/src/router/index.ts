@@ -66,7 +66,7 @@ const router = createRouter({
         {
           path: 'greenhouses',
           name: 'greenhouses',
-          component: () => import('@/views/PlaceholderView.vue'),
+          component: () => import('@/views/catalog/GreenhouseView.vue'),
           meta: { title: 'Nhà màng' },
         },
       ],
