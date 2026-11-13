@@ -81,7 +81,6 @@ public class CertificateResource {
         certificate.setValidTo(to);
         certificate.setFileKey(request.getFileKey() == null || request.getFileKey().isBlank()
                 ? null : request.getFileKey().trim());
-        certificate.setActive(true);
 
         certificateRepository.persist(certificate);
         return Response.status(Response.Status.CREATED)

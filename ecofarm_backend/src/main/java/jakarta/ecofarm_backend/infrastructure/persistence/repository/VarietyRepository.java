@@ -31,7 +31,7 @@ public class VarietyRepository {
         StringBuilder jpql = new StringBuilder("""
                 SELECT v, (SELECT COUNT(b) FROM Batch b WHERE b.varietyId = v.id)
                 FROM Variety v
-                WHERE v.active = true
+                WHERE v.isActive = true
                 """);
         if (q != null && !q.isBlank()) {
             jpql.append(" AND (LOWER(v.code) LIKE :q OR LOWER(v.name) LIKE :q)");
@@ -53,7 +53,7 @@ public class VarietyRepository {
     }
 
     public long countActive(String q) {
-        StringBuilder jpql = new StringBuilder("SELECT COUNT(v) FROM Variety v WHERE v.active = true");
+        StringBuilder jpql = new StringBuilder("SELECT COUNT(v) FROM Variety v WHERE v.isActive = true");
         if (q != null && !q.isBlank()) {
             jpql.append(" AND (LOWER(v.code) LIKE :q OR LOWER(v.name) LIKE :q)");
         }
@@ -77,7 +77,7 @@ public class VarietyRepository {
     }
 
     public boolean existsByCodeAndIdNot(String code, Long id) {
-        StringBuilder jpql = new StringBuilder("SELECT COUNT(v) FROM Variety v WHERE v.active = true AND v.code = :code");
+        StringBuilder jpql = new StringBuilder("SELECT COUNT(v) FROM Variety v WHERE v.isActive = true AND v.code = :code");
         if (id != null) {
             jpql.append(" AND v.id <> :id");
         }

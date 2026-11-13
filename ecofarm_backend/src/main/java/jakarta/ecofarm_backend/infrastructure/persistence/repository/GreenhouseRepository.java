@@ -49,7 +49,7 @@ public class GreenhouseRepository {
         StringBuilder jpql = new StringBuilder("""
                 SELECT g, (SELECT COUNT(b) FROM Batch b WHERE b.greenhouseId = g.id)
                 FROM Greenhouse g
-                WHERE g.active = true
+                WHERE g.isActive = true
                 """);
         appendFilters(jpql, status, q);
         jpql.append(" ORDER BY g.id DESC");
@@ -67,7 +67,7 @@ public class GreenhouseRepository {
     }
 
     public long countActive(String status, String q) {
-        StringBuilder jpql = new StringBuilder("SELECT COUNT(g) FROM Greenhouse g WHERE g.active = true");
+        StringBuilder jpql = new StringBuilder("SELECT COUNT(g) FROM Greenhouse g WHERE g.isActive = true");
         appendFilters(jpql, status, q);
 
         TypedQuery<Long> query = em.createQuery(jpql.toString(), Long.class);
@@ -88,7 +88,7 @@ public class GreenhouseRepository {
     }
 
     public boolean existsByCodeAndIdNot(String code, Long id) {
-        StringBuilder jpql = new StringBuilder("SELECT COUNT(g) FROM Greenhouse g WHERE g.active = true AND g.code = :code");
+        StringBuilder jpql = new StringBuilder("SELECT COUNT(g) FROM Greenhouse g WHERE g.isActive = true AND g.code = :code");
         if (id != null) {
             jpql.append(" AND g.id <> :id");
         }

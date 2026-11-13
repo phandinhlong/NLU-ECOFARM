@@ -33,7 +33,7 @@ public class CertificateResponse {
                 .validFrom(c.getValidFrom() == null ? null : c.getValidFrom().toString())
                 .validTo(c.getValidTo() == null ? null : c.getValidTo().toString())
                 .fileKey(c.getFileKey())
-                .active(c.getActive())
+                .active(c.isActive())
                 .version(c.getVersion())
                 .createdAt(c.getCreatedAt())
                 .updatedAt(c.getUpdatedAt())
