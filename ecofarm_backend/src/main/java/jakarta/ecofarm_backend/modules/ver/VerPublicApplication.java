@@ -1,6 +1,7 @@
 package jakarta.ecofarm_backend.modules.ver;
 
 import jakarta.ecofarm_backend.infrastructure.cors.CorsFilter;
+import jakarta.ecofarm_backend.modules.ver.filter.RateLimitFilter;
 import jakarta.ecofarm_backend.modules.ver.rest.PublicTraceResource;
 import jakarta.ws.rs.ApplicationPath;
 import jakarta.ws.rs.core.Application;
@@ -18,6 +19,7 @@ public class VerPublicApplication extends Application {
     public Set<Class<?>> getClasses() {
         return Set.of(
                 PublicTraceResource.class,
+                RateLimitFilter.class,
                 CorsFilter.class);
     }
 }
