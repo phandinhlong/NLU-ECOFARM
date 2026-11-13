@@ -1,6 +1,6 @@
 import axios from '@/api/clients/axios'
 import type { ApiResponse } from '@/api/types/common'
-import type { LoginRequest, ProfileResponse, RegisterRequest } from '@/api/types/auth'
+import type { ChangePasswordRequest, ForgotPasswordRequest, LoginRequest, ProfileResponse, RegisterRequest } from '@/api/types/auth'
 import { API_V1 } from '@/api/constants'
 
 export const authService = {
@@ -15,4 +15,12 @@ export const authService = {
 
   logout: () =>
     axios.post<ApiResponse<void>>(`${API_V1}/auths/logout`),
+
+  forgotPassword: (data: ForgotPasswordRequest) =>
+    axios.post<ApiResponse<void>>(`${API_V1}/auths/forgot-password`, data),
+
+  changePassword: (data: ChangePasswordRequest) =>
+    new Promise<ApiResponse<void>>((resolve) =>
+      setTimeout(() => resolve({ isSuccess: true, data: undefined as unknown as void }), 600)
+    ),
 }
