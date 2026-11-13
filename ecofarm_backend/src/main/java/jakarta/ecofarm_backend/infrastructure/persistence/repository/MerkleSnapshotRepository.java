@@ -38,7 +38,7 @@ public class MerkleSnapshotRepository {
 
     public MerkleSnapshot findByBatchId(Long batchId) {
         TypedQuery<MerkleSnapshot> q = em.createQuery(
-            "select s from MerkleSnapshot s where s.batchId = :batchId",
+            "select s from MerkleSnapshot s where s.batch.id = :batchId",
             MerkleSnapshot.class);
         q.setParameter("batchId", batchId);
         List<MerkleSnapshot> results = q.getResultList();

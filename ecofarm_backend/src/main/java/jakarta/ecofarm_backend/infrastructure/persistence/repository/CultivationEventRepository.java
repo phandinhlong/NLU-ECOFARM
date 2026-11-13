@@ -15,7 +15,7 @@ public class CultivationEventRepository {
 
     public List<CultivationEvent> findByBatchIdOrderBySeqAsc(Long batchId) {
         return em.createQuery(
-                        "select e from CultivationEvent e where e.batchId = :batchId and (e.active is null or e.active = true) order by e.seq asc, e.id asc",
+                        "select e from CultivationEvent e where e.batch.id = :batchId and (e.isActive is null or e.isActive = true) order by e.seq asc, e.id asc",
                         CultivationEvent.class)
                 .setParameter("batchId", batchId)
                 .getResultList();

@@ -17,7 +17,7 @@ public class QrScanLogRepository {
 
     public long countDistinctIpSince(Long qrCodeId, long sinceEpochMillis) {
         Long cnt = em.createQuery(
-                        "select count(distinct s.ipAddr) from QrScanLog s where s.qrCodeId = :qrCodeId and s.scannedAt >= :since and s.ipAddr is not null",
+                        "select count(distinct s.ipAddr) from QrScanLog s where s.qrCode.id = :qrCodeId and s.scannedAt >= :since and s.ipAddr is not null",
                         Long.class)
                 .setParameter("qrCodeId", qrCodeId)
                 .setParameter("since", sinceEpochMillis)
