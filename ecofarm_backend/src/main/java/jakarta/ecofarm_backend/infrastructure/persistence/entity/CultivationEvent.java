@@ -1,23 +1,27 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "cultivation_events")
 @Getter
 @Setter
+@SuperBuilder
+@AllArgsConstructor
 @NoArgsConstructor
-public class CultivationEvent {
+public class CultivationEvent extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(name = "batch_id")
-    private Long batchId;
+    // JPA relation thay cho DB foreign key (batches.id)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "batch_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    @JsonIgnore
+    private Batch batch;
 
     @Column(name = "seq")
     private Integer seq;
@@ -34,8 +38,11 @@ public class CultivationEvent {
     @Column(name = "status")
     private String status;
 
-    @Column(name = "recorded_by")
-    private Long recordedBy;
+    // JPA relation thay cho DB foreign key (users.id)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "recorded_by", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    @JsonIgnore
+    private User recordedBy;
 
     @Column(name = "recorded_at")
     private Long recordedAt;
@@ -43,19 +50,9 @@ public class CultivationEvent {
     @Column(name = "client_event_id", unique = true)
     private String clientEventId;
 
-    @Column(name = "amends_event_id")
-    private Long amendsEventId;
-
-    @Column(name = "is_active")
-    private Boolean active;
-
-    @Version
-    @Column(name = "version")
-    private Integer version;
-
-    @Column(name = "created_at")
-    private Long createdAt;
-
-    @Column(name = "updated_at")
-    private Long updatedAt;
+    // JPA self relation thay cho DB foreign key (cultivation_events.id)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "amends_event_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    @JsonIgnore
+    private CultivationEvent amendsEvent;
 }

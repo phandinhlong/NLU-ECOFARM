@@ -88,11 +88,10 @@ public class VerificationFacadeImpl implements VerificationFacade {
         int newScanCount = (qr.getScanCount() != null ? qr.getScanCount() : 0) + 1;
         qr.setScanCount(newScanCount);
         qr.setLastScannedAt(now);
-        qr.setUpdatedAt(now);
         qrCodeRepository.merge(qr);
 
         QrScanLog scanLog = new QrScanLog();
-        scanLog.setQrCodeId(qr.getId());
+        scanLog.setQrCode(qr);
         scanLog.setIpAddr(clientIp);
         scanLog.setUserAgent(userAgent);
         scanLog.setScannedAt(now);
@@ -115,8 +114,8 @@ public class VerificationFacadeImpl implements VerificationFacade {
             }
         }
 
-        PackageEntity pkg = qr.getPackageId() != null ? packageRepository.findById(qr.getPackageId()) : null;
-        Batch batch = (pkg != null && pkg.getBatchId() != null) ? batchRepository.findById(pkg.getBatchId()) : null;
+        PackageEntity pkg = qr.getPkg();
+        Batch batch = (pkg != null && pkg.getBatch() != null) ? batchRepository.findById(pkg.getBatch().getId()) : null;
 
         PublicTrace trace = new PublicTrace();
         trace.setCode(code);
@@ -180,7 +179,7 @@ public class VerificationFacadeImpl implements VerificationFacade {
         }
         Anchor anchor = anchors.get(anchors.size() - 1);
 
-        boolean recalled = !recallRepository.findByBatchId(snapshot.getBatchId()).isEmpty();
+        boolean recalled = !recallRepository.findByBatchId(snapshot.getBatch() != null ? snapshot.getBatch().getId() : null).isEmpty();
         String onChainRoot = "CONFIRMED".equals(anchor.getStatus()) ? computedRoot : null;
         String result = onChainRoot != null ? "MATCH" : "UNAVAILABLE";
         String message = onChainRoot != null
