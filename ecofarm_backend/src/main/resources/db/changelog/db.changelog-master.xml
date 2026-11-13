@@ -15,6 +15,6 @@
     <include file="db/changes/003-catalog-greenhouses.sql"/>
     <include file="db/changes/004-catalog-varieties.sql"/>
     <include file="db/changes/005-catalog-certificates.sql"/>
-    <include file="db/changes/003-packaging-schema.sql"/>
+    <include file="/db/changes/006-packaging-schema.sql"/>
 
 </databaseChangeLog>
