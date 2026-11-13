@@ -78,8 +78,20 @@ const router = createRouter({
         {
           path: 'greenhouses',
           name: 'greenhouses',
-          component: () => import('@/views/PlaceholderView.vue'),
+          component: () => import('@/views/catalog/GreenhouseView.vue'),
           meta: { title: 'Nhà màng' },
+        },
+        {
+          path: 'varieties',
+          name: 'varieties',
+          component: () => import('@/views/catalog/VarietyView.vue'),
+          meta: { title: 'Giống dưa' },
+        },
+        {
+          path: 'certificates',
+          name: 'certificates',
+          component: () => import('@/views/catalog/CertificateView.vue'),
+          meta: { title: 'Chứng nhận' },
         },
       ],
     },
