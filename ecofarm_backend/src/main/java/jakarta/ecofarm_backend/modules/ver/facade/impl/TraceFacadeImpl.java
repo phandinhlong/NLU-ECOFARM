@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.modules.ver.facade.impl;
 
+import jakarta.ecofarm_backend.modules.ver.cache.AnchorRootCache;
 import jakarta.ecofarm_backend.modules.ver.client.PolygonRpcClient;
 import jakarta.ecofarm_backend.modules.ver.dto.AnchorInfo;
 import jakarta.ecofarm_backend.modules.ver.dto.BatchInfo;
@@ -37,6 +38,9 @@ public class TraceFacadeImpl implements TraceFacade {
 
     @Inject
     private PolygonRpcClient polygonRpcClient;
+
+    @Inject
+    private AnchorRootCache anchorRootCache;
 
     @Inject
     @ConfigProperty(name = "nlu.eco.farm.ver.chain-id", defaultValue = "80002")
@@ -134,7 +138,14 @@ public class TraceFacadeImpl implements TraceFacade {
                     .build();
         }
 
-        String onChainRoot = polygonRpcClient.callRoot(anchor.getContractAddress());
+        // Cache root tren chain de RPC sap khong chan luong xac thuc
+        String onChainRoot = anchorRootCache.get(anchor.getContractAddress());
+        if (onChainRoot == null) {
+            onChainRoot = polygonRpcClient.callRoot(anchor.getContractAddress());
+            if (onChainRoot != null) {
+                anchorRootCache.put(anchor.getContractAddress(), onChainRoot);
+            }
+        }
         builder.onChainRoot(onChainRoot);
         if (onChainRoot == null) {
             return builder.result(RESULT_UNAVAILABLE)
