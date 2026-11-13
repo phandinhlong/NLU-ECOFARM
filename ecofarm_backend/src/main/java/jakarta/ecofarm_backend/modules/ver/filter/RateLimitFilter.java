@@ -2,7 +2,7 @@ package jakarta.ecofarm_backend.modules.ver.filter;
 
 import jakarta.annotation.Priority;
 import jakarta.ecofarm_backend.common.constant.FilterOrder;
-import jakarta.ecofarm_backend.modules.ver.dto.ErrorResponse;
+import jakarta.ecofarm_backend.common.dto.response.ErrorResponse;
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.container.ContainerRequestContext;

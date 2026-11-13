@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.modules.ver.dto;
+package jakarta.ecofarm_backend.common.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;

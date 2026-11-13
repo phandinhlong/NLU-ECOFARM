@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.modules.ver.dto;
+package jakarta.ecofarm_backend.common.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -15,10 +15,10 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ProofBundleResponse {
+public class TraceResponse {
 
     private String code;
-    private BatchInfo batch;
+    private TraceBatchInfo batch;
     private VarietyInfo variety;
     private GreenhouseInfo greenhouse;
     private List<CertificateInfo> certificates;
@@ -26,6 +26,4 @@ public class ProofBundleResponse {
     private List<EventData> timeline;
     private BlockchainStatusInfo blockchain;
     private RecallInfo recall;
-    private List<String> leaves;
-    private VerVerifyResponse verification;
 }

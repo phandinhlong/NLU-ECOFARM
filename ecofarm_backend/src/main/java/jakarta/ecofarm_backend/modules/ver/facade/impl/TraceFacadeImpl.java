@@ -2,16 +2,16 @@ package jakarta.ecofarm_backend.modules.ver.facade.impl;
 
 import jakarta.ecofarm_backend.modules.ver.cache.AnchorRootCache;
 import jakarta.ecofarm_backend.modules.ver.client.PolygonRpcClient;
-import jakarta.ecofarm_backend.modules.ver.dto.AnchorInfo;
-import jakarta.ecofarm_backend.modules.ver.dto.BatchInfo;
-import jakarta.ecofarm_backend.modules.ver.dto.BlockchainStatusInfo;
-import jakarta.ecofarm_backend.modules.ver.dto.ErrorResponse;
-import jakarta.ecofarm_backend.modules.ver.dto.GreenhouseInfo;
-import jakarta.ecofarm_backend.modules.ver.dto.ProofBundleResponse;
-import jakarta.ecofarm_backend.modules.ver.dto.TraceData;
-import jakarta.ecofarm_backend.modules.ver.dto.TraceResponse;
-import jakarta.ecofarm_backend.modules.ver.dto.VarietyInfo;
-import jakarta.ecofarm_backend.modules.ver.dto.VerVerifyResponse;
+import jakarta.ecofarm_backend.common.dto.response.AnchorInfo;
+import jakarta.ecofarm_backend.common.dto.response.TraceBatchInfo;
+import jakarta.ecofarm_backend.common.dto.response.BlockchainStatusInfo;
+import jakarta.ecofarm_backend.common.dto.response.ErrorResponse;
+import jakarta.ecofarm_backend.common.dto.response.GreenhouseInfo;
+import jakarta.ecofarm_backend.common.dto.response.ProofBundleResponse;
+import jakarta.ecofarm_backend.modules.ver.repository.TraceData;
+import jakarta.ecofarm_backend.common.dto.response.TraceResponse;
+import jakarta.ecofarm_backend.common.dto.response.VarietyInfo;
+import jakarta.ecofarm_backend.common.dto.response.VerVerifyResponse;
 import jakarta.ecofarm_backend.modules.ver.facade.TraceFacade;
 import jakarta.ecofarm_backend.modules.ver.repository.VerTraceRepository;
 import jakarta.ecofarm_backend.modules.ver.util.MerkleUtil;
@@ -178,7 +178,7 @@ public class TraceFacadeImpl implements TraceFacade {
         return TraceResponse.builder()
                 .code(data.getCode())
                 .batch(data.getBatchCode() != null
-                        ? BatchInfo.builder()
+                        ? TraceBatchInfo.builder()
                                 .batchCode(data.getBatchCode())
                                 .status(data.getBatchStatus())
                                 .sowDate(data.getSowDate())

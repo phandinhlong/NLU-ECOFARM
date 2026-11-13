@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.modules.ver.dto;
+package jakarta.ecofarm_backend.common.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -13,7 +13,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class GreenhouseInfo {
+public class VarietyInfo {
 
     private String code;
     private String name;

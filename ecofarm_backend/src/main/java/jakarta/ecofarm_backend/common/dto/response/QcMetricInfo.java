@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.modules.ver.dto;
+package jakarta.ecofarm_backend.common.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -13,8 +13,10 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class VarietyInfo {
+public class QcMetricInfo {
 
-    private String code;
-    private String name;
+    private Double brix;
+    private Double avgWeightKg;
+    private Boolean passed;
+    private Long inspectedAt;
 }

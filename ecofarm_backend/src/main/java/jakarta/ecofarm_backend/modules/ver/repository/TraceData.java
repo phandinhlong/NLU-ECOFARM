@@ -1,5 +1,10 @@
-package jakarta.ecofarm_backend.modules.ver.dto;
+package jakarta.ecofarm_backend.modules.ver.repository;
 
+import jakarta.ecofarm_backend.common.dto.response.AnchorInfo;
+import jakarta.ecofarm_backend.common.dto.response.CertificateInfo;
+import jakarta.ecofarm_backend.common.dto.response.EventData;
+import jakarta.ecofarm_backend.common.dto.response.QcMetricInfo;
+import jakarta.ecofarm_backend.common.dto.response.RecallInfo;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

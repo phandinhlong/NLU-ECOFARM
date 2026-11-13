@@ -1,7 +1,7 @@
 package jakarta.ecofarm_backend.modules.ver.rest;
 
 import jakarta.ecofarm_backend.common.anotation.RequireRoles;
-import jakarta.ecofarm_backend.modules.ver.dto.ProofBundleResponse;
+import jakarta.ecofarm_backend.common.dto.response.ProofBundleResponse;
 import jakarta.ecofarm_backend.modules.ver.facade.TraceFacade;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;

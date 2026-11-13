@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.modules.ver.dto;
+package jakarta.ecofarm_backend.modules.ver.repository;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

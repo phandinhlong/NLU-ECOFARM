@@ -1,8 +1,8 @@
 package jakarta.ecofarm_backend.modules.ver.facade;
 
-import jakarta.ecofarm_backend.modules.ver.dto.ProofBundleResponse;
-import jakarta.ecofarm_backend.modules.ver.dto.TraceResponse;
-import jakarta.ecofarm_backend.modules.ver.dto.VerVerifyResponse;
+import jakarta.ecofarm_backend.common.dto.response.ProofBundleResponse;
+import jakarta.ecofarm_backend.common.dto.response.TraceResponse;
+import jakarta.ecofarm_backend.common.dto.response.VerVerifyResponse;
 
 public interface TraceFacade {
 

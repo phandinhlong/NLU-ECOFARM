@@ -5,13 +5,11 @@ import jakarta.ecofarm_backend.infrastructure.persistence.entity.Greenhouse;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.PackageEntity;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.QrCode;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Variety;
-import jakarta.ecofarm_backend.modules.ver.dto.AnchorInfo;
-import jakarta.ecofarm_backend.modules.ver.dto.CertificateInfo;
-import jakarta.ecofarm_backend.modules.ver.dto.EventData;
-import jakarta.ecofarm_backend.modules.ver.dto.QcMetricInfo;
-import jakarta.ecofarm_backend.modules.ver.dto.RecallInfo;
-import jakarta.ecofarm_backend.modules.ver.dto.SnapshotData;
-import jakarta.ecofarm_backend.modules.ver.dto.TraceData;
+import jakarta.ecofarm_backend.common.dto.response.AnchorInfo;
+import jakarta.ecofarm_backend.common.dto.response.CertificateInfo;
+import jakarta.ecofarm_backend.common.dto.response.EventData;
+import jakarta.ecofarm_backend.common.dto.response.QcMetricInfo;
+import jakarta.ecofarm_backend.common.dto.response.RecallInfo;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
@@ -99,7 +97,7 @@ public class VerTraceRepository {
 
     private List<CertificateInfo> findCertificatesByGreenhouseId(Long greenhouseId) {
         return em.createQuery(
-                "select new jakarta.ecofarm_backend.modules.ver.dto.CertificateInfo(c.certType, c.certNo, c.validFrom, c.validTo) "
+                "select new jakarta.ecofarm_backend.common.dto.response.CertificateInfo(c.certType, c.certNo, c.validFrom, c.validTo) "
                         + "from Certificate c where c.greenhouse.id = :greenhouseId order by c.id desc",
                 CertificateInfo.class)
                 .setParameter("greenhouseId", greenhouseId)
@@ -108,7 +106,7 @@ public class VerTraceRepository {
 
     private List<EventData> findEventsByBatchId(Long batchId) {
         return em.createQuery(
-                "select new jakarta.ecofarm_backend.modules.ver.dto.EventData(e.seq, e.eventType, e.status, e.recordedAt, e.eventHash, u.id) "
+                "select new jakarta.ecofarm_backend.common.dto.response.EventData(e.seq, e.eventType, e.status, e.recordedAt, e.eventHash, u.id) "
                         + "from CultivationEvent e left join e.recordedBy u "
                         + "where e.batch.id = :batchId order by e.seq asc, e.id asc",
                 EventData.class)
@@ -118,7 +116,7 @@ public class VerTraceRepository {
 
     private QcMetricInfo findLatestQcByBatchId(Long batchId) {
         return em.createQuery(
-                "select new jakarta.ecofarm_backend.modules.ver.dto.QcMetricInfo(q.brix, q.avgWeightKg, q.passed, q.inspectedAt) "
+                "select new jakarta.ecofarm_backend.common.dto.response.QcMetricInfo(q.brix, q.avgWeightKg, q.passed, q.inspectedAt) "
                         + "from QcRecord q where q.batch.id = :batchId order by q.id desc",
                 QcMetricInfo.class)
                 .setParameter("batchId", batchId)
@@ -130,7 +128,7 @@ public class VerTraceRepository {
 
     private List<RecallInfo> findRecallsByBatchId(Long batchId) {
         return em.createQuery(
-                "select new jakarta.ecofarm_backend.modules.ver.dto.RecallInfo(r.reason, r.createdAt, r.revokeTxHash) "
+                "select new jakarta.ecofarm_backend.common.dto.response.RecallInfo(r.reason, r.createdAt, r.revokeTxHash) "
                         + "from Recall r where r.batch.id = :batchId order by r.id desc",
                 RecallInfo.class)
                 .setParameter("batchId", batchId)
@@ -139,7 +137,7 @@ public class VerTraceRepository {
 
     private SnapshotData findLatestSnapshotByBatchId(Long batchId) {
         return em.createQuery(
-                "select new jakarta.ecofarm_backend.modules.ver.dto.SnapshotData(s.id, s.merkleRoot, s.leafCount) "
+                "select new jakarta.ecofarm_backend.modules.ver.repository.SnapshotData(s.id, s.merkleRoot, s.leafCount) "
                         + "from MerkleSnapshot s where s.batch.id = :batchId order by s.id desc",
                 SnapshotData.class)
                 .setParameter("batchId", batchId)
@@ -159,7 +157,7 @@ public class VerTraceRepository {
 
     private List<AnchorInfo> findAnchorsBySnapshotId(Long snapshotId) {
         return em.createQuery(
-                "select new jakarta.ecofarm_backend.modules.ver.dto.AnchorInfo(a.id, a.chainId, a.contractAddress, a.txHash, a.blockNumber, a.status, a.anchoredAt, a.explorerUrl) "
+                "select new jakarta.ecofarm_backend.common.dto.response.AnchorInfo(a.id, a.chainId, a.contractAddress, a.txHash, a.blockNumber, a.status, a.anchoredAt, a.explorerUrl) "
                         + "from Anchor a where a.snapshot.id = :snapshotId order by a.id desc",
                 AnchorInfo.class)
                 .setParameter("snapshotId", snapshotId)

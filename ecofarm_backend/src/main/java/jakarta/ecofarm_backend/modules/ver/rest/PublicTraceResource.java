@@ -1,7 +1,7 @@
 package jakarta.ecofarm_backend.modules.ver.rest;
 
-import jakarta.ecofarm_backend.modules.ver.dto.TraceResponse;
-import jakarta.ecofarm_backend.modules.ver.dto.VerVerifyResponse;
+import jakarta.ecofarm_backend.common.dto.response.TraceResponse;
+import jakarta.ecofarm_backend.common.dto.response.VerVerifyResponse;
 import jakarta.ecofarm_backend.modules.ver.facade.TraceFacade;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;

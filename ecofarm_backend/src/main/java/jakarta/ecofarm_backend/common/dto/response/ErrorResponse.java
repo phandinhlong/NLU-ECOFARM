@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.modules.ver.dto;
+package jakarta.ecofarm_backend.common.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -13,13 +13,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class BatchInfo {
+public class ErrorResponse {
 
-    private String batchCode;
-    private String status;
-    private String sowDate;
-    private String harvestDate;
-    private Long activatedAt;
-    private Boolean active;
-    private Boolean recalled;
+    private String code;
+    private String message;
+    private Boolean isSuccess;
 }
