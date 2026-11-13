@@ -65,6 +65,7 @@ public class VerTraceRepository {
         data.setHarvestDate(batch.getHarvestDate() != null ? batch.getHarvestDate().toString() : null);
         data.setActivatedAt(batch.getActivatedAt());
         data.setSaltEnc(batch.getSaltEnc());
+        data.setBatchActive(batch.isActive());
 
         Greenhouse greenhouse = batch.getGreenhouse();
         if (greenhouse != null) {
@@ -82,7 +83,10 @@ public class VerTraceRepository {
 
         data.setTimeline(findEventsByBatchId(batch.getId()));
         data.setMetrics(findLatestQcByBatchId(batch.getId()));
-        data.setRecalls(findRecallsByBatchId(batch.getId()));
+
+        List<RecallInfo> recalls = findRecallsByBatchId(batch.getId());
+        data.setRecalls(recalls);
+        data.setRecalled(recalls != null && !recalls.isEmpty());
 
         SnapshotData snapshot = findLatestSnapshotByBatchId(batch.getId());
         if (snapshot != null) {

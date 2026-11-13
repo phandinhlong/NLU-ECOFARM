@@ -1,6 +1,8 @@
 package jakarta.ecofarm_backend.modules.ver.facade.impl;
 
+import jakarta.ecofarm_backend.modules.ver.dto.AnchorInfo;
 import jakarta.ecofarm_backend.modules.ver.dto.BatchInfo;
+import jakarta.ecofarm_backend.modules.ver.dto.BlockchainStatusInfo;
 import jakarta.ecofarm_backend.modules.ver.dto.ErrorResponse;
 import jakarta.ecofarm_backend.modules.ver.dto.GreenhouseInfo;
 import jakarta.ecofarm_backend.modules.ver.dto.TraceData;
@@ -55,6 +57,8 @@ public class TraceFacadeImpl implements TraceFacade {
                                 .sowDate(data.getSowDate())
                                 .harvestDate(data.getHarvestDate())
                                 .activatedAt(data.getActivatedAt())
+                                .active(data.getBatchActive())
+                                .recalled(data.getRecalled())
                                 .build()
                         : null)
                 .variety(data.getVarietyCode() != null
@@ -71,6 +75,28 @@ public class TraceFacadeImpl implements TraceFacade {
                         : null)
                 .certificates(data.getCertificates())
                 .metrics(data.getMetrics())
+                .timeline(data.getTimeline())
+                .blockchain(data.getMerkleRoot() != null ? mapBlockchain(data) : null)
+                .recall(data.getRecalls() != null && !data.getRecalls().isEmpty()
+                        ? data.getRecalls().get(0)
+                        : null)
+                .build();
+    }
+
+    private BlockchainStatusInfo mapBlockchain(TraceData data) {
+        String status = "UNVERIFIED";
+        if (data.getAnchors() != null && !data.getAnchors().isEmpty()) {
+            AnchorInfo latest = data.getAnchors().get(0);
+            if ("CONFIRMED".equalsIgnoreCase(latest.getStatus())) {
+                status = "VERIFIED";
+            } else if ("PENDING".equalsIgnoreCase(latest.getStatus())) {
+                status = "PENDING";
+            }
+        }
+        return BlockchainStatusInfo.builder()
+                .status(status)
+                .merkleRoot(data.getMerkleRoot())
+                .leafCount(data.getLeafCount())
                 .build();
     }
 }

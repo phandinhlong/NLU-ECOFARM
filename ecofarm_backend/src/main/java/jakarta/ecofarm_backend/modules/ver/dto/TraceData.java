@@ -44,4 +44,6 @@ public class TraceData {
     private String leavesJson;
     private List<AnchorInfo> anchors;
     private List<RecallInfo> recalls;
+    private Boolean batchActive;
+    private Boolean recalled;
 }

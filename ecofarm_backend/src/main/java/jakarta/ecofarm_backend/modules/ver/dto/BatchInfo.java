@@ -20,4 +20,6 @@ public class BatchInfo {
     private String sowDate;
     private String harvestDate;
     private Long activatedAt;
+    private Boolean active;
+    private Boolean recalled;
 }

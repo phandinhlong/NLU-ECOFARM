@@ -23,4 +23,7 @@ public class TraceResponse {
     private GreenhouseInfo greenhouse;
     private List<CertificateInfo> certificates;
     private QcMetricInfo metrics;
+    private List<EventData> timeline;
+    private BlockchainStatusInfo blockchain;
+    private RecallInfo recall;
 }
