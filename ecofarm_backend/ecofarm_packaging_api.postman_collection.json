@@ -1,0 +1,222 @@
+{
+  "info": {
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "name": "EcoFarm Packaging & Blockchain API",
+    "description": "Collection test module Packaging (FR-PCK-001..006), Auth va Blockchain. Base URL: http://localhost:8080/ecofarm_backend-1.0-SNAPSHOT"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const path = pm.request.url.getPath();",
+          "const isPublic = path.endsWith('/auths/login') || path.endsWith('/auths/sign-up') || path.endsWith('/auths/activation') || path.includes('/block-chain/public/');",
+          "if (!isPublic && !pm.request.headers.has('Cookie')) {",
+          "    const accessToken = pm.collectionVariables.get('access_token');",
+          "    const refreshToken = pm.collectionVariables.get('refresh_token');",
+          "    const cookies = [];",
+          "    if (accessToken) cookies.push(`access_token=${accessToken}`);",
+          "    if (refreshToken) cookies.push(`refresh_token=${refreshToken}`);",
+          "    if (cookies.length > 0) {",
+          "        pm.request.headers.upsert({ key: 'Cookie', value: cookies.join('; ') });",
+          "    }",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseurl", "value": "http://localhost:8080/ecofarm_backend-1.0-SNAPSHOT", "type": "string" },
+    { "key": "access_token", "value": "", "type": "string" },
+    { "key": "refresh_token", "value": "", "type": "string" },
+    { "key": "email", "value": "systemadmin@gmail.com", "type": "string" },
+    { "key": "password", "value": "admin123", "type": "string" },
+    { "key": "batchId", "value": "1", "type": "string" },
+    { "key": "unitCount", "value": "10", "type": "string" },
+    { "key": "extraCount", "value": "5", "type": "string" },
+    { "key": "code", "value": "ECOFARM-QR-000001", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const res = pm.response.json();",
+                  "    if (res && res.data) {",
+                  "        if (res.data.accessToken) pm.collectionVariables.set('access_token', res.data.accessToken);",
+                  "        if (res.data.refreshToken) pm.collectionVariables.set('refresh_token', res.data.refreshToken);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/api/v1/auths/login",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "auths", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/auths/profile",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "auths", "profile"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Packaging (FR-PCK-001..005)",
+      "item": [
+        {
+          "name": "Activate Batch (FR-PCK-001, FR-PCK-002)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unitCount\": {{unitCount}}\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/activate",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "batches", "{{batchId}}", "activate"]
+            }
+          }
+        },
+        {
+          "name": "Print QR Labels - PDF (FR-PCK-003, FR-PCK-004)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/qr?reprint=false&format=pdf",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "batches", "{{batchId}}", "qr"],
+              "query": [
+                { "key": "reprint", "value": "false" },
+                { "key": "format", "value": "pdf" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reprint QR Labels - PDF (FR-PCK-004)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/qr?reprint=true&format=pdf",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "batches", "{{batchId}}", "qr"],
+              "query": [
+                { "key": "reprint", "value": "true" },
+                { "key": "format", "value": "pdf" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Export QR Labels - CSV (FR-PCK-004 Could)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/qr?reprint=true&format=csv",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "batches", "{{batchId}}", "qr"],
+              "query": [
+                { "key": "reprint", "value": "true" },
+                { "key": "format", "value": "csv" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Export QR Labels - ZPL (FR-PCK-004 Could)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/qr?reprint=true&format=zpl",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "batches", "{{batchId}}", "qr"],
+              "query": [
+                { "key": "reprint", "value": "true" },
+                { "key": "format", "value": "zpl" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Generate Extra QR Codes (FR-PCK-005)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"extraCount\": {{extraCount}},\n  \"reason\": \"Tem bi hong khi dan thung\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/api/v1/batches/{{batchId}}/qr/extra",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "batches", "{{batchId}}", "qr", "extra"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verification & Scan Alert (FR-PCK-006)",
+      "item": [
+        {
+          "name": "Public Trace & Scan Count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/block-chain/public/trace/{{code}}",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "block-chain", "public", "trace", "{{code}}"]
+            }
+          }
+        },
+        {
+          "name": "Verify Public Trace",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/api/v1/block-chain/public/trace/{{code}}/verify",
+              "host": ["{{baseurl}}"],
+              "path": ["api", "v1", "block-chain", "public", "trace", "{{code}}", "verify"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

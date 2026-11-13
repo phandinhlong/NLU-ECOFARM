@@ -7,13 +7,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import jakarta.ecofarm_backend.modules.blockchain.PolygonClient;
+import jakarta.ecofarm_backend.modules.blockchain.client.PolygonClient;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.MerkleSnapshot;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.AuditLogRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.AnchorRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.MerkleSnapshotRepository;
-import jakarta.ecofarm_backend.common.dto.ReconciliationItem;
+import jakarta.ecofarm_backend.common.dto.response.ReconciliationItem;
 
 @ApplicationScoped
 public class ReconciliationService {

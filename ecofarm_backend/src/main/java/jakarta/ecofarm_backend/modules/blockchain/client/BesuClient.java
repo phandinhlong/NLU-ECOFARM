@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.modules.blockchain;
+package jakarta.ecofarm_backend.modules.blockchain.client;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -65,19 +65,16 @@ public class BesuClient implements BlockchainClient {
     public String sendTransaction(String data) throws Exception {
         ensureConnected();
         byte[] payload = hexOrUtf8(data);
-
-        // Nonce includes pending txs so back-to-back sends in the same timer tick do not collide
         EthGetTransactionCount nonceResp = web3j.ethGetTransactionCount(
                 credentials.getAddress(), DefaultBlockParameterName.PENDING).send();
         long nonce = nonceResp.getTransactionCount().longValueExact();
-
         BigInteger gasPrice = BigInteger.valueOf(config.getPrivateGasPrice());
         BigInteger gasLimit = BigInteger.valueOf(100_000L);
         RawTransaction raw = RawTransaction.createTransaction(
                 BigInteger.valueOf(nonce),
                 gasPrice,
                 gasLimit,
-                credentials.getAddress(), // self-transfer: value 0, payload carries the anchor hash
+                credentials.getAddress(),
                 BigInteger.ZERO,
                 Numeric.toHexString(payload));
 
@@ -116,7 +113,7 @@ public class BesuClient implements BlockchainClient {
             throw new RuntimeException("eth_getTransactionReceipt error: " + receiptResp.getError().getMessage());
         }
         if (receiptResp.getTransactionReceipt().isEmpty()) {
-            return 0; // not mined yet
+            return 0;
         }
         long minedAt = receiptResp.getTransactionReceipt().get().getBlockNumber().longValueExact();
         long latest = web3j.ethBlockNumber().send().getBlockNumber().longValueExact();

@@ -6,4 +6,5 @@ public enum RoleEnum {
     ENGINEER,
     FARMER,
     QUALITY_CONTROL,
+    PACKER,
 }

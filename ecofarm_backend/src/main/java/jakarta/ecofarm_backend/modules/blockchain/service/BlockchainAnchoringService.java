@@ -6,18 +6,17 @@ import jakarta.inject.Inject;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 
-import jakarta.ecofarm_backend.modules.blockchain.BesuClient;
-import jakarta.ecofarm_backend.modules.blockchain.PolygonClient;
+import jakarta.ecofarm_backend.modules.blockchain.client.BesuClient;
+import jakarta.ecofarm_backend.modules.blockchain.client.PolygonClient;
 import jakarta.ecofarm_backend.config.BlockchainConfig;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.AuditLog;
-import jakarta.ecofarm_backend.infrastructure.persistence.entity.MerkleSnapshot;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.OutboxEvent;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.AnchorRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.AuditLogRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.MerkleSnapshotRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.OutboxEventRepository;
-import jakarta.ecofarm_backend.common.dto.AuditError;
+import jakarta.ecofarm_backend.common.dto.response.AuditError;
 
 @Singleton
 public class BlockchainAnchoringService {

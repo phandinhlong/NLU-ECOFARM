@@ -19,6 +19,14 @@ public class MerkleSnapshotRepository {
         em.persist(snapshot);
     }
 
+    public void updateLeavesJson(Long snapshotId, String leavesJson) {
+        em.flush();
+        em.createNativeQuery("UPDATE merkle_snapshots SET leaves = CAST(:leaves AS json), is_active = true, version = COALESCE(version, 1) WHERE id = :id")
+                .setParameter("leaves", leavesJson)
+                .setParameter("id", snapshotId)
+                .executeUpdate();
+    }
+
     public MerkleSnapshot findById(Long id) {
         return em.find(MerkleSnapshot.class, id);
     }

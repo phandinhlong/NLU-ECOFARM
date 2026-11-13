@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.modules.blockchain;
+package jakarta.ecofarm_backend.modules.blockchain.client;
 
 import java.io.IOException;
 import java.math.BigInteger;
