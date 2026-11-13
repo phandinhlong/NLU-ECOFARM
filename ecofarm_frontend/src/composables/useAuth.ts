@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { authService } from '@/api/services'
 import { useUserStore } from '@/stores'
 import { useRoute, useRouter } from 'vue-router'
-import type { LoginRequest, ProfileResponse, RegisterRequest } from '@/api/types/auth'
+import type { ChangePasswordRequest, ForgotPasswordRequest, LoginRequest, ProfileResponse, RegisterRequest } from '@/api/types/auth'
 
 export const useLoginMutation = () => {
   const router = useRouter()
@@ -44,6 +44,23 @@ export const useLogoutMutation = () => {
     onSuccess: () => {
       userStore.clearUser()
       queryClient.clear()
+      router.push('/login')
+    },
+  })
+}
+
+export const useForgotPasswordMutation = () => {
+  return useMutation({
+    mutationFn: (data: ForgotPasswordRequest) => authService.forgotPassword(data),
+  })
+}
+
+export const useChangePasswordMutation = () => {
+  const router = useRouter()
+
+  return useMutation({
+    mutationFn: (data: ChangePasswordRequest) => authService.changePassword(data),
+    onSuccess: () => {
       router.push('/login')
     },
   })
