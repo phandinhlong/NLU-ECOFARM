@@ -113,10 +113,12 @@ const brixVariant = (value: number | null): 'success' | 'warning' | 'muted' => {
       </template>
     </PageHeader>
 
-    <div class="ef-card ef-card-pad mb-3">
-      <div class="ef-filter-grid">
-        <div>
-          <label class="ef-label" for="v-search">Tìm kiếm</label>
+    <section class="border rounded-3 bg-body p-3 p-lg-4 mb-3">
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-4">
+          <label class="form-label small fw-semibold text-body-secondary mb-1" for="v-search">
+            Tìm kiếm
+          </label>
           <BFormInput
             id="v-search"
             v-model="searchText"
@@ -124,18 +126,18 @@ const brixVariant = (value: number | null): 'success' | 'warning' | 'muted' => {
             @keyup.enter="applyFilter"
           />
         </div>
-        <div class="d-flex gap-2">
+        <div class="col-12 col-md-5 d-flex gap-2">
           <BButton variant="primary" @click="applyFilter">Lọc dữ liệu</BButton>
           <BButton variant="outline-secondary" @click="resetFilter">Đặt lại</BButton>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="ef-card">
-      <div class="ef-card-pad d-flex flex-wrap gap-2 justify-content-between align-items-center">
+    <section class="border rounded-3 bg-body">
+      <div class="p-3 border-bottom d-flex flex-wrap gap-2 justify-content-between align-items-center">
         <div>
-          <p class="mb-1 fw-semibold" style="color: #0f172a">Danh sách giống dưa</p>
-          <p class="ef-stat-hint mb-0">
+          <p class="mb-1 fw-semibold text-body">Danh sách giống dưa</p>
+          <p class="small text-body-secondary mb-0">
             Mã giống không thể đổi khi đã có lô tham chiếu.
           </p>
         </div>
@@ -151,7 +153,7 @@ const brixVariant = (value: number | null): 'success' | 'warning' | 'muted' => {
       </div>
 
       <div v-else class="table-responsive">
-        <table class="ef-table">
+        <table class="table table-hover align-middle mb-0">
           <thead>
             <tr>
               <th scope="col">Mã giống</th>
@@ -173,7 +175,7 @@ const brixVariant = (value: number | null): 'success' | 'warning' | 'muted' => {
               <td class="fw-semibold">{{ row.code }}</td>
               <td>
                 <div class="fw-medium">{{ row.name }}</div>
-                <div class="ef-stat-hint">ID #{{ row.id }} · phiên bản {{ row.version }}</div>
+                <div class="small text-body-secondary">ID #{{ row.id }} · phiên bản {{ row.version }}</div>
               </td>
               <td class="text-end text-nowrap">{{ formatDays(row.daysPollinationToHarvest) }}</td>
               <td class="text-end">
@@ -197,7 +199,7 @@ const brixVariant = (value: number | null): 'success' | 'warning' | 'muted' => {
         unit="giống"
         @update:page="goToPage"
       />
-    </div>
+    </section>
 
     <BModal v-model="showModal" :title="editing ? 'Sửa giống dưa' : 'Thêm giống dưa'">
       <BAlert v-if="saveError" variant="danger" dismissible>

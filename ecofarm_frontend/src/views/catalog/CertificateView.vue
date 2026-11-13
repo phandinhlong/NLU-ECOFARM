@@ -131,10 +131,12 @@ const goToPage = (next: number) => {
       </template>
     </PageHeader>
 
-    <div class="ef-card ef-card-pad mb-3">
-      <div class="ef-filter-grid">
-        <div>
-          <label class="ef-label" for="c-greenhouse">Nhà màng</label>
+    <section class="border rounded-3 bg-body p-3 p-lg-4 mb-3">
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-4">
+          <label class="form-label small fw-semibold text-body-secondary mb-1" for="c-greenhouse">
+            Nhà màng
+          </label>
           <BFormSelect id="c-greenhouse" v-model="greenhouseFilter">
             <option value="">Tất cả nhà màng</option>
             <option v-for="item in greenhouses" :key="item.id" :value="String(item.id)">
@@ -142,25 +144,27 @@ const goToPage = (next: number) => {
             </option>
           </BFormSelect>
         </div>
-        <div>
-          <label class="ef-label" for="c-expiring">Thời hạn</label>
+        <div class="col-12 col-md-3">
+          <label class="form-label small fw-semibold text-body-secondary mb-1" for="c-expiring">
+            Thời hạn
+          </label>
           <BFormSelect id="c-expiring" v-model="expiringFilter">
             <option value="">Tất cả thời hạn</option>
             <option value="30">Sắp hết hạn (30 ngày tới)</option>
             <option value="90">Sắp hết hạn (90 ngày tới)</option>
           </BFormSelect>
         </div>
-        <div class="d-flex gap-2">
-          <BButton variant="primary" @click="resetFilter">Đặt lại</BButton>
+        <div class="col-12 col-md-5 d-flex gap-2">
+          <BButton variant="outline-secondary" @click="resetFilter">Đặt lại</BButton>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="ef-card">
-      <div class="ef-card-pad d-flex flex-wrap gap-2 justify-content-between align-items-center">
+    <section class="border rounded-3 bg-body">
+      <div class="p-3 border-bottom d-flex flex-wrap gap-2 justify-content-between align-items-center">
         <div>
-          <p class="mb-1 fw-semibold" style="color: #0f172a">Danh sách chứng nhận</p>
-          <p class="ef-stat-hint mb-0">
+          <p class="mb-1 fw-semibold text-body">Danh sách chứng nhận</p>
+          <p class="small text-body-secondary mb-0">
             Hệ thống cảnh báo khi chứng nhận còn dưới 30 ngày hiệu lực.
           </p>
         </div>
@@ -176,7 +180,7 @@ const goToPage = (next: number) => {
       </div>
 
       <div v-else class="table-responsive">
-        <table class="ef-table">
+        <table class="table table-hover align-middle mb-0">
           <thead>
             <tr>
               <th scope="col">Số chứng nhận</th>
@@ -218,7 +222,7 @@ const goToPage = (next: number) => {
                 >
                   Tải PDF
                 </a>
-                <span v-else class="ef-stat-hint d-inline-block text-truncate" style="max-width: 170px">
+                <span v-else class="small text-body-secondary d-inline-block text-truncate" style="max-width: 170px">
                   {{ row.fileKey ?? '—' }}
                 </span>
               </td>
@@ -235,7 +239,7 @@ const goToPage = (next: number) => {
         unit="chứng nhận"
         @update:page="goToPage"
       />
-    </div>
+    </section>
 
     <BModal v-model="showModal" title="Thêm chứng nhận">
       <BAlert v-if="saveError" variant="danger" dismissible>

@@ -33,34 +33,40 @@ const goTo = (value: number) => {
 </script>
 
 <template>
-  <div class="ef-footer-bar">
+  <footer
+    class="d-flex flex-wrap gap-2 justify-content-between align-items-center px-3 py-2 border-top small text-body-secondary"
+  >
     <span>
-      Hiển thị <strong>{{ start }} – {{ end }}</strong> trong tổng số
-      <strong>{{ totalElements }}</strong> {{ unit }}
+      Hiển thị <strong class="text-body">{{ start }} – {{ end }}</strong> trong tổng số
+      <strong class="text-body">{{ totalElements }}</strong> {{ unit }}
     </span>
-    <div class="ef-pager">
-      <button class="ef-pager-btn" type="button" :disabled="page === 0" aria-label="Trang trước" @click="goTo(page - 1)">
-        &lt;
-      </button>
-      <button
-        v-for="item in pageNumbers"
-        :key="item"
-        class="ef-pager-btn"
-        :class="{ active: item === page }"
-        type="button"
-        @click="goTo(item)"
-      >
-        {{ item + 1 }}
-      </button>
-      <button
-        class="ef-pager-btn"
-        type="button"
-        :disabled="page + 1 >= lastPage"
-        aria-label="Trang sau"
-        @click="goTo(page + 1)"
-      >
-        &gt;
-      </button>
-    </div>
-  </div>
+
+    <nav aria-label="Phân trang">
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item" :class="{ disabled: page === 0 }">
+          <button class="page-link" type="button" :disabled="page === 0" @click="goTo(page - 1)">
+            &lt;
+          </button>
+        </li>
+        <li
+          v-for="item in pageNumbers"
+          :key="item"
+          class="page-item"
+          :class="{ active: item === page }"
+        >
+          <button class="page-link" type="button" @click="goTo(item)">{{ item + 1 }}</button>
+        </li>
+        <li class="page-item" :class="{ disabled: page + 1 >= lastPage }">
+          <button
+            class="page-link"
+            type="button"
+            :disabled="page + 1 >= lastPage"
+            @click="goTo(page + 1)"
+          >
+            &gt;
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </footer>
 </template>

@@ -135,10 +135,12 @@ const formatArea = (value: number | null) =>
       </template>
     </PageHeader>
 
-    <div class="ef-card ef-card-pad mb-3">
-      <div class="ef-filter-grid">
-        <div>
-          <label class="ef-label" for="gh-search">Tìm kiếm</label>
+    <section class="border rounded-3 bg-body p-3 p-lg-4 mb-3">
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-4">
+          <label class="form-label small fw-semibold text-body-secondary mb-1" for="gh-search">
+            Tìm kiếm
+          </label>
           <BFormInput
             id="gh-search"
             v-model="searchText"
@@ -146,8 +148,10 @@ const formatArea = (value: number | null) =>
             @keyup.enter="applyFilter"
           />
         </div>
-        <div>
-          <label class="ef-label" for="gh-status-filter">Trạng thái</label>
+        <div class="col-12 col-md-3">
+          <label class="form-label small fw-semibold text-body-secondary mb-1" for="gh-status-filter">
+            Trạng thái
+          </label>
           <BFormSelect id="gh-status-filter" v-model="statusFilter">
             <option value="">Tất cả trạng thái</option>
             <option v-for="[value, label] in statuses" :key="value" :value="value">
@@ -155,18 +159,18 @@ const formatArea = (value: number | null) =>
             </option>
           </BFormSelect>
         </div>
-        <div class="d-flex gap-2">
+        <div class="col-12 col-md-5 d-flex gap-2">
           <BButton variant="primary" @click="applyFilter">Lọc dữ liệu</BButton>
           <BButton variant="outline-secondary" @click="resetFilter">Đặt lại</BButton>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="ef-card">
-      <div class="ef-card-pad d-flex flex-wrap gap-2 justify-content-between align-items-center">
+    <section class="border rounded-3 bg-body">
+      <div class="p-3 border-bottom d-flex flex-wrap gap-2 justify-content-between align-items-center">
         <div>
-          <p class="mb-1 fw-semibold" style="color: #0f172a">Danh sách nhà màng</p>
-          <p class="ef-stat-hint mb-0">
+          <p class="mb-1 fw-semibold text-body">Danh sách nhà màng</p>
+          <p class="small text-body-secondary mb-0">
             Mã nhà màng không thể đổi khi đã có lô tham chiếu.
           </p>
         </div>
@@ -182,7 +186,7 @@ const formatArea = (value: number | null) =>
       </div>
 
       <div v-else class="table-responsive">
-        <table class="ef-table">
+        <table class="table table-hover align-middle mb-0">
           <thead>
             <tr>
               <th scope="col">Mã nhà màng</th>
@@ -204,7 +208,7 @@ const formatArea = (value: number | null) =>
               <td class="fw-semibold">{{ row.code }}</td>
               <td>
                 <div class="fw-medium">{{ row.name }}</div>
-                <div class="ef-stat-hint">ID #{{ row.id }} · phiên bản {{ row.version }}</div>
+                <div class="small text-body-secondary">ID #{{ row.id }} · phiên bản {{ row.version }}</div>
               </td>
               <td class="text-nowrap">{{ formatGps(row.gpsLat, row.gpsLng) }}</td>
               <td class="text-end text-nowrap">{{ formatArea(row.areaM2) }}</td>
@@ -231,7 +235,7 @@ const formatArea = (value: number | null) =>
         unit="nhà màng"
         @update:page="goToPage"
       />
-    </div>
+    </section>
 
     <BModal v-model="showModal" :title="editing ? 'Sửa nhà màng' : 'Thêm nhà màng'">
       <BAlert v-if="saveError" variant="danger" dismissible>

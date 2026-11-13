@@ -2,7 +2,6 @@ import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import { createBootstrap } from 'bootstrap-vue-next'
 import './styles/index.css'
-import './styles/admin.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'

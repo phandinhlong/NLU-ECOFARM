@@ -101,18 +101,20 @@ const resetFilter = () => {
 
     <div class="row g-3 mb-3">
       <div v-for="card in statCards" :key="card.label" class="col-12 col-sm-6 col-xl-3">
-        <div class="ef-card ef-card-pad h-100">
-          <p class="ef-stat-label mb-1">{{ card.label }}</p>
-          <p class="ef-stat-value mb-1">{{ card.value }}</p>
-          <p class="ef-stat-hint mb-0">{{ card.hint }}</p>
+        <div class="border rounded-3 bg-body p-3 h-100">
+          <p class="small text-uppercase fw-bold text-body-secondary mb-1">{{ card.label }}</p>
+          <p class="fs-3 fw-bold text-body mb-1">{{ card.value }}</p>
+          <p class="small text-body-secondary mb-0">{{ card.hint }}</p>
         </div>
       </div>
     </div>
 
-    <div class="ef-card ef-card-pad mb-3">
-      <div class="ef-filter-grid">
-        <div>
-          <label class="ef-label" for="dash-greenhouse">Nhà màng</label>
+    <section class="border rounded-3 bg-body p-3 p-lg-4 mb-3">
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-4">
+          <label class="form-label small fw-semibold text-body-secondary mb-1" for="dash-greenhouse">
+            Nhà màng
+          </label>
           <BFormSelect id="dash-greenhouse" v-model="greenhouseFilter" @change="applyFilter">
             <option value="">Tất cả nhà màng</option>
             <option v-for="item in greenhouses" :key="item.id" :value="String(item.id)">
@@ -120,26 +122,28 @@ const resetFilter = () => {
             </option>
           </BFormSelect>
         </div>
-        <div>
-          <label class="ef-label" for="dash-window">Khoảng thời gian</label>
+        <div class="col-12 col-md-3">
+          <label class="form-label small fw-semibold text-body-secondary mb-1" for="dash-window">
+            Khoảng thời gian
+          </label>
           <BFormSelect id="dash-window" v-model.number="windowDays" @change="applyFilter">
             <option :value="30">30 ngày tới</option>
             <option :value="60">60 ngày tới</option>
             <option :value="90">90 ngày tới</option>
           </BFormSelect>
         </div>
-        <div class="d-flex gap-2">
+        <div class="col-12 col-md-5 d-flex gap-2">
           <BButton variant="primary" @click="applyFilter">Lọc dữ liệu</BButton>
           <BButton variant="outline-secondary" @click="resetFilter">Đặt lại</BButton>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="ef-card">
-      <div class="ef-card-pad d-flex flex-wrap gap-2 justify-content-between align-items-center">
+    <section class="border rounded-3 bg-body">
+      <div class="p-3 border-bottom d-flex flex-wrap gap-2 justify-content-between align-items-center">
         <div>
-          <p class="mb-1 fw-semibold" style="color: #0f172a">Chứng nhận sắp hết hạn</p>
-          <p class="ef-stat-hint mb-0">
+          <p class="mb-1 fw-semibold text-body">Chứng nhận sắp hết hạn</p>
+          <p class="small text-body-secondary mb-0">
             Danh sách chứng nhận có ngày hết hạn trong {{ windowDays }} ngày tới.
           </p>
         </div>
@@ -155,7 +159,7 @@ const resetFilter = () => {
       </div>
 
       <div v-else class="table-responsive">
-        <table class="ef-table">
+        <table class="table table-hover align-middle mb-0">
           <thead>
             <tr>
               <th scope="col">Nhà màng</th>
@@ -199,6 +203,6 @@ const resetFilter = () => {
         unit="chứng nhận"
         @update:page="page = $event"
       />
-    </div>
+    </section>
   </div>
 </template>
