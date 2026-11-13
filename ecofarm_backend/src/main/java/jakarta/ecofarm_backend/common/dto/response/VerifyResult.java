@@ -1,12 +1,21 @@
 package jakarta.ecofarm_backend.common.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
 @Setter
 @Getter
+@Builder
+@AllArgsConstructor
 public class VerifyResult {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String code;
     String result;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String storedRoot;
     String computedRoot;
     String onChainRoot;
     String txHash;

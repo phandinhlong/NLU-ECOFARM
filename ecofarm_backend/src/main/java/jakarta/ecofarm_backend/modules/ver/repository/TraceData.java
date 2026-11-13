@@ -1,8 +1,8 @@
 package jakarta.ecofarm_backend.modules.ver.repository;
 
-import jakarta.ecofarm_backend.common.dto.response.AnchorInfo;
 import jakarta.ecofarm_backend.common.dto.response.CertificateInfo;
 import jakarta.ecofarm_backend.common.dto.response.EventData;
+import jakarta.ecofarm_backend.common.dto.response.PublicChainStatus;
 import jakarta.ecofarm_backend.common.dto.response.QcMetricInfo;
 import jakarta.ecofarm_backend.common.dto.response.RecallInfo;
 import lombok.AllArgsConstructor;
@@ -47,7 +47,7 @@ public class TraceData {
     private String merkleRoot;
     private Integer leafCount;
     private String leavesJson;
-    private List<AnchorInfo> anchors;
+    private List<PublicChainStatus> anchors;
     private List<RecallInfo> recalls;
     private Boolean batchActive;
     private Boolean recalled;

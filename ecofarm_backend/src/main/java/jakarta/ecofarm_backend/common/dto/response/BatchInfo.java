@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.common.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,6 +13,14 @@ public class BatchInfo {
     String greenhouseCode;
     String greenhouseName;
     String sowDate;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String harvestDate;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    Long activatedAt;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    Boolean active;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    Boolean recalled;
 
     public BatchInfo() {}
 

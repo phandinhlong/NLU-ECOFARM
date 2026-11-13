@@ -7,8 +7,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
-
 @Getter
 @Setter
 @Builder
@@ -18,14 +16,7 @@ import java.util.List;
 public class ProofBundleResponse {
 
     private String code;
-    private TraceBatchInfo batch;
-    private VarietyInfo variety;
-    private GreenhouseInfo greenhouse;
-    private List<CertificateInfo> certificates;
-    private QcMetricInfo metrics;
-    private List<EventData> timeline;
-    private BlockchainStatusInfo blockchain;
-    private RecallInfo recall;
-    private List<String> leaves;
-    private VerVerifyResponse verification;
+    private PublicTrace trace;
+    private ProofBundle proof;
+    private VerifyResult verification;
 }

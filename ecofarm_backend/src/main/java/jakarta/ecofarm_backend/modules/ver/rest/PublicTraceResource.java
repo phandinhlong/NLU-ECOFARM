@@ -1,7 +1,7 @@
 package jakarta.ecofarm_backend.modules.ver.rest;
 
-import jakarta.ecofarm_backend.common.dto.response.TraceResponse;
-import jakarta.ecofarm_backend.common.dto.response.VerVerifyResponse;
+import jakarta.ecofarm_backend.common.dto.response.PublicTrace;
+import jakarta.ecofarm_backend.common.dto.response.VerifyResult;
 import jakarta.ecofarm_backend.modules.ver.facade.TraceFacade;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
@@ -21,13 +21,13 @@ public class PublicTraceResource {
 
     @GET
     @Path("/{code}")
-    public TraceResponse getTrace(@PathParam("code") String code) {
+    public PublicTrace getTrace(@PathParam("code") String code) {
         return traceFacade.getTrace(code);
     }
 
     @POST
     @Path("/{code}/verify")
-    public VerVerifyResponse verifyTrace(@PathParam("code") String code) {
+    public VerifyResult verifyTrace(@PathParam("code") String code) {
         return traceFacade.verifyTrace(code);
     }
 }

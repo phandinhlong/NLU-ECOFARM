@@ -2,7 +2,7 @@ package jakarta.ecofarm_backend.modules.ver.filter;
 
 import jakarta.annotation.Priority;
 import jakarta.ecofarm_backend.common.constant.FilterOrder;
-import jakarta.ecofarm_backend.common.dto.response.ErrorResponse;
+import jakarta.ecofarm_backend.common.dto.response.ExceptionResponse;
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.container.ContainerRequestContext;
@@ -65,8 +65,9 @@ public class RateLimitFilter implements ContainerRequestFilter {
             ctx.abortWith(Response.status(Response.Status.TOO_MANY_REQUESTS)
                     .type(MediaType.APPLICATION_JSON)
                     .header("Retry-After", String.valueOf(retryAfter))
-                    .entity(ErrorResponse.builder()
-                            .code("RATE_LIMITED")
+                    .entity(ExceptionResponse.builder()
+                            .code(Response.Status.TOO_MANY_REQUESTS.getStatusCode())
+                            .errorCode("RATE_LIMITED")
                             .message("Quá nhiều yêu cầu từ địa chỉ này, vui lòng thử lại sau")
                             .isSuccess(false)
                             .build())

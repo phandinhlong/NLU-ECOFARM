@@ -1,18 +1,23 @@
 package jakarta.ecofarm_backend.modules.ver.facade.impl;
 
+import jakarta.ecofarm_backend.common.dto.response.BatchInfo;
+import jakarta.ecofarm_backend.common.dto.response.BlockchainStatus;
+import jakarta.ecofarm_backend.common.dto.response.EventData;
+import jakarta.ecofarm_backend.common.dto.response.ExceptionResponse;
+import jakarta.ecofarm_backend.common.dto.response.GreenhouseInfo;
+import jakarta.ecofarm_backend.common.dto.response.ProofBundle;
+import jakarta.ecofarm_backend.common.dto.response.ProofBundleResponse;
+import jakarta.ecofarm_backend.common.dto.response.ProofEvent;
+import jakarta.ecofarm_backend.common.dto.response.ProofLeaf;
+import jakarta.ecofarm_backend.common.dto.response.PublicChainStatus;
+import jakarta.ecofarm_backend.common.dto.response.PublicTrace;
+import jakarta.ecofarm_backend.common.dto.response.VarietyInfo;
+import jakarta.ecofarm_backend.common.dto.response.VerifyResult;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.modules.ver.cache.AnchorRootCache;
 import jakarta.ecofarm_backend.modules.ver.client.ChainRootReader;
-import jakarta.ecofarm_backend.common.dto.response.AnchorInfo;
-import jakarta.ecofarm_backend.common.dto.response.TraceBatchInfo;
-import jakarta.ecofarm_backend.common.dto.response.BlockchainStatusInfo;
-import jakarta.ecofarm_backend.common.dto.response.ErrorResponse;
-import jakarta.ecofarm_backend.common.dto.response.GreenhouseInfo;
-import jakarta.ecofarm_backend.common.dto.response.ProofBundleResponse;
-import jakarta.ecofarm_backend.modules.ver.repository.TraceData;
-import jakarta.ecofarm_backend.common.dto.response.TraceResponse;
-import jakarta.ecofarm_backend.common.dto.response.VarietyInfo;
-import jakarta.ecofarm_backend.common.dto.response.VerVerifyResponse;
 import jakarta.ecofarm_backend.modules.ver.facade.TraceFacade;
+import jakarta.ecofarm_backend.modules.ver.repository.TraceData;
 import jakarta.ecofarm_backend.modules.ver.repository.VerTraceRepository;
 import jakarta.ecofarm_backend.modules.ver.util.MerkleUtil;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -22,6 +27,9 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @ApplicationScoped
 public class TraceFacadeImpl implements TraceFacade {
@@ -42,31 +50,23 @@ public class TraceFacadeImpl implements TraceFacade {
     private AnchorRootCache anchorRootCache;
 
     @Override
-    public TraceResponse getTrace(String code) {
+    public PublicTrace getTrace(String code) {
         log.info("getTrace code={}", code);
         return mapToResponse(requireTrace(code));
     }
 
     @Override
-    public VerVerifyResponse verifyTrace(String code) {
+    public VerifyResult verifyTrace(String code) {
         return doVerify(code, requireTrace(code));
     }
 
     @Override
     public ProofBundleResponse getProofBundle(String code) {
         TraceData data = requireTrace(code);
-        TraceResponse trace = mapToResponse(data);
         return ProofBundleResponse.builder()
-                .code(trace.getCode())
-                .batch(trace.getBatch())
-                .variety(trace.getVariety())
-                .greenhouse(trace.getGreenhouse())
-                .certificates(trace.getCertificates())
-                .metrics(trace.getMetrics())
-                .timeline(trace.getTimeline())
-                .blockchain(trace.getBlockchain())
-                .recall(trace.getRecall())
-                .leaves(MerkleUtil.parseLeaves(data.getLeavesJson()))
+                .code(data.getCode())
+                .trace(mapToResponse(data))
+                .proof(mapProof(data))
                 .verification(doVerify(code, data))
                 .build();
     }
@@ -79,14 +79,14 @@ public class TraceFacadeImpl implements TraceFacade {
         return data;
     }
 
-    private VerVerifyResponse doVerify(String code, TraceData data) {
+    private VerifyResult doVerify(String code, TraceData data) {
         long checkedAt = System.currentTimeMillis();
 
-        AnchorInfo anchor = data.getAnchors() != null && !data.getAnchors().isEmpty()
+        PublicChainStatus anchor = data.getAnchors() != null && !data.getAnchors().isEmpty()
                 ? data.getAnchors().get(0)
                 : null;
 
-        VerVerifyResponse.VerVerifyResponseBuilder builder = VerVerifyResponse.builder()
+        VerifyResult.VerifyResultBuilder builder = VerifyResult.builder()
                 .code(code)
                 .checkedAt(checkedAt)
                 .recalled(Boolean.TRUE.equals(data.getRecalled()));
@@ -163,78 +163,147 @@ public class TraceFacadeImpl implements TraceFacade {
     private WebApplicationException qrNotFound() {
         return new WebApplicationException(Response.status(Response.Status.NOT_FOUND)
                 .type(MediaType.APPLICATION_JSON)
-                .entity(ErrorResponse.builder()
-                        .code("QR_NOT_FOUND")
+                .entity(ExceptionResponse.builder()
+                        .code(Response.Status.NOT_FOUND.getStatusCode())
+                        .errorCode("QR_NOT_FOUND")
                         .message("Không tìm thấy mã truy xuất")
                         .isSuccess(false)
                         .build())
                 .build());
     }
 
-    private TraceResponse mapToResponse(TraceData data) {
-        return TraceResponse.builder()
-                .code(data.getCode())
-                .batch(data.getBatchCode() != null
-                        ? TraceBatchInfo.builder()
-                                .batchCode(data.getBatchCode())
-                                .status(data.getBatchStatus())
-                                .sowDate(data.getSowDate())
-                                .harvestDate(data.getHarvestDate())
-                                .activatedAt(data.getActivatedAt())
-                                .active(data.getBatchActive())
-                                .recalled(data.getRecalled())
-                                .build()
-                        : null)
-                .variety(data.getVarietyCode() != null
-                        ? VarietyInfo.builder()
-                                .code(data.getVarietyCode())
-                                .name(data.getVarietyName())
-                                .build()
-                        : null)
-                .greenhouse(data.getGreenhouseCode() != null
-                        ? GreenhouseInfo.builder()
-                                .code(data.getGreenhouseCode())
-                                .name(data.getGreenhouseName())
-                                .build()
-                        : null)
-                .certificates(data.getCertificates())
-                .metrics(data.getMetrics())
-                .timeline(data.getTimeline())
-                .blockchain(data.getMerkleRoot() != null ? mapBlockchain(data) : null)
-                .recall(data.getRecalls() != null && !data.getRecalls().isEmpty()
-                        ? data.getRecalls().get(0)
-                        : null)
-                .build();
+    private PublicTrace mapToResponse(TraceData data) {
+        PublicTrace trace = new PublicTrace();
+        trace.setCode(data.getCode());
+
+        if (data.getBatchCode() != null) {
+            BatchInfo batch = new BatchInfo(
+                    data.getBatchCode(),
+                    data.getBatchStatus(),
+                    data.getVarietyName(),
+                    data.getGreenhouseCode(),
+                    data.getGreenhouseName(),
+                    data.getSowDate());
+            batch.setHarvestDate(data.getHarvestDate());
+            batch.setActivatedAt(data.getActivatedAt());
+            batch.setActive(data.getBatchActive());
+            batch.setRecalled(data.getRecalled());
+            trace.setBatch(batch);
+        }
+
+        if (data.getVarietyCode() != null) {
+            trace.setVariety(VarietyInfo.builder()
+                    .code(data.getVarietyCode())
+                    .name(data.getVarietyName())
+                    .build());
+        }
+        if (data.getGreenhouseCode() != null) {
+            trace.setGreenhouse(GreenhouseInfo.builder()
+                    .code(data.getGreenhouseCode())
+                    .name(data.getGreenhouseName())
+                    .build());
+        }
+
+        trace.setCertificates(data.getCertificates());
+        trace.setMetrics(data.getMetrics());
+        trace.setTimeline(data.getTimeline());
+        if (data.getMerkleRoot() != null) {
+            trace.setBlockchain(mapBlockchain(data));
+        }
+        if (data.getRecalls() != null && !data.getRecalls().isEmpty()) {
+            trace.setRecall(data.getRecalls().get(0));
+        }
+        return trace;
     }
 
-    private BlockchainStatusInfo mapBlockchain(TraceData data) {
-        String status = "UNVERIFIED";
-        BlockchainStatusInfo.BlockchainStatusInfoBuilder builder = BlockchainStatusInfo.builder()
-                .merkleRoot(data.getMerkleRoot())
-                .leafCount(data.getLeafCount());
-
-        AnchorInfo anchor = data.getAnchors() != null && !data.getAnchors().isEmpty()
+    private BlockchainStatus mapBlockchain(TraceData data) {
+        PublicChainStatus anchor = data.getAnchors() != null && !data.getAnchors().isEmpty()
                 ? data.getAnchors().get(0)
                 : null;
+
+        String status = "UNVERIFIED";
+        String chainName = null;
+        String txHash = null;
+        Long anchoredAt = null;
+        String explorerUrl = null;
+
         if (anchor != null) {
-            String explorerUrl = anchor.getExplorerUrl();
+            chainName = chainRootReader.chainName(anchor.getChainId());
+            txHash = anchor.getTxHash();
+            anchoredAt = anchor.getAnchoredAt();
+            explorerUrl = anchor.getExplorerUrl();
             if (explorerUrl == null && anchor.getTxHash() != null
                     && chainRootReader.isPublicChain(anchor.getChainId())) {
                 explorerUrl = "https://amoy.polygonscan.com/tx/" + anchor.getTxHash();
             }
-            builder.chainId(anchor.getChainId())
-                    .chainName(chainRootReader.chainName(anchor.getChainId()))
-                    .contractAddress(anchor.getContractAddress())
-                    .txHash(anchor.getTxHash())
-                    .blockNumber(anchor.getBlockNumber())
-                    .anchoredAt(anchor.getAnchoredAt())
-                    .explorerUrl(explorerUrl);
             if ("CONFIRMED".equalsIgnoreCase(anchor.getStatus())) {
                 status = "VERIFIED";
             } else if ("PENDING".equalsIgnoreCase(anchor.getStatus())) {
                 status = "PENDING";
             }
         }
-        return builder.status(status).build();
+
+        BlockchainStatus blockchain = new BlockchainStatus(
+                "VERIFIED".equals(status),
+                chainName,
+                data.getMerkleRoot(),
+                txHash,
+                anchoredAt,
+                explorerUrl);
+        blockchain.setStatus(status);
+        blockchain.setLeafCount(data.getLeafCount());
+        if (anchor != null) {
+            blockchain.setChainId(anchor.getChainId());
+            blockchain.setContractAddress(anchor.getContractAddress());
+            blockchain.setBlockNumber(anchor.getBlockNumber());
+        }
+        return blockchain;
+    }
+
+    private ProofBundle mapProof(TraceData data) {
+        ProofBundle proof = new ProofBundle();
+        proof.setBatchCode(data.getBatchCode());
+        proof.setSalt(data.getSaltEnc() != null ? String.valueOf(data.getSaltEnc()) : null);
+        proof.setHashAlgorithm("Keccak-256");
+        proof.setMerkleRoot(data.getMerkleRoot());
+        proof.setGeneratedAt(System.currentTimeMillis());
+
+        List<ProofLeaf> leaves = new ArrayList<>();
+        List<String> rawLeaves = MerkleUtil.parseLeaves(data.getLeavesJson());
+        for (int i = 0; i < rawLeaves.size(); i++) {
+            ProofLeaf leaf = new ProofLeaf();
+            leaf.setSeq(i + 1);
+            leaf.setLeaf(rawLeaves.get(i));
+            leaves.add(leaf);
+        }
+        proof.setLeaves(leaves);
+
+        if (data.getTimeline() != null) {
+            List<ProofEvent> events = new ArrayList<>();
+            for (EventData e : data.getTimeline()) {
+                ProofEvent event = new ProofEvent();
+                event.setSeq(e.getSeq());
+                event.setEventType(e.getEventType());
+                event.setPayload(e);
+                events.add(event);
+            }
+            proof.setEvents(events);
+        }
+
+        PublicChainStatus anchor = data.getAnchors() != null && !data.getAnchors().isEmpty()
+                ? data.getAnchors().get(0)
+                : null;
+        if (anchor != null) {
+            Anchor entity = new Anchor();
+            entity.setChainId(anchor.getChainId());
+            entity.setContractAddress(anchor.getContractAddress());
+            entity.setTxHash(anchor.getTxHash());
+            entity.setBlockNumber(anchor.getBlockNumber());
+            entity.setStatus(anchor.getStatus());
+            entity.setAnchoredAt(anchor.getAnchoredAt());
+            entity.setExplorerUrl(anchor.getExplorerUrl());
+            proof.setAnchor(entity);
+        }
+        return proof;
     }
 }

@@ -5,9 +5,9 @@ import jakarta.ecofarm_backend.infrastructure.persistence.entity.Greenhouse;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.PackageEntity;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.QrCode;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Variety;
-import jakarta.ecofarm_backend.common.dto.response.AnchorInfo;
 import jakarta.ecofarm_backend.common.dto.response.CertificateInfo;
 import jakarta.ecofarm_backend.common.dto.response.EventData;
+import jakarta.ecofarm_backend.common.dto.response.PublicChainStatus;
 import jakarta.ecofarm_backend.common.dto.response.QcMetricInfo;
 import jakarta.ecofarm_backend.common.dto.response.RecallInfo;
 import jakarta.ejb.Stateless;
@@ -155,11 +155,11 @@ public class VerTraceRepository {
                 .orElse(null);
     }
 
-    private List<AnchorInfo> findAnchorsBySnapshotId(Long snapshotId) {
+    private List<PublicChainStatus> findAnchorsBySnapshotId(Long snapshotId) {
         return em.createQuery(
-                "select new jakarta.ecofarm_backend.common.dto.response.AnchorInfo(a.id, a.chainId, a.contractAddress, a.txHash, a.blockNumber, a.status, a.anchoredAt, a.explorerUrl) "
+                "select new jakarta.ecofarm_backend.common.dto.response.PublicChainStatus(a.id, a.chainId, a.contractAddress, a.txHash, a.blockNumber, a.status, a.anchoredAt, a.explorerUrl) "
                         + "from Anchor a where a.snapshot.id = :snapshotId order by a.id desc",
-                AnchorInfo.class)
+                PublicChainStatus.class)
                 .setParameter("snapshotId", snapshotId)
                 .getResultList();
     }

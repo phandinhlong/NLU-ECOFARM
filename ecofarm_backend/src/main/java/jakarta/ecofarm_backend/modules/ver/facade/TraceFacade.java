@@ -1,14 +1,14 @@
 package jakarta.ecofarm_backend.modules.ver.facade;
 
 import jakarta.ecofarm_backend.common.dto.response.ProofBundleResponse;
-import jakarta.ecofarm_backend.common.dto.response.TraceResponse;
-import jakarta.ecofarm_backend.common.dto.response.VerVerifyResponse;
+import jakarta.ecofarm_backend.common.dto.response.PublicTrace;
+import jakarta.ecofarm_backend.common.dto.response.VerifyResult;
 
 public interface TraceFacade {
 
-    TraceResponse getTrace(String code);
+    PublicTrace getTrace(String code);
 
-    VerVerifyResponse verifyTrace(String code);
+    VerifyResult verifyTrace(String code);
 
     ProofBundleResponse getProofBundle(String code);
 }
