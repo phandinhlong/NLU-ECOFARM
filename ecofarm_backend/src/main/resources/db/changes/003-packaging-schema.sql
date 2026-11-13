@@ -28,16 +28,9 @@ BEGIN
         created_at BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
         updated_at BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT
     );
-    -- Chi gan sequence khi bang cu chua co default/identity (Hibernate update tao IDENTITY)
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'packages' AND column_name = 'id'
-          AND (is_identity = 'YES' OR column_default IS NOT NULL)
-    ) THEN
-        CREATE SEQUENCE IF NOT EXISTS packages_id_seq;
-        PERFORM setval('packages_id_seq', COALESCE((SELECT MAX(id) FROM packages), 0) + 1, false);
-        ALTER TABLE packages ALTER COLUMN id SET DEFAULT nextval('packages_id_seq');
-    END IF;
+--     CREATE SEQUENCE IF NOT EXISTS packages_id_seq;
+--     PERFORM setval('packages_id_seq', COALESCE((SELECT MAX(id) FROM packages), 0) + 1, false);
+--     ALTER TABLE packages ALTER COLUMN id SET DEFAULT nextval('packages_id_seq');
 
     -- Bang qr_codes
     CREATE TABLE IF NOT EXISTS qr_codes (
@@ -58,44 +51,11 @@ BEGIN
     ALTER TABLE qr_codes ADD COLUMN IF NOT EXISTS scan_count INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE qr_codes ADD COLUMN IF NOT EXISTS last_scanned_at BIGINT;
     ALTER TABLE qr_codes ADD COLUMN IF NOT EXISTS reprint_count INTEGER NOT NULL DEFAULT 0;
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'qr_codes' AND column_name = 'id'
-          AND (is_identity = 'YES' OR column_default IS NOT NULL)
-    ) THEN
-        CREATE SEQUENCE IF NOT EXISTS qr_codes_id_seq;
-        PERFORM setval('qr_codes_id_seq', COALESCE((SELECT MAX(id) FROM qr_codes), 0) + 1, false);
-        ALTER TABLE qr_codes ALTER COLUMN id SET DEFAULT nextval('qr_codes_id_seq');
-    END IF;
+
     CREATE INDEX IF NOT EXISTS idx_qr_codes_package_serial ON qr_codes (package_id, serial);
 
     -- Bang cultivation_events (dam bao co sequence neu bang da ton tai tu dump)
-    IF EXISTS (
-        SELECT 1 FROM information_schema.tables
-        WHERE table_schema = 'public' AND table_name = 'cultivation_events'
-    ) AND NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'cultivation_events' AND column_name = 'id'
-          AND (is_identity = 'YES' OR column_default IS NOT NULL)
-    ) THEN
-        CREATE SEQUENCE IF NOT EXISTS cultivation_events_id_seq;
-        PERFORM setval('cultivation_events_id_seq', COALESCE((SELECT MAX(id) FROM cultivation_events), 0) + 1, false);
-        ALTER TABLE cultivation_events ALTER COLUMN id SET DEFAULT nextval('cultivation_events_id_seq');
-    END IF;
 
-    -- Bang qc_records
-    IF EXISTS (
-        SELECT 1 FROM information_schema.tables
-        WHERE table_schema = 'public' AND table_name = 'qc_records'
-    ) AND NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'qc_records' AND column_name = 'id'
-          AND (is_identity = 'YES' OR column_default IS NOT NULL)
-    ) THEN
-        CREATE SEQUENCE IF NOT EXISTS qc_records_id_seq;
-        PERFORM setval('qc_records_id_seq', COALESCE((SELECT MAX(id) FROM qc_records), 0) + 1, false);
-        ALTER TABLE qc_records ALTER COLUMN id SET DEFAULT nextval('qc_records_id_seq');
-    END IF;
 
     -- Bang qr_scan_logs phuc vu FR-PCK-006 (chong sao chep tem)
     CREATE TABLE IF NOT EXISTS qr_scan_logs (
