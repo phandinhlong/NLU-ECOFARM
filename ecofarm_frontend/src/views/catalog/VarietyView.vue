@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
+import PageHeader from '@/components/common/PageHeader.vue'
+import PagerBar from '@/components/common/PagerBar.vue'
+import SoftBadge from '@/components/common/SoftBadge.vue'
 import { useSaveVarietyMutation, useVarietiesQuery } from '@/composables/useVarieties'
 import type { PageResponse, Variety, VarietyInput } from '@/api/types/catalog'
 
@@ -24,7 +27,6 @@ const page = computed<PageResponse<Variety>>(
   () =>
     data.value ?? { content: [], page: 0, size: 10, totalElements: 0, totalPages: 0 },
 )
-const totalPages = computed(() => page.value.totalPages || 1)
 const isCodeLocked = computed(() => editing.value != null && editing.value.batchCount > 0)
 
 const resetForm = () => {
@@ -76,52 +78,87 @@ const submit = () => {
   )
 }
 
-const applySearch = () => {
+const applyFilter = () => {
   params.value = { ...params.value, q: searchText.value.trim() || undefined, page: 0 }
+}
+
+const resetFilter = () => {
+  searchText.value = ''
+  params.value = { page: 0, size: params.value.size }
 }
 
 const goToPage = (next: number) => {
   params.value = { ...params.value, page: next }
 }
+
+const formatDays = (value: number | null) => (value == null ? '—' : `${value} ngày`)
+const formatBrix = (value: number | null) => (value == null ? '—' : `${value} °Bx`)
+
+const brixVariant = (value: number | null): 'success' | 'warning' | 'muted' => {
+  if (value == null) return 'muted'
+  if (value >= 10) return 'success'
+  return 'warning'
+}
 </script>
 
 <template>
   <div>
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-      <h2 class="mb-0">Giống dưa</h2>
-      <BButton variant="primary" @click="openCreate">Thêm giống</BButton>
+    <PageHeader
+      title="Quản lý giống dưa"
+      subtitle="Thông tin canh tác của từng giống: thời gian sinh trưởng, độ Brix và ngày cách ly."
+      :breadcrumb="['Trang chủ', 'Quản lý danh mục', 'Giống dưa']"
+    >
+      <template #actions>
+        <BButton variant="primary" @click="openCreate">+ Thêm giống</BButton>
+      </template>
+    </PageHeader>
+
+    <div class="ef-card ef-card-pad mb-3">
+      <div class="ef-filter-grid">
+        <div>
+          <label class="ef-label" for="v-search">Tìm kiếm</label>
+          <BFormInput
+            id="v-search"
+            v-model="searchText"
+            placeholder="Nhập mã hoặc tên giống"
+            @keyup.enter="applyFilter"
+          />
+        </div>
+        <div class="d-flex gap-2">
+          <BButton variant="primary" @click="applyFilter">Lọc dữ liệu</BButton>
+          <BButton variant="outline-secondary" @click="resetFilter">Đặt lại</BButton>
+        </div>
+      </div>
     </div>
 
-    <div class="d-flex flex-wrap gap-2 mb-3">
-      <form class="d-flex gap-2" @submit.prevent="applySearch">
-        <BFormInput
-          v-model="searchText"
-          class="w-auto"
-          placeholder="Tìm theo mã hoặc tên"
-          aria-label="Tìm giống dưa"
-        />
-        <BButton variant="outline-secondary" type="submit">Tìm</BButton>
-      </form>
-    </div>
+    <div class="ef-card">
+      <div class="ef-card-pad d-flex flex-wrap gap-2 justify-content-between align-items-center">
+        <div>
+          <p class="mb-1 fw-semibold" style="color: #0f172a">Danh sách giống dưa</p>
+          <p class="ef-stat-hint mb-0">
+            Mã giống không thể đổi khi đã có lô tham chiếu.
+          </p>
+        </div>
+        <SoftBadge variant="info" :label="`${page.totalElements} giống`" />
+      </div>
 
-    <BAlert v-if="isError" variant="danger" dismissible>
-      Không tải được danh sách giống: {{ error?.message }}
-    </BAlert>
+      <BAlert v-if="isError" variant="danger" class="mx-3 mt-3 mb-0">
+        Không tải được danh sách giống: {{ error?.message }}
+      </BAlert>
 
-    <div v-if="isLoading" class="d-flex justify-content-center py-5">
-      <BSpinner />
-    </div>
+      <div v-if="isLoading" class="d-flex justify-content-center py-5">
+        <BSpinner />
+      </div>
 
-    <template v-else>
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
+      <div v-else class="table-responsive">
+        <table class="ef-table">
           <thead>
             <tr>
-              <th scope="col">Mã</th>
-              <th scope="col">Tên</th>
-              <th scope="col" class="text-end">Ngày thụ phấn → thu hoạch</th>
-              <th scope="col" class="text-end">Ngưỡng Brix tối thiểu (°Bx)</th>
-              <th scope="col" class="text-end">Ngày cách ly tối thiểu</th>
+              <th scope="col">Mã giống</th>
+              <th scope="col">Tên giống</th>
+              <th scope="col" class="text-end">Thụ phấn → thu hoạch</th>
+              <th scope="col" class="text-end">Brix tối thiểu</th>
+              <th scope="col" class="text-end">Ngày cách ly</th>
               <th scope="col" class="text-end">Số lô</th>
               <th scope="col" class="text-end">Thao tác</th>
             </tr>
@@ -133,46 +170,34 @@ const goToPage = (next: number) => {
               </td>
             </tr>
             <tr v-for="row in page.content" :key="row.id">
-              <td class="fw-medium">{{ row.code }}</td>
-              <td>{{ row.name }}</td>
-              <td class="text-end">{{ row.daysPollinationToHarvest ?? '—' }}</td>
-              <td class="text-end">{{ row.minBrix ?? '—' }}</td>
-              <td class="text-end">{{ row.minIsolationDays ?? '—' }}</td>
-              <td class="text-end">{{ row.batchCount }}</td>
+              <td class="fw-semibold">{{ row.code }}</td>
+              <td>
+                <div class="fw-medium">{{ row.name }}</div>
+                <div class="ef-stat-hint">ID #{{ row.id }} · phiên bản {{ row.version }}</div>
+              </td>
+              <td class="text-end text-nowrap">{{ formatDays(row.daysPollinationToHarvest) }}</td>
               <td class="text-end">
-                <BButton size="sm" variant="outline-primary" @click="openEdit(row)">
-                  Sửa
-                </BButton>
+                <SoftBadge :variant="brixVariant(row.minBrix)" :label="formatBrix(row.minBrix)" />
+              </td>
+              <td class="text-end text-nowrap">{{ formatDays(row.minIsolationDays) }}</td>
+              <td class="text-end">{{ row.batchCount ?? 0 }}</td>
+              <td class="text-end">
+                <BButton size="sm" variant="outline-primary" @click="openEdit(row)">Sửa</BButton>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div class="d-flex justify-content-between align-items-center">
-        <span class="small text-body-secondary">
-          Trang {{ page.page + 1 }}/{{ totalPages }} · {{ page.totalElements }} giống
-        </span>
-        <div class="d-flex gap-2">
-          <BButton
-            size="sm"
-            variant="outline-secondary"
-            :disabled="page.page === 0"
-            @click="goToPage(page.page - 1)"
-          >
-            Trước
-          </BButton>
-          <BButton
-            size="sm"
-            variant="outline-secondary"
-            :disabled="page.page + 1 >= totalPages"
-            @click="goToPage(page.page + 1)"
-          >
-            Sau
-          </BButton>
-        </div>
-      </div>
-    </template>
+      <PagerBar
+        :page="page.page"
+        :total-pages="page.totalPages"
+        :total-elements="page.totalElements"
+        :size="page.size"
+        unit="giống"
+        @update:page="goToPage"
+      />
+    </div>
 
     <BModal v-model="showModal" :title="editing ? 'Sửa giống dưa' : 'Thêm giống dưa'">
       <BAlert v-if="saveError" variant="danger" dismissible>
