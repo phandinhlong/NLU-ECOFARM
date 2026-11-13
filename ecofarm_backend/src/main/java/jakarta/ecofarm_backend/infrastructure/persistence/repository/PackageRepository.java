@@ -27,7 +27,7 @@ public class PackageRepository {
 
     public PackageEntity findLatestByBatchId(Long batchId) {
         List<PackageEntity> results = em.createQuery(
-                        "select p from PackageEntity p where p.batchId = :batchId and (p.active is null or p.active = true) order by p.id desc",
+                        "select p from PackageEntity p where p.batch.id = :batchId and (p.isActive is null or p.isActive = true) order by p.id desc",
                         PackageEntity.class)
                 .setParameter("batchId", batchId)
                 .setMaxResults(1)

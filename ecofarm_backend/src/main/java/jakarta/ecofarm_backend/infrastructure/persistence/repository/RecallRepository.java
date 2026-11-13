@@ -25,7 +25,7 @@ public class RecallRepository {
 
     public List<Recall> findByBatchId(Long batchId) {
         TypedQuery<Recall> q = em.createQuery(
-                "SELECT r FROM Recall r WHERE r.batchId = :batchId ORDER BY r.createdAt DESC",
+                "SELECT r FROM Recall r WHERE r.batch.id = :batchId ORDER BY r.createdAt DESC",
                 Recall.class);
         q.setParameter("batchId", batchId);
         return q.getResultList();

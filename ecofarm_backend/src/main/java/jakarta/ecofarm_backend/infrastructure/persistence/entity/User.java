@@ -42,4 +42,8 @@ public class User extends BaseEntity {
     public void activeUser() {
         super.isActive = true;
     }
+
+    public void changePassword(String encodedPassword){
+        this.password = encodedPassword;
+    }
 }

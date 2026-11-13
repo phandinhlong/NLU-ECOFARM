@@ -1,23 +1,27 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "qr_codes")
 @Getter
 @Setter
+@SuperBuilder
+@AllArgsConstructor
 @NoArgsConstructor
-public class QrCode {
+public class QrCode extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(name = "package_id")
-    private Long packageId;
+    // JPA relation thay cho DB foreign key (packages.id)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "package_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    @JsonIgnore
+    private PackageEntity pkg;
 
     @Column(name = "code", unique = true)
     private String code;
@@ -40,16 +44,8 @@ public class QrCode {
     @Column(name = "reprint_count", nullable = false)
     private Integer reprintCount = 0;
 
-    @Column(name = "is_active")
-    private Boolean active;
-
-    @Version
-    @Column(name = "version")
-    private Integer version;
-
-    @Column(name = "created_at")
-    private Long createdAt;
-
-    @Column(name = "updated_at")
-    private Long updatedAt;
+    @Override
+    public String toString() {
+        return "QrCode{id=" + getId() + ", code='" + code + "', serial=" + serial + "}";
+    }
 }

@@ -96,9 +96,9 @@ watch(form, () => {
     </div>
 
     <div class="pt-1 text-end">
-      <a class="small fw-medium link-primary link-underline-opacity-0 link-underline-opacity-100-hover" href="#">
+      <RouterLink to="/forgot-password" class="small fw-medium link-primary link-underline-opacity-0 link-underline-opacity-100-hover">
         Quên mật khẩu?
-      </a>
+      </RouterLink>
     </div>
 
     <BButton variant="primary" class="w-100 mt-2 small shadow-sm" type="submit" :disabled="isPending">

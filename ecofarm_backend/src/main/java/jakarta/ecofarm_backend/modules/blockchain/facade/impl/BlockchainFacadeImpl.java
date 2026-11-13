@@ -8,13 +8,17 @@ import jakarta.ecofarm_backend.common.dto.response.ProofBundle;
 import jakarta.ecofarm_backend.common.dto.response.ReconciliationItem;
 import jakarta.ecofarm_backend.config.BlockchainConfig;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.MerkleSnapshot;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.OutboxEvent;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Recall;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.AnchorRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.BatchRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.MerkleSnapshotRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.OutboxEventRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.RecallRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.UserRepository;
 import jakarta.ecofarm_backend.modules.blockchain.client.PolygonClient;
 import jakarta.ecofarm_backend.modules.blockchain.facade.BlockchainFacade;
 import jakarta.ecofarm_backend.modules.blockchain.service.ReconciliationService;
@@ -47,6 +51,12 @@ public class BlockchainFacadeImpl implements BlockchainFacade {
 
     @Inject
     private RecallRepository recallRepository;
+
+    @Inject
+    private BatchRepository batchRepository;
+
+    @Inject
+    private UserRepository userRepository;
 
     @Inject
     private PolygonClient polygonClient;
@@ -133,7 +143,7 @@ public class BlockchainFacadeImpl implements BlockchainFacade {
 
         PublicChainStatus publicChain = new PublicChainStatus();
         publicChain.setId(anchor.getId());
-        publicChain.setSnapshotId(anchor.getSnapshotId());
+        publicChain.setSnapshotId(anchor.getSnapshot() != null ? anchor.getSnapshot().getId() : null);
         publicChain.setChainId(anchor.getChainId());
         publicChain.setContractAddress(anchor.getContractAddress());
         publicChain.setTxHash(anchor.getTxHash());
@@ -169,7 +179,11 @@ public class BlockchainFacadeImpl implements BlockchainFacade {
 
     @Override
     public Recall recallBatch(Long batchId, RecallRequest req) {
-        Recall recall = new Recall(batchId, req.getReason(), 1L);
+        Recall recall = Recall.builder()
+                .batch(batchRepository.findById(batchId))
+                .reason(req.getReason())
+                .createdByUser(userRepository.findById(1L).orElse(null))
+                .build();
         recallRepository.persist(recall);
         return recall;
     }
@@ -204,11 +218,13 @@ public class BlockchainFacadeImpl implements BlockchainFacade {
 
     @Override
     public OutboxEvent createTestOutbox(String data) {
-        OutboxEvent event = new OutboxEvent(
-                "0x" + Long.toHexString(System.currentTimeMillis()),
-                1,
-                data
-        );
+        OutboxEvent event = OutboxEvent.builder()
+                .batchIdHash("0x" + Long.toHexString(System.currentTimeMillis()))
+                .seq(1)
+                .eventData(data)
+                .status(OutboxEvent.OutboxStatus.PENDING)
+                .attempts(0)
+                .build();
         outboxEventRepository.persist(event);
         return event;
     }

@@ -20,14 +20,26 @@ const router = createRouter({
     {
       path: '/activation/success',
       name: 'activation-success',
-      component: () => import('@/views/ActivationSuccess.vue'),
+      component: () => import('@/views/auth/ActivationSuccess.vue'),
       meta: { title: 'Kích hoạt thành công' },
     },
     {
       path: '/activation/failure',
       name: 'activation-failure',
-      component: () => import('@/views/ActivationFailure.vue'),
+      component: () => import('@/views/auth/ActivationFailure.vue'),
       meta: { title: 'Kích hoạt thất bại' },
+    },
+    {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: () => import('@/views/auth/ForgotPasswordView.vue'),
+      meta: { guestOnly: true, title: 'Quên mật khẩu' },
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: () => import('@/views/auth/ResetPasswordView.vue'),
+      meta: { guestOnly: true, title: 'Đặt lại mật khẩu' },
     },
     {
       path: '/',

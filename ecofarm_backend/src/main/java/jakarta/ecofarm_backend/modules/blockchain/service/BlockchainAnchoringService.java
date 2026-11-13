@@ -151,12 +151,10 @@ public class BlockchainAnchoringService {
                             privateAnchor.setStatus("SUCCESS");
                             privateAnchor.setTxHash(privateTxHash);
                             privateAnchor.setAnchoredAt(System.currentTimeMillis() / 1000);
-                            privateAnchor.setCreatedAt(System.currentTimeMillis());
-                            privateAnchor.setUpdatedAt(System.currentTimeMillis());
                             anchorRepository.persist(privateAnchor);
                             // Audit log cho Besu
-                            AuditLog privateLog = new AuditLog(
-                                    null, null,
+                            AuditLog privateLog = buildAuditLog(
+                                    null,
                                     "OUTBOX_EVENT_ANCHORED",
                                     "outboxEvents",
                                     event.getId(),
@@ -179,12 +177,10 @@ public class BlockchainAnchoringService {
                         publicAnchor.setTxHash(publicTxHash);
                         publicAnchor.setExplorerUrl("https://amoy.polygonscan.com/tx/" + publicTxHash);
                         publicAnchor.setAnchoredAt(System.currentTimeMillis() / 1000);
-                        publicAnchor.setCreatedAt(System.currentTimeMillis());
-                        publicAnchor.setUpdatedAt(System.currentTimeMillis());
                         anchorRepository.persist(publicAnchor);
                         // Audit log cho Polygon
-                        AuditLog publicLog = new AuditLog(
-                                null, null,
+                        AuditLog publicLog = buildAuditLog(
+                                null,
                                 "OUTBOX_EVENT_ANCHORED_PUBLIC",
                                 "outboxEvents",
                                 event.getId(),
@@ -221,8 +217,8 @@ public class BlockchainAnchoringService {
         }
         if (confirmations >= config.getRequiredConfirmations()) {
             anchor.setStatus("CONFIRMED");
-            auditLogRepository.persist(new AuditLog(
-                null, null, "PUBLIC_ANCHOR_CONFIRMED", "anchors", anchor.getId(), anchor.toString(), null
+            auditLogRepository.persist(buildAuditLog(
+                null, "PUBLIC_ANCHOR_CONFIRMED", "anchors", anchor.getId(), anchor.toString(), null
             ));
         }
         anchorRepository.persist(anchor);
@@ -247,8 +243,7 @@ public class BlockchainAnchoringService {
 
     private void auditLogError(OutboxEvent event, String errorMsg) {
         try {
-            AuditLog log = new AuditLog(
-                null,
+            AuditLog log = buildAuditLog(
                 null,
                 "OUTBOX_PROCESS_ERROR",
                 "outboxEvents",
@@ -276,8 +271,8 @@ public class BlockchainAnchoringService {
                     if (confirmations >= required) {
                         anchor.setStatus("CONFIRMED");
                         anchor.setAnchoredAt(System.currentTimeMillis());
-                        auditLogRepository.persist(new AuditLog(
-                            null, null, "ANCHOR_CONFIRMED", "anchors", anchor.getId(), anchor.toString(), null
+                        auditLogRepository.persist(buildAuditLog(
+                            null, "ANCHOR_CONFIRMED", "anchors", anchor.getId(), anchor.toString(), null
                         ));
                     }
                     anchorRepository.persist(anchor);
@@ -288,5 +283,16 @@ public class BlockchainAnchoringService {
         } catch (Exception e) {
             System.err.println("Error in checkConfirmations: " + e.getMessage());
         }
+    }
+
+    private AuditLog buildAuditLog(Long actorId, String action, String entity, Long entityId, String detail, String ipAddr) {
+        return AuditLog.builder()
+                .actor(null)
+                .action(action)
+                .entity(entity)
+                .entityId(entityId)
+                .detail(detail)
+                .ipAddr(ipAddr)
+                .build();
     }
 }

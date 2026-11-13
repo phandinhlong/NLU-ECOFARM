@@ -1,6 +1,7 @@
 package jakarta.ecofarm_backend.modules.auth;
 
 import jakarta.ecofarm_backend.common.constant.SecurityConstant;
+import jakarta.ecofarm_backend.common.dto.request.ChangePasswordRequest;
 import jakarta.ecofarm_backend.common.dto.request.ForgotPasswordRequest;
 import jakarta.ecofarm_backend.common.dto.request.LoginRequest;
 import jakarta.ecofarm_backend.common.dto.request.SignupRequest;
@@ -79,5 +80,10 @@ public class AuthResource {
         return this.authFacade.verifyForgotPassword(token);
     }
 
+    @POST
+    @Path("/change-password")
+    public BaseResponse<Boolean> changePassword(@Valid ChangePasswordRequest request){
+        return this.authFacade.changePassword(request);
+    }
 
 }

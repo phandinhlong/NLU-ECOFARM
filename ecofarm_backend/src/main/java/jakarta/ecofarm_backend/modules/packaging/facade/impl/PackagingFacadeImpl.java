@@ -19,6 +19,7 @@ import jakarta.ecofarm_backend.infrastructure.persistence.entity.MerkleSnapshot;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.OutboxEvent;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.PackageEntity;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.QrCode;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.AnchorRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.AuditLogRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.BatchRepository;
@@ -27,6 +28,7 @@ import jakarta.ecofarm_backend.infrastructure.persistence.repository.MerkleSnaps
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.OutboxEventRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.PackageRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.QrCodeRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.UserRepository;
 import jakarta.ecofarm_backend.modules.packaging.facade.PackagingFacade;
 import jakarta.ecofarm_backend.modules.packaging.service.MerkleTreeService;
 import jakarta.ecofarm_backend.modules.packaging.service.QrLabelExportService;
@@ -71,6 +73,9 @@ public class PackagingFacadeImpl implements PackagingFacade {
     private AuditLogRepository auditLogRepository;
 
     @Inject
+    private UserRepository userRepository;
+
+    @Inject
     private MerkleTreeService merkleTreeService;
 
     @Inject
@@ -113,35 +118,31 @@ public class PackagingFacadeImpl implements PackagingFacade {
 
         // 1. Tạo Package
         PackageEntity pkg = new PackageEntity();
-        pkg.setBatchId(batchId);
+        pkg.setBatch(batch);
         pkg.setPackageCode("PKG-" + (batch.getBatchCode() != null ? batch.getBatchCode() : batchId) + "-" + now);
         pkg.setUnitCount(request.getUnitCount());
-        pkg.setPackedBy(actorId);
+        pkg.setPackedBy(userRepository.findById(actorId).orElse(null));
         pkg.setPackedAt(now);
-        pkg.setActive(true);
-        pkg.setCreatedAt(now);
-        pkg.setUpdatedAt(now);
         packageRepository.persist(pkg);
 
         // 2. Dựng Merkle tree & lưu MerkleSnapshot
         MerkleTreeService.MerkleResult merkle = merkleTreeService.buildTree(batch.getSaltEnc(), events);
         MerkleSnapshot snapshot = new MerkleSnapshot();
-        snapshot.setBatchId(batchId);
+        snapshot.setBatch(batch);
         snapshot.setMerkleRoot(merkle.merkleRoot());
         snapshot.setLeafCount(merkle.leafHashes().size());
-        snapshot.setCreatedAt(now);
-        snapshot.setUpdatedAt(now);
         snapshotRepository.persist(snapshot);
         snapshotRepository.updateLeavesJson(snapshot.getId(), merkle.leavesJson());
 
         // 3. Chuyển lô sang ANCHORING
         batch.setStatus("ANCHORING");
         batch.setActivatedAt(now);
-        batch.setUpdatedAt(now);
         batchRepository.merge(batch);
 
         // 4. Tạo Anchor PENDING
-        Anchor anchor = new Anchor(snapshot.getId(), blockchainConfig.getPublicChainId(), null);
+        Anchor anchor = new Anchor();
+        anchor.setSnapshot(snapshot);
+        anchor.setChainId(blockchainConfig.getPublicChainId());
         anchorRepository.persist(anchor);
 
         // 5. Tạo OutboxEvent finalizeBatch trong cùng transaction
@@ -149,13 +150,18 @@ public class PackagingFacadeImpl implements PackagingFacade {
         String batchIdHash = Hash.sha3String(batchKey);
         int nextSeq = outboxEventRepository.findNextSeqByBatchIdHash(batchIdHash);
         String eventPayload = buildFinalizePayload(batch, snapshot, pkg, merkle.merkleRoot());
-        OutboxEvent outbox = new OutboxEvent(batchIdHash, nextSeq, eventPayload);
+        OutboxEvent outbox = OutboxEvent.builder()
+                .batchIdHash(batchIdHash)
+                .seq(nextSeq)
+                .eventData(eventPayload)
+                .status(OutboxEvent.OutboxStatus.PENDING)
+                .attempts(0)
+                .build();
         outboxEventRepository.persist(outbox);
 
         // 6. Ghi AuditLog
-        auditLogRepository.persist(new AuditLog(
+        auditLogRepository.persist(buildAuditLog(
                 actorId,
-                actorName,
                 "BATCH_ACTIVATE",
                 "batches",
                 batchId,
@@ -173,10 +179,10 @@ public class PackagingFacadeImpl implements PackagingFacade {
 
         PackageResponse pkgResp = PackageResponse.builder()
                 .id(pkg.getId())
-                .batchId(pkg.getBatchId())
+                .batchId(pkg.getBatch() != null ? pkg.getBatch().getId() : null)
                 .packageCode(pkg.getPackageCode())
                 .unitCount(pkg.getUnitCount())
-                .packedBy(pkg.getPackedBy())
+                .packedBy(pkg.getPackedBy() != null ? pkg.getPackedBy().getId() : null)
                 .packedAt(pkg.getPackedAt())
                 .build();
 
@@ -233,12 +239,11 @@ public class PackagingFacadeImpl implements PackagingFacade {
 
         if (existingCount == 0) {
             int unitCount = pkg.getUnitCount() != null ? pkg.getUnitCount() : 0;
-            List<QrCode> generated = generateSerialBatch(pkg.getId(), 1, unitCount, "PRINTED", now);
+            List<QrCode> generated = generateSerialBatch(pkg, 1, unitCount, "PRINTED", now);
             codesToPrint = filterByRange(generated, fromSerial, toSerial);
 
-            auditLogRepository.persist(new AuditLog(
+            auditLogRepository.persist(buildAuditLog(
                     actorId,
-                    actorName,
                     "QR_GENERATED",
                     "packages",
                     pkg.getId(),
@@ -267,13 +272,11 @@ public class PackagingFacadeImpl implements PackagingFacade {
                 qr.setReprintCount(currentReprints + 1);
                 qr.setStatus("PRINTED");
                 qr.setPrintedAt(now);
-                qr.setUpdatedAt(now);
                 qrCodeRepository.merge(qr);
             }
 
-            auditLogRepository.persist(new AuditLog(
+            auditLogRepository.persist(buildAuditLog(
                     actorId,
-                    actorName,
                     "QR_REPRINT",
                     "packages",
                     pkg.getId(),
@@ -329,23 +332,21 @@ public class PackagingFacadeImpl implements PackagingFacade {
         int previousUnitCount = pkg.getUnitCount() != null ? pkg.getUnitCount() : 0;
         int existingCount = qrCodeRepository.countByPackageId(pkg.getId());
         if (existingCount == 0 && previousUnitCount > 0) {
-            generateSerialBatch(pkg.getId(), 1, previousUnitCount, "GENERATED", now);
+            generateSerialBatch(pkg, 1, previousUnitCount, "GENERATED", now);
         }
 
         int maxSerial = qrCodeRepository.findMaxSerialByPackageId(pkg.getId());
         int fromSerial = maxSerial + 1;
         int toSerial = maxSerial + request.getExtraCount();
 
-        List<QrCode> extraCodes = generateSerialBatch(pkg.getId(), fromSerial, toSerial, "GENERATED", now);
+        List<QrCode> extraCodes = generateSerialBatch(pkg, fromSerial, toSerial, "GENERATED", now);
 
         int newTotalUnitCount = Math.max(previousUnitCount, maxSerial) + request.getExtraCount();
         pkg.setUnitCount(newTotalUnitCount);
-        pkg.setUpdatedAt(now);
         packageRepository.merge(pkg);
 
-        auditLogRepository.persist(new AuditLog(
+        auditLogRepository.persist(buildAuditLog(
                 actorId,
-                actorName,
                 "QR_EXTRA_GENERATED",
                 "packages",
                 pkg.getId(),
@@ -405,7 +406,7 @@ public class PackagingFacadeImpl implements PackagingFacade {
         return missing;
     }
 
-    private List<QrCode> generateSerialBatch(Long packageId, int fromSerial, int toSerial, String status, long now) {
+    private List<QrCode> generateSerialBatch(PackageEntity pkg, int fromSerial, int toSerial, String status, long now) {
         List<QrCode> created = new ArrayList<>();
         for (int serial = fromSerial; serial <= toSerial; serial++) {
             String code;
@@ -414,20 +415,28 @@ public class PackagingFacadeImpl implements PackagingFacade {
             } while (qrCodeRepository.existsByCode(code));
 
             QrCode qr = new QrCode();
-            qr.setPackageId(packageId);
+            qr.setPkg(pkg);
             qr.setCode(code);
             qr.setSerial(serial);
             qr.setStatus(status);
             qr.setPrintedAt("PRINTED".equals(status) ? now : null);
             qr.setScanCount(0);
             qr.setReprintCount(0);
-            qr.setActive(true);
-            qr.setCreatedAt(now);
-            qr.setUpdatedAt(now);
             qrCodeRepository.persist(qr);
             created.add(qr);
         }
         return created;
+    }
+
+    private AuditLog buildAuditLog(Long actorId, String action, String entity, Long entityId, String detail, String ipAddr) {
+        return AuditLog.builder()
+                .actor(userRepository.findById(actorId).orElse(null))
+                .action(action)
+                .entity(entity)
+                .entityId(entityId)
+                .detail(detail)
+                .ipAddr(ipAddr)
+                .build();
     }
 
     private List<QrCode> filterByRange(List<QrCode> list, Integer fromSerial, Integer toSerial) {
