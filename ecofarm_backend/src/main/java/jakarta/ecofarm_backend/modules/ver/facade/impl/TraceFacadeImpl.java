@@ -177,18 +177,31 @@ public class TraceFacadeImpl implements TraceFacade {
 
     private BlockchainStatusInfo mapBlockchain(TraceData data) {
         String status = "UNVERIFIED";
-        if (data.getAnchors() != null && !data.getAnchors().isEmpty()) {
-            AnchorInfo latest = data.getAnchors().get(0);
-            if ("CONFIRMED".equalsIgnoreCase(latest.getStatus())) {
+        BlockchainStatusInfo.BlockchainStatusInfoBuilder builder = BlockchainStatusInfo.builder()
+                .merkleRoot(data.getMerkleRoot())
+                .leafCount(data.getLeafCount());
+
+        AnchorInfo anchor = data.getAnchors() != null && !data.getAnchors().isEmpty()
+                ? data.getAnchors().get(0)
+                : null;
+        if (anchor != null) {
+            String explorerUrl = anchor.getExplorerUrl();
+            if (explorerUrl == null && anchor.getTxHash() != null
+                    && anchor.getChainId() != null && anchor.getChainId().intValue() == expectedChainId) {
+                explorerUrl = "https://amoy.polygonscan.com/tx/" + anchor.getTxHash();
+            }
+            builder.chainId(anchor.getChainId())
+                    .contractAddress(anchor.getContractAddress())
+                    .txHash(anchor.getTxHash())
+                    .blockNumber(anchor.getBlockNumber())
+                    .anchoredAt(anchor.getAnchoredAt())
+                    .explorerUrl(explorerUrl);
+            if ("CONFIRMED".equalsIgnoreCase(anchor.getStatus())) {
                 status = "VERIFIED";
-            } else if ("PENDING".equalsIgnoreCase(latest.getStatus())) {
+            } else if ("PENDING".equalsIgnoreCase(anchor.getStatus())) {
                 status = "PENDING";
             }
         }
-        return BlockchainStatusInfo.builder()
-                .status(status)
-                .merkleRoot(data.getMerkleRoot())
-                .leafCount(data.getLeafCount())
-                .build();
+        return builder.status(status).build();
     }
 }
