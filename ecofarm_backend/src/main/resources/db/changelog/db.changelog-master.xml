@@ -5,11 +5,13 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
+    <include file="db/changes/000-sync-legacy-columns.sql"/>
     <changeSet id="001-init-schema" author="ecofarm">
         <validCheckSum>ANY</validCheckSum>
         <sqlFile path="db/init.sql" relativeToChangelogFile="false"/>
     </changeSet>
     <include file="db/changes/000-hello-liquibase.sql"/>
     <include file="db/changes/002-seed-test-roles.sql"/>
+    <include file="db/changes/003-packaging-schema.sql"/>
 
 </databaseChangeLog>

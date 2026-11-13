@@ -5,4 +5,5 @@ public enum RoleEnum {
     ADMIN,
     FARMER,
     QUALITY_CONTROL,
+    PACKER,
 }
