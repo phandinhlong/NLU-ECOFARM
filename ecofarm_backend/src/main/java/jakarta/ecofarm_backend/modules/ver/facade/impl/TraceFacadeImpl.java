@@ -6,6 +6,7 @@ import jakarta.ecofarm_backend.modules.ver.dto.BatchInfo;
 import jakarta.ecofarm_backend.modules.ver.dto.BlockchainStatusInfo;
 import jakarta.ecofarm_backend.modules.ver.dto.ErrorResponse;
 import jakarta.ecofarm_backend.modules.ver.dto.GreenhouseInfo;
+import jakarta.ecofarm_backend.modules.ver.dto.ProofBundleResponse;
 import jakarta.ecofarm_backend.modules.ver.dto.TraceData;
 import jakarta.ecofarm_backend.modules.ver.dto.TraceResponse;
 import jakarta.ecofarm_backend.modules.ver.dto.VarietyInfo;
@@ -44,20 +45,43 @@ public class TraceFacadeImpl implements TraceFacade {
     @Override
     public TraceResponse getTrace(String code) {
         log.info("getTrace code={}", code);
-        TraceData data = traceRepository.load(code);
-        if (data == null) {
-            throw qrNotFound();
-        }
-        return mapToResponse(data);
+        return mapToResponse(requireTrace(code));
     }
 
     @Override
     public VerVerifyResponse verifyTrace(String code) {
-        long checkedAt = System.currentTimeMillis();
+        return doVerify(code, requireTrace(code));
+    }
+
+    @Override
+    public ProofBundleResponse getProofBundle(String code) {
+        TraceData data = requireTrace(code);
+        TraceResponse trace = mapToResponse(data);
+        return ProofBundleResponse.builder()
+                .code(trace.getCode())
+                .batch(trace.getBatch())
+                .variety(trace.getVariety())
+                .greenhouse(trace.getGreenhouse())
+                .certificates(trace.getCertificates())
+                .metrics(trace.getMetrics())
+                .timeline(trace.getTimeline())
+                .blockchain(trace.getBlockchain())
+                .recall(trace.getRecall())
+                .leaves(MerkleUtil.parseLeaves(data.getLeavesJson()))
+                .verification(doVerify(code, data))
+                .build();
+    }
+
+    private TraceData requireTrace(String code) {
         TraceData data = traceRepository.load(code);
         if (data == null) {
             throw qrNotFound();
         }
+        return data;
+    }
+
+    private VerVerifyResponse doVerify(String code, TraceData data) {
+        long checkedAt = System.currentTimeMillis();
 
         AnchorInfo anchor = data.getAnchors() != null && !data.getAnchors().isEmpty()
                 ? data.getAnchors().get(0)

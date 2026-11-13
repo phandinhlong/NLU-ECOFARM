@@ -11,14 +11,14 @@ import jakarta.ws.rs.container.PreMatching;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.ext.Provider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-@Provider
+// Khong danh dau @Provider de chi duoc dang ky trong VerPublicApplication,
+// tranh bi ApplicationConfig quet tu dong ap dung cho toan bo /api
 @PreMatching
 @Priority(FilterOrder.CORS)
 public class RateLimitFilter implements ContainerRequestFilter {
