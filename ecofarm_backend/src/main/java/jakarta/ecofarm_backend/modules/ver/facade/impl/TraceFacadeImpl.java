@@ -1,7 +1,7 @@
 package jakarta.ecofarm_backend.modules.ver.facade.impl;
 
 import jakarta.ecofarm_backend.modules.ver.cache.AnchorRootCache;
-import jakarta.ecofarm_backend.modules.ver.client.PolygonRpcClient;
+import jakarta.ecofarm_backend.modules.ver.client.ChainRootReader;
 import jakarta.ecofarm_backend.common.dto.response.AnchorInfo;
 import jakarta.ecofarm_backend.common.dto.response.TraceBatchInfo;
 import jakarta.ecofarm_backend.common.dto.response.BlockchainStatusInfo;
@@ -22,7 +22,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @ApplicationScoped
 public class TraceFacadeImpl implements TraceFacade {
@@ -37,14 +36,10 @@ public class TraceFacadeImpl implements TraceFacade {
     private VerTraceRepository traceRepository;
 
     @Inject
-    private PolygonRpcClient polygonRpcClient;
+    private ChainRootReader chainRootReader;
 
     @Inject
     private AnchorRootCache anchorRootCache;
-
-    @Inject
-    @ConfigProperty(name = "nlu.eco.farm.ver.chain-id", defaultValue = "80002")
-    private Integer expectedChainId;
 
     @Override
     public TraceResponse getTrace(String code) {
@@ -131,31 +126,33 @@ public class TraceFacadeImpl implements TraceFacade {
                     .build();
         }
 
-        if (anchor.getChainId() == null || anchor.getChainId().intValue() != expectedChainId) {
+        Integer chainId = anchor.getChainId();
+        String rpcEndpoint = chainRootReader.resolveEndpoint(chainId);
+        if (rpcEndpoint == null) {
             return builder.result(RESULT_UNAVAILABLE)
-                    .message("Anchor nằm trên chain " + anchor.getChainId()
-                            + ", không kiểm chứng được trên Polygon Amoy (chainId " + expectedChainId + ")")
+                    .message("Chain " + chainId + " chưa được hỗ trợ xác thực (Polygon Amoy và private chain Besu)")
                     .build();
         }
 
         // Cache root tren chain de RPC sap khong chan luong xac thuc
-        String onChainRoot = anchorRootCache.get(anchor.getContractAddress());
+        String cacheKey = chainId + ":" + anchor.getContractAddress();
+        String onChainRoot = anchorRootCache.get(cacheKey);
         if (onChainRoot == null) {
-            onChainRoot = polygonRpcClient.callRoot(anchor.getContractAddress());
+            onChainRoot = chainRootReader.callRoot(rpcEndpoint, anchor.getContractAddress());
             if (onChainRoot != null) {
-                anchorRootCache.put(anchor.getContractAddress(), onChainRoot);
+                anchorRootCache.put(cacheKey, onChainRoot);
             }
         }
         builder.onChainRoot(onChainRoot);
         if (onChainRoot == null) {
             return builder.result(RESULT_UNAVAILABLE)
-                    .message("Không đọc được root trên Polygon Amoy, vui lòng thử lại sau")
+                    .message("Không đọc được root trên " + chainRootReader.chainName(chainId) + ", vui lòng thử lại sau")
                     .build();
         }
 
         if (onChainRoot.equalsIgnoreCase(computedRoot)) {
             return builder.result(RESULT_MATCH)
-                    .message("Dữ liệu khớp với root trên Polygon Amoy — xác thực thành công")
+                    .message("Dữ liệu khớp với root trên " + chainRootReader.chainName(chainId) + " — xác thực thành công")
                     .build();
         }
         return builder.result(RESULT_MISMATCH)
@@ -222,10 +219,11 @@ public class TraceFacadeImpl implements TraceFacade {
         if (anchor != null) {
             String explorerUrl = anchor.getExplorerUrl();
             if (explorerUrl == null && anchor.getTxHash() != null
-                    && anchor.getChainId() != null && anchor.getChainId().intValue() == expectedChainId) {
+                    && chainRootReader.isPublicChain(anchor.getChainId())) {
                 explorerUrl = "https://amoy.polygonscan.com/tx/" + anchor.getTxHash();
             }
             builder.chainId(anchor.getChainId())
+                    .chainName(chainRootReader.chainName(anchor.getChainId()))
                     .contractAddress(anchor.getContractAddress())
                     .txHash(anchor.getTxHash())
                     .blockNumber(anchor.getBlockNumber())

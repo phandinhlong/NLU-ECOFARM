@@ -25,25 +25,25 @@ public class AnchorRootCache {
         }
     }
 
-    public String get(String contractAddress) {
-        if (contractAddress == null) {
+    public String get(String key) {
+        if (key == null) {
             return null;
         }
-        Entry entry = cache.get(contractAddress);
+        Entry entry = cache.get(key);
         if (entry == null) {
             return null;
         }
         if (System.currentTimeMillis() >= entry.expiresAt) {
-            cache.remove(contractAddress);
+            cache.remove(key);
             return null;
         }
         return entry.root;
     }
 
-    public void put(String contractAddress, String root) {
-        if (contractAddress == null || root == null) {
+    public void put(String key, String root) {
+        if (key == null || root == null) {
             return;
         }
-        cache.put(contractAddress, new Entry(root, System.currentTimeMillis() + ttlSeconds * 1000L));
+        cache.put(key, new Entry(root, System.currentTimeMillis() + ttlSeconds * 1000L));
     }
 }

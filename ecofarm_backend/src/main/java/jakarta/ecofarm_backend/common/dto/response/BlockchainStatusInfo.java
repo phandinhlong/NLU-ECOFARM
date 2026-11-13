@@ -19,6 +19,7 @@ public class BlockchainStatusInfo {
     private String merkleRoot;
     private Integer leafCount;
     private Integer chainId;
+    private String chainName;
     private String contractAddress;
     private String txHash;
     private Long blockNumber;
