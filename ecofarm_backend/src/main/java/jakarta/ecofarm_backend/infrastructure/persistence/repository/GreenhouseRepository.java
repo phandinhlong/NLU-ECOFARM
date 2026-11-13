@@ -32,6 +32,19 @@ public class GreenhouseRepository {
         }
     }
 
+    private static int safePage(int page) {
+        return Math.max(page, 0);
+    }
+
+    private static int safeSize(int size) {
+        return size <= 0 ? 20 : Math.min(size, 100);
+    }
+
+    private static int safeOffset(int page, int size) {
+        long offset = (long) safePage(page) * safeSize(size);
+        return offset > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) offset;
+    }
+
     public List<Greenhouse> findPage(int page, int size, String status, String q) {
         StringBuilder jpql = new StringBuilder("""
                 SELECT g, (SELECT COUNT(b) FROM Batch b WHERE b.greenhouseId = g.id)
@@ -43,8 +56,8 @@ public class GreenhouseRepository {
 
         TypedQuery<Object[]> query = em.createQuery(jpql.toString(), Object[].class);
         bindFilters(query, status, q);
-        query.setFirstResult(page * size);
-        query.setMaxResults(size);
+        query.setFirstResult(safeOffset(page, size));
+        query.setMaxResults(safeSize(size));
 
         return query.getResultList().stream().map(row -> {
             Greenhouse g = (Greenhouse) row[0];

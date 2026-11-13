@@ -80,10 +80,7 @@ const backendURL = import.meta.env.VITE_BACKEND;
 export const createClient = () =>
   applyInterceptors(
     axios.create({
-      // Ở dev, request đi qua proxy của Vite (same-origin) nên dùng URL tương đối,
-      // không phụ thuộc port dev server và không vướng CORS. Bản build production
-      // vẫn gọi thẳng backend qua VITE_BACKEND.
-      baseURL: import.meta.env.DEV ? '' : `${backendURL}`,
+      baseURL: `${backendURL}`,
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',

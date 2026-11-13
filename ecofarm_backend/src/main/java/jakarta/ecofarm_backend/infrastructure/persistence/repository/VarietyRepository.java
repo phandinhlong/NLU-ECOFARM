@@ -14,6 +14,19 @@ public class VarietyRepository {
     @PersistenceContext
     private EntityManager em;
 
+    private static int safePage(int page) {
+        return Math.max(page, 0);
+    }
+
+    private static int safeSize(int size) {
+        return size <= 0 ? 20 : Math.min(size, 100);
+    }
+
+    private static int safeOffset(int page, int size) {
+        long offset = (long) safePage(page) * safeSize(size);
+        return offset > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) offset;
+    }
+
     public List<Variety> findPage(int page, int size, String q) {
         StringBuilder jpql = new StringBuilder("""
                 SELECT v, (SELECT COUNT(b) FROM Batch b WHERE b.varietyId = v.id)
@@ -29,8 +42,8 @@ public class VarietyRepository {
         if (q != null && !q.isBlank()) {
             query.setParameter("q", "%" + q.trim().toLowerCase() + "%");
         }
-        query.setFirstResult(page * size);
-        query.setMaxResults(size);
+        query.setFirstResult(safeOffset(page, size));
+        query.setMaxResults(safeSize(size));
 
         return query.getResultList().stream().map(row -> {
             Variety v = (Variety) row[0];

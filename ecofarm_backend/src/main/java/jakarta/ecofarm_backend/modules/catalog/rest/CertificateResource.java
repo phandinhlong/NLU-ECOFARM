@@ -39,10 +39,12 @@ public class CertificateResource {
             @QueryParam("expiringInDays") Integer expiringInDays) {
         int safeSize = Math.min(Math.max(size, 1), 100);
         int safePage = Math.max(page, 0);
+        // Số ngày cảnh báo phải dương; số âm/0 hoặc không truyền thì bỏ qua bộ lọc hết hạn.
+        Integer expiring = (expiringInDays == null || expiringInDays <= 0) ? null : expiringInDays;
 
-        long total = certificateRepository.countActive(greenhouseId, expiringInDays);
+        long total = certificateRepository.countActive(greenhouseId, expiring);
         List<CertificateResponse> content = certificateRepository
-                .findPage(safePage, safeSize, greenhouseId, expiringInDays)
+                .findPage(safePage, safeSize, greenhouseId, expiring)
                 .stream()
                 .map(CertificateResponse::from)
                 .toList();

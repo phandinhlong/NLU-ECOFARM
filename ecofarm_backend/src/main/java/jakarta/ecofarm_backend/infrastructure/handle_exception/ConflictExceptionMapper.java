@@ -12,18 +12,15 @@ public class ConflictExceptionMapper implements ExceptionMapper<ConflictExceptio
 
     @Override
     public Response toResponse(ConflictException e) {
-        ExceptionResponse exceptionResponse = ExceptionResponse.builder()
         ExceptionResponse response = ExceptionResponse.builder()
                 .code(e.getCode())
                 .isSuccess(false)
                 .message(e.getMessage())
                 .errors(e.getErrors().isEmpty() ? null : e.getErrors())
-                .isSuccess(false)
                 .build();
 
         return Response.status(Response.Status.CONFLICT)
                 .type(MediaType.APPLICATION_JSON)
-                .entity(exceptionResponse)
                 .entity(response)
                 .build();
     }

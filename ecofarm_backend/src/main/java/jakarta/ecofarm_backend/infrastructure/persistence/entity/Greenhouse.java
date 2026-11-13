@@ -1,11 +1,17 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "green_houses")
+@Getter
+@Setter
+@NoArgsConstructor
 public class Greenhouse {
 
     @Id
@@ -46,9 +52,6 @@ public class Greenhouse {
     @Transient
     private Long batchCount;
 
-    public Greenhouse() {
-    }
-
     @PrePersist
     protected void prePersist() {
         if (this.createdAt == null) this.createdAt = System.currentTimeMillis();
@@ -59,29 +62,4 @@ public class Greenhouse {
     protected void preUpdate() {
         this.updatedAt = System.currentTimeMillis();
     }
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getCode() { return code; }
-    public void setCode(String code) { this.code = code; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public BigDecimal getGpsLat() { return gpsLat; }
-    public void setGpsLat(BigDecimal gpsLat) { this.gpsLat = gpsLat; }
-    public BigDecimal getGpsLng() { return gpsLng; }
-    public void setGpsLng(BigDecimal gpsLng) { this.gpsLng = gpsLng; }
-    public BigDecimal getAreaM2() { return areaM2; }
-    public void setAreaM2(BigDecimal areaM2) { this.areaM2 = areaM2; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public Long getVersion() { return version; }
-    public void setVersion(Long version) { this.version = version; }
-    public Boolean getActive() { return active; }
-    public void setActive(Boolean active) { this.active = active; }
-    public Long getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Long createdAt) { this.createdAt = createdAt; }
-    public Long getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Long updatedAt) { this.updatedAt = updatedAt; }
-    public Long getBatchCount() { return batchCount; }
-    public void setBatchCount(Long batchCount) { this.batchCount = batchCount; }
 }
