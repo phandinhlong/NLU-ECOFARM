@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import PageHeader from '@/components/common/PageHeader.vue'
+import PagerBar from '@/components/common/PagerBar.vue'
+import SoftBadge from '@/components/common/SoftBadge.vue'
 import { useCertificatesQuery, useCreateCertificateMutation } from '@/composables/useCertificates'
 import { useGreenhousesQuery } from '@/composables/useGreenhouses'
 import {
   CERT_TYPE_LABELS,
+  type CatalogQuery,
   type Certificate,
   type CertificateInput,
   type CertificateQuery,
-  type CatalogQuery,
   type PageResponse,
 } from '@/api/types/catalog'
 
@@ -39,7 +42,6 @@ const page = computed<PageResponse<Certificate>>(
   () =>
     data.value ?? { content: [], page: 0, size: 10, totalElements: 0, totalPages: 0 },
 )
-const totalPages = computed(() => page.value.totalPages || 1)
 
 const daysLeft = (validTo: string | null): number | null => {
   if (!validTo) return null
@@ -49,17 +51,17 @@ const daysLeft = (validTo: string | null): number | null => {
   return Math.round((to.getTime() - now.getTime()) / 86_400_000)
 }
 
-const expiryBadge = (validTo: string | null): { variant: string; label: string } => {
+const expiryBadge = (validTo: string | null) => {
   const days = daysLeft(validTo)
-  if (days == null) return { variant: 'secondary', label: '—' }
-  if (days < 0) return { variant: 'danger', label: 'Hết hạn' }
-  if (days <= 30) return { variant: 'warning', label: `Còn ${days} ngày` }
-  return { variant: 'success', label: `Còn ${days} ngày` }
+  if (days == null) return { variant: 'muted' as const, label: '—' }
+  if (days < 0) return { variant: 'danger' as const, label: 'Hết hạn' }
+  if (days <= 30) return { variant: 'warning' as const, label: `Còn ${days} ngày` }
+  return { variant: 'success' as const, label: `Còn ${days} ngày` }
 }
 
 const greenhouseLabel = (id: number | null): string => {
   if (id == null) return '—'
-  const greenhouse = greenhouses.value.find((g) => g.id === id)
+  const greenhouse = greenhouses.value.find((item) => item.id === id)
   return greenhouse ? `${greenhouse.code} — ${greenhouse.name}` : `#${id}`
 }
 
@@ -106,6 +108,12 @@ watch(expiringFilter, () => {
   }
 })
 
+const resetFilter = () => {
+  greenhouseFilter.value = ''
+  expiringFilter.value = ''
+  params.value = { page: 0, size: params.value.size }
+}
+
 const goToPage = (next: number) => {
   params.value = { ...params.value, page: next }
 }
@@ -113,51 +121,70 @@ const goToPage = (next: number) => {
 
 <template>
   <div>
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-      <h2 class="mb-0">Chứng nhận</h2>
-      <BButton variant="primary" @click="openCreate">Thêm chứng nhận</BButton>
+    <PageHeader
+      title="Quản lý chứng nhận"
+      subtitle="Chứng nhận VietGAP, GlobalGAP và Organic gắn với từng nhà màng, kèm cảnh báo hết hạn."
+      :breadcrumb="['Trang chủ', 'Quản lý danh mục', 'Chứng nhận']"
+    >
+      <template #actions>
+        <BButton variant="primary" @click="openCreate">+ Thêm chứng nhận</BButton>
+      </template>
+    </PageHeader>
+
+    <div class="ef-card ef-card-pad mb-3">
+      <div class="ef-filter-grid">
+        <div>
+          <label class="ef-label" for="c-greenhouse">Nhà màng</label>
+          <BFormSelect id="c-greenhouse" v-model="greenhouseFilter">
+            <option value="">Tất cả nhà màng</option>
+            <option v-for="item in greenhouses" :key="item.id" :value="String(item.id)">
+              {{ item.code }} — {{ item.name }}
+            </option>
+          </BFormSelect>
+        </div>
+        <div>
+          <label class="ef-label" for="c-expiring">Thời hạn</label>
+          <BFormSelect id="c-expiring" v-model="expiringFilter">
+            <option value="">Tất cả thời hạn</option>
+            <option value="30">Sắp hết hạn (30 ngày tới)</option>
+            <option value="90">Sắp hết hạn (90 ngày tới)</option>
+          </BFormSelect>
+        </div>
+        <div class="d-flex gap-2">
+          <BButton variant="primary" @click="resetFilter">Đặt lại</BButton>
+        </div>
+      </div>
     </div>
 
-    <div class="d-flex flex-wrap gap-2 mb-3">
-      <BFormSelect
-        v-model="greenhouseFilter"
-        class="w-auto"
-        aria-label="Lọc theo nhà màng"
-      >
-        <option value="">Tất cả nhà màng</option>
-        <option v-for="g in greenhouses" :key="g.id" :value="String(g.id)">
-          {{ g.code }} — {{ g.name }}
-        </option>
-      </BFormSelect>
-      <BFormSelect
-        v-model="expiringFilter"
-        class="w-auto"
-        aria-label="Lọc theo thời hạn"
-      >
-        <option value="">Tất cả thời hạn</option>
-        <option value="30">Sắp hết hạn (30 ngày tới)</option>
-      </BFormSelect>
-    </div>
+    <div class="ef-card">
+      <div class="ef-card-pad d-flex flex-wrap gap-2 justify-content-between align-items-center">
+        <div>
+          <p class="mb-1 fw-semibold" style="color: #0f172a">Danh sách chứng nhận</p>
+          <p class="ef-stat-hint mb-0">
+            Hệ thống cảnh báo khi chứng nhận còn dưới 30 ngày hiệu lực.
+          </p>
+        </div>
+        <SoftBadge variant="info" :label="`${page.totalElements} chứng nhận`" />
+      </div>
 
-    <BAlert v-if="isError" variant="danger" dismissible>
-      Không tải được danh sách chứng nhận: {{ error?.message }}
-    </BAlert>
+      <BAlert v-if="isError" variant="danger" class="mx-3 mt-3 mb-0">
+        Không tải được danh sách chứng nhận: {{ error?.message }}
+      </BAlert>
 
-    <div v-if="isLoading" class="d-flex justify-content-center py-5">
-      <BSpinner />
-    </div>
+      <div v-if="isLoading" class="d-flex justify-content-center py-5">
+        <BSpinner />
+      </div>
 
-    <template v-else>
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
+      <div v-else class="table-responsive">
+        <table class="ef-table">
           <thead>
             <tr>
               <th scope="col">Số chứng nhận</th>
               <th scope="col">Loại</th>
               <th scope="col">Nhà màng</th>
-              <th scope="col">Hiệu lực từ</th>
+              <th scope="col">Hiệu lực</th>
               <th scope="col">Hết hạn</th>
-              <th scope="col">Trạng thái hiệu lực</th>
+              <th scope="col">Trạng thái</th>
               <th scope="col">Tệp PDF</th>
             </tr>
           </thead>
@@ -168,17 +195,18 @@ const goToPage = (next: number) => {
               </td>
             </tr>
             <tr v-for="row in page.content" :key="row.id">
-              <td class="fw-medium">{{ row.certNo }}</td>
+              <td class="fw-semibold">{{ row.certNo }}</td>
               <td>
-                <span class="badge text-bg-info">{{ CERT_TYPE_LABELS[row.certType] ?? row.certType }}</span>
+                <SoftBadge variant="info" :label="CERT_TYPE_LABELS[row.certType] ?? row.certType" />
               </td>
               <td>{{ greenhouseLabel(row.greenhouseId) }}</td>
-              <td>{{ row.validFrom ?? '—' }}</td>
-              <td>{{ row.validTo ?? '—' }}</td>
+              <td class="text-nowrap">{{ row.validFrom ?? '—' }}</td>
+              <td class="text-nowrap">{{ row.validTo ?? '—' }}</td>
               <td>
-                <span class="badge" :class="`text-bg-${expiryBadge(row.validTo).variant}`">
-                  {{ expiryBadge(row.validTo).label }}
-                </span>
+                <SoftBadge
+                  :variant="expiryBadge(row.validTo).variant"
+                  :label="expiryBadge(row.validTo).label"
+                />
               </td>
               <td>
                 <a
@@ -186,11 +214,11 @@ const goToPage = (next: number) => {
                   :href="row.downloadUrl"
                   target="_blank"
                   rel="noopener"
-                  class="small fw-medium"
+                  class="small fw-semibold text-decoration-none"
                 >
                   Tải PDF
                 </a>
-                <span v-else class="small text-body-secondary text-truncate d-inline-block" style="max-width: 180px;">
+                <span v-else class="ef-stat-hint d-inline-block text-truncate" style="max-width: 170px">
                   {{ row.fileKey ?? '—' }}
                 </span>
               </td>
@@ -199,30 +227,15 @@ const goToPage = (next: number) => {
         </table>
       </div>
 
-      <div class="d-flex justify-content-between align-items-center">
-        <span class="small text-body-secondary">
-          Trang {{ page.page + 1 }}/{{ totalPages }} · {{ page.totalElements }} chứng nhận
-        </span>
-        <div class="d-flex gap-2">
-          <BButton
-            size="sm"
-            variant="outline-secondary"
-            :disabled="page.page === 0"
-            @click="goToPage(page.page - 1)"
-          >
-            Trước
-          </BButton>
-          <BButton
-            size="sm"
-            variant="outline-secondary"
-            :disabled="page.page + 1 >= totalPages"
-            @click="goToPage(page.page + 1)"
-          >
-            Sau
-          </BButton>
-        </div>
-      </div>
-    </template>
+      <PagerBar
+        :page="page.page"
+        :total-pages="page.totalPages"
+        :total-elements="page.totalElements"
+        :size="page.size"
+        unit="chứng nhận"
+        @update:page="goToPage"
+      />
+    </div>
 
     <BModal v-model="showModal" title="Thêm chứng nhận">
       <BAlert v-if="saveError" variant="danger" dismissible>
@@ -233,8 +246,8 @@ const goToPage = (next: number) => {
           <label class="form-label small fw-medium mb-1" for="cert-greenhouse">Nhà màng</label>
           <BFormSelect id="cert-greenhouse" v-model="form.greenhouseId" required>
             <option value="" disabled>Chọn nhà màng</option>
-            <option v-for="g in greenhouses" :key="g.id" :value="String(g.id)">
-              {{ g.code }} — {{ g.name }}
+            <option v-for="item in greenhouses" :key="item.id" :value="String(item.id)">
+              {{ item.code }} — {{ item.name }}
             </option>
           </BFormSelect>
         </div>
@@ -256,13 +269,18 @@ const goToPage = (next: number) => {
             <BFormInput id="cert-from" v-model="form.validFrom" type="date" required />
           </div>
           <div class="col-6">
-            <label class="form-label small fw-medium mb-1" for="cert-to">Ngày hết hạn</label>
+            <label class="form-label fw-medium mb-1 small" for="cert-to">Ngày hết hạn</label>
             <BFormInput id="cert-to" v-model="form.validTo" type="date" required />
           </div>
         </div>
         <div>
           <label class="form-label small fw-medium mb-1" for="cert-file">Tệp PDF</label>
-          <BFormInput id="cert-file" v-model="form.fileKey" maxlength="255" placeholder="Khóa tệp PDF đã tải lên MinIO (nếu có)" />
+          <BFormInput
+            id="cert-file"
+            v-model="form.fileKey"
+            maxlength="255"
+            placeholder="Khóa tệp PDF đã tải lên MinIO (nếu có)"
+          />
           <p class="small text-body-secondary mt-2 mb-0">
             Tải tệp lên MinIO trước, sau đó nhập khóa tệp (fileKey) vào đây.
           </p>
