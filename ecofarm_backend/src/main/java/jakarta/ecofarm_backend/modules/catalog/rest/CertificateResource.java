@@ -7,7 +7,9 @@ import jakarta.ecofarm_backend.common.dto.response.PageResponse;
 import jakarta.ecofarm_backend.common.enums.ErrorCode;
 import jakarta.ecofarm_backend.common.exception.ConflictException;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Certificate;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Greenhouse;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.CertificateRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.GreenhouseRepository;
 import jakarta.ecofarm_backend.modules.catalog.dto.CertificateRequest;
 import jakarta.ecofarm_backend.modules.catalog.dto.CertificateResponse;
 import jakarta.ejb.Stateless;
@@ -31,6 +33,9 @@ public class CertificateResource {
     @Inject
     private CertificateRepository certificateRepository;
 
+    @Inject
+    private GreenhouseRepository greenhouseRepository;
+
     @GET
     public BaseResponse<PageResponse<CertificateResponse>> list(
             @QueryParam("page") @DefaultValue("0") int page,
@@ -53,7 +58,8 @@ public class CertificateResource {
 
     @POST
     public Response create(@Valid CertificateRequest request) {
-        if (!certificateRepository.existsGreenhouse(request.getGreenhouseId())) {
+        Greenhouse greenhouse = greenhouseRepository.findById(request.getGreenhouseId());
+        if (greenhouse == null) {
             throw badRequest(ErrorCode.GREENHOUSE_NOT_FOUND);
         }
 
@@ -74,7 +80,7 @@ public class CertificateResource {
         }
 
         Certificate certificate = new Certificate();
-        certificate.setGreenhouseId(request.getGreenhouseId());
+        certificate.setGreenhouse(greenhouse);
         certificate.setCertType(request.getCertType());
         certificate.setCertNo(request.getCertNo().trim());
         certificate.setValidFrom(from);

@@ -38,7 +38,7 @@ public class CertificateRepository {
                 WHERE c.isActive = true
                 """);
         if (greenhouseId != null) {
-            jpql.append(" AND c.greenhouseId = :greenhouseId");
+            jpql.append(" AND c.greenhouse.id = :greenhouseId");
         }
         if (hasExpiringFilter(expiringInDays)) {
             jpql.append(" AND c.validTo >= :fromDate AND c.validTo <= :toDate");
@@ -62,7 +62,7 @@ public class CertificateRepository {
     public long countActive(Long greenhouseId, Integer expiringInDays) {
         StringBuilder jpql = new StringBuilder("SELECT COUNT(c) FROM Certificate c WHERE c.isActive = true");
         if (greenhouseId != null) {
-            jpql.append(" AND c.greenhouseId = :greenhouseId");
+            jpql.append(" AND c.greenhouse.id = :greenhouseId");
         }
         if (hasExpiringFilter(expiringInDays)) {
             jpql.append(" AND c.validTo >= :fromDate AND c.validTo <= :toDate");
@@ -85,14 +85,6 @@ public class CertificateRepository {
                 "SELECT COUNT(c) FROM Certificate c WHERE c.isActive = true AND c.certNo = :certNo",
                 Long.class);
         query.setParameter("certNo", certNo);
-        return query.getSingleResult() > 0;
-    }
-
-    public boolean existsGreenhouse(Long greenhouseId) {
-        TypedQuery<Long> query = em.createQuery(
-                "SELECT COUNT(g) FROM Greenhouse g WHERE g.id = :id AND g.isActive = true",
-                Long.class);
-        query.setParameter("id", greenhouseId);
         return query.getSingleResult() > 0;
     }
 

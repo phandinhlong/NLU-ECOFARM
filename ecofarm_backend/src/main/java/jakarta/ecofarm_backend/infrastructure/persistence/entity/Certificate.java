@@ -14,8 +14,10 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class Certificate extends BaseEntity {
 
-    @Column(name = "greenhouse_id")
-    private Long greenhouseId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "greenhouse_id",
+            foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    private Greenhouse greenhouse;
 
     @Column(name = "cert_type", nullable = false, length = 32)
     private String certType;

@@ -27,7 +27,7 @@ public class CertificateResponse {
     public static CertificateResponse from(Certificate c) {
         return CertificateResponse.builder()
                 .id(c.getId())
-                .greenhouseId(c.getGreenhouseId())
+                .greenhouseId(c.getGreenhouse() == null ? null : c.getGreenhouse().getId())
                 .certType(c.getCertType())
                 .certNo(c.getCertNo())
                 .validFrom(c.getValidFrom() == null ? null : c.getValidFrom().toString())
