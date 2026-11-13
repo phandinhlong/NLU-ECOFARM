@@ -34,6 +34,9 @@ public class Greenhouse extends BaseEntity {
     @Column(name = "status")
     private String status;
 
+    @Transient
+    private Long batchCount;
+
     @Override
     public String toString() {
         return "Greenhouse{id=" + getId() + ", code='" + code + "', name='" + name + "'}";

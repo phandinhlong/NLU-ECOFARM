@@ -8,8 +8,8 @@ import java.util.List;
 
 @Getter
 public class ConflictException extends RuntimeException {
+
     private final Integer code;
-    private final String message;
     private final List<String> errors;
 
     public ConflictException(ErrorCode errorCode) {
@@ -19,7 +19,6 @@ public class ConflictException extends RuntimeException {
     public ConflictException(ErrorCode errorCode, List<String> errors) {
         super(errorCode.getMessage());
         this.code = errorCode.getCode();
-        this.message = errorCode.getMessage();
         this.errors = errors == null ? Collections.emptyList() : errors;
     }
 }

@@ -31,6 +31,9 @@ public class Variety extends BaseEntity {
     @Column(name = "min_isolation_days")
     private Integer minIsolationDays;
 
+    @Transient
+    private Long batchCount;
+
     @Override
     public String toString() {
         return "Variety{id=" + getId() + ", code='" + code + "', name='" + name + "'}";

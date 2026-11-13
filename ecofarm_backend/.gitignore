@@ -31,7 +31,7 @@ target/
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
-
+/block_chain
 ### VS Code ###
 .vscode/
 .env/

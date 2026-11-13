@@ -14,9 +14,9 @@ public class ConflictExceptionMapper implements ExceptionMapper<ConflictExceptio
     public Response toResponse(ConflictException e) {
         ExceptionResponse response = ExceptionResponse.builder()
                 .code(e.getCode())
+                .isSuccess(false)
                 .message(e.getMessage())
                 .errors(e.getErrors().isEmpty() ? null : e.getErrors())
-                .isSuccess(false)
                 .build();
 
         return Response.status(Response.Status.CONFLICT)
