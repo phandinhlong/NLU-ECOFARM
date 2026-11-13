@@ -19,13 +19,14 @@ declare module 'vue' {
     BFormInput: typeof import('bootstrap-vue-next/components/BFormInput')['BFormInput']
     BFormSelect: typeof import('bootstrap-vue-next/components/BFormSelect')['BFormSelect']
     BModal: typeof import('bootstrap-vue-next/components/BModal')['BModal']
-    BNav: typeof import('bootstrap-vue-next/components/BNav')['BNav']
-    BNavItem: typeof import('bootstrap-vue-next/components/BNav')['BNavItem']
     BrandHeader: typeof import('./src/components/common/BrandHeader.vue')['default']
     BSpinner: typeof import('bootstrap-vue-next/components/BSpinner')['BSpinner']
     LoginForm: typeof import('./src/components/auth/LoginForm.vue')['default']
+    PageHeader: typeof import('./src/components/common/PageHeader.vue')['default']
+    PagerBar: typeof import('./src/components/common/PagerBar.vue')['default']
     RegisterForm: typeof import('./src/components/auth/RegisterForm.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SoftBadge: typeof import('./src/components/common/SoftBadge.vue')['default']
   }
 }
