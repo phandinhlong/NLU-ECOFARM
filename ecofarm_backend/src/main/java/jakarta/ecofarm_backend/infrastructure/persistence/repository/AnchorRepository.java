@@ -43,7 +43,7 @@ public class AnchorRepository {
 
     public List<Anchor> findBySnapshotId(Long snapshotId) {
         TypedQuery<Anchor> q = em.createQuery(
-            "select a from Anchor a where a.snapshotId = :snapshotId",
+            "select a from Anchor a where a.snapshot.id = :snapshotId",
             Anchor.class);
         q.setParameter("snapshotId", snapshotId);
         return q.getResultList();

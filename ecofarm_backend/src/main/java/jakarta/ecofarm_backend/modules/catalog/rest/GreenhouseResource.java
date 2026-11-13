@@ -93,9 +93,9 @@ public class GreenhouseResource {
     private void applyRequest(Greenhouse greenhouse, GreenhouseRequest request) {
         greenhouse.setCode(request.getCode().trim());
         greenhouse.setName(request.getName().trim());
-        greenhouse.setGpsLat(request.getGpsLat());
-        greenhouse.setGpsLng(request.getGpsLng());
-        greenhouse.setAreaM2(request.getAreaM2());
+        greenhouse.setGpsLat(request.getGpsLat() == null ? null : request.getGpsLat().doubleValue());
+        greenhouse.setGpsLng(request.getGpsLng() == null ? null : request.getGpsLng().doubleValue());
+        greenhouse.setAreaM2(request.getAreaM2() == null ? null : request.getAreaM2().doubleValue());
         greenhouse.setStatus(request.getStatus() == null ? "ACTIVE" : request.getStatus());
     }
 }

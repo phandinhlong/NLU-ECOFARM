@@ -39,19 +39,16 @@ public class OutboxEventRepository {
             long nextAt = System.currentTimeMillis() + (1L << attempts) * 10000;
             event.setNextAttemptAt(nextAt);
         }
-        event.setUpdatedAt(System.currentTimeMillis());
         em.merge(event);
     }
 
     public void complete(OutboxEvent event) {
         event.setStatus(OutboxEvent.OutboxStatus.SUCCESS);
-        event.setUpdatedAt(System.currentTimeMillis());
         em.merge(event);
     }
 
     public void markFailed(OutboxEvent event, String errorMsg) {
         event.setStatus(OutboxEvent.OutboxStatus.FAILED);
-        event.setUpdatedAt(System.currentTimeMillis());
         int attempts = event.getAttempts() + 1;
         event.setAttempts(attempts);
         event.setNextAttemptAt(null);

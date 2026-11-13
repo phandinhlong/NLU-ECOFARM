@@ -40,7 +40,7 @@ public class QrCodeRepository {
     }
 
     public List<QrCode> findByPackageIdOrderBySerialAsc(Long packageId, Integer fromSerial, Integer toSerial) {
-        StringBuilder jpql = new StringBuilder("select q from QrCode q where q.packageId = :packageId");
+        StringBuilder jpql = new StringBuilder("select q from QrCode q where q.pkg.id = :packageId");
         if (fromSerial != null) jpql.append(" and q.serial >= :fromSerial");
         if (toSerial != null) jpql.append(" and q.serial <= :toSerial");
         jpql.append(" order by q.serial asc");
@@ -53,14 +53,14 @@ public class QrCodeRepository {
     }
 
     public int countByPackageId(Long packageId) {
-        Long cnt = em.createQuery("select count(q) from QrCode q where q.packageId = :packageId", Long.class)
+        Long cnt = em.createQuery("select count(q) from QrCode q where q.pkg.id = :packageId", Long.class)
                 .setParameter("packageId", packageId)
                 .getSingleResult();
         return cnt != null ? cnt.intValue() : 0;
     }
 
     public int findMaxSerialByPackageId(Long packageId) {
-        Integer max = em.createQuery("select max(q.serial) from QrCode q where q.packageId = :packageId", Integer.class)
+        Integer max = em.createQuery("select max(q.serial) from QrCode q where q.pkg.id = :packageId", Integer.class)
                 .setParameter("packageId", packageId)
                 .getSingleResult();
         return max != null ? max : 0;

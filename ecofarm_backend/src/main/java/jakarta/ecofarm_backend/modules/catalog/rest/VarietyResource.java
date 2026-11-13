@@ -93,7 +93,7 @@ public class VarietyResource {
         variety.setCode(request.getCode().trim());
         variety.setName(request.getName().trim());
         variety.setDaysPollinationToHarvest(request.getDaysPollinationToHarvest());
-        variety.setMinBrix(request.getMinBrix());
+        variety.setMinBrix(request.getMinBrix() == null ? null : request.getMinBrix().doubleValue());
         variety.setMinIsolationDays(request.getMinIsolationDays());
     }
 }
