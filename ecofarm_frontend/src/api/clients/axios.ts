@@ -2,7 +2,7 @@ import axios from 'axios'
 import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
 import type { ApiResponse } from '@/api/types/common'
 import { API_V1 } from '@/api/constants'
-import router from '@/router'
+import router from '@/router/router.ts'
 
 type RetryConfig = InternalAxiosRequestConfig & { _retry?: boolean }
 

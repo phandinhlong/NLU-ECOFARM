@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import type { Ref } from 'vue'
-import { catalogService } from '@/api/services'
+import { catalogService } from '@/api/services/catalog.service'
 import type { CatalogQuery, GreenhouseInput } from '@/api/types/catalog'
 
 export const useGreenhousesQuery = (params: Ref<CatalogQuery>) =>

@@ -2,6 +2,7 @@ package jakarta.ecofarm_backend.modules.auth.facade.impl;
 
 import jakarta.ecofarm_backend.common.anotation.DatabaseTransactional;
 import jakarta.ecofarm_backend.common.constant.SecurityConstant;
+import jakarta.ecofarm_backend.common.dto.request.ChangePasswordRequest;
 import jakarta.ecofarm_backend.common.dto.request.ForgotPasswordRequest;
 import jakarta.ecofarm_backend.common.dto.request.LoginRequest;
 import jakarta.ecofarm_backend.common.dto.request.SignupRequest;
@@ -13,6 +14,7 @@ import jakarta.ecofarm_backend.common.exception.EntityNotFoundException;
 import jakarta.ecofarm_backend.common.exception.JwtInvalidException;
 import jakarta.ecofarm_backend.common.exception.PermissionDeniedException;
 import jakarta.ecofarm_backend.common.util.CookieBuilderUtil;
+import jakarta.ecofarm_backend.common.util.CurrentUserUtil;
 import jakarta.ecofarm_backend.common.util.PasswordEncoderUtil;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Role;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
@@ -25,13 +27,17 @@ import jakarta.ecofarm_backend.infrastructure.service.impl.JwtServiceImpl;
 import jakarta.ecofarm_backend.modules.auth.facade.AuthFacade;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Cookie;
 import jakarta.ws.rs.core.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.net.URI;
-import java.util.Map;
+import java.util.Arrays;
+import java.util.Optional;
 
 @ApplicationScoped
 public class AuthFacadeImpl implements AuthFacade {
@@ -50,6 +56,15 @@ public class AuthFacadeImpl implements AuthFacade {
 
     @Inject
     private CookieBuilderUtil cookieBuilder;
+
+    @Inject
+    private HttpServletResponse servletResponse;
+
+    @Inject
+    private HttpServletRequest servletRequest;
+
+    @Inject
+    private CurrentUserUtil currentUser;
 
     @Inject
     @ConfigProperty(name = "nlu.eco.farm.backend.activate.user.api.url", defaultValue = "http://localhost:8080")
@@ -91,7 +106,7 @@ public class AuthFacadeImpl implements AuthFacade {
     private static final Logger log = LogManager.getLogger(AuthFacadeImpl.class);
 
     @Override
-    public BaseResponse<Map<String, String>> login(LoginRequest request) {
+    public BaseResponse<Boolean> login(LoginRequest request) {
 
         String email = request.getEmail();
 
@@ -107,15 +122,27 @@ public class AuthFacadeImpl implements AuthFacade {
         String accessToken = jwtService.generateAccessToken(email);
         String refreshToken = jwtService.generateRefreshToken(email);
 
-        return BaseResponse.build(Map.of(
-                "accessToken", accessToken,
-                "refreshToken", refreshToken));
+        String accessTokenCookie = cookieBuilder.buildCookie(
+                SecurityConstant.ACCESS_TOKEN_COOKIE_NAME, accessToken, "/", accessMaxAge);
+        String refreshTokenCookie = cookieBuilder.buildCookie(
+                SecurityConstant.REFRESH_TOKEN_COOKIE_NAME, refreshToken, "/", refreshMaxAge);
+
+        servletResponse.addHeader("Set-Cookie", accessTokenCookie);
+        servletResponse.addHeader("Set-Cookie", refreshTokenCookie);
+
+        return BaseResponse.build(true);
     }
 
     @Override
-    public BaseResponse<Map<String, String>> refreshToken(String refreshToken) {
-        if (refreshToken == null)
+    public BaseResponse<Boolean> refreshToken() {
+        Optional<Cookie> cookieOpt = Arrays.stream(this.servletRequest.getCookies())
+                .filter(c ->c.getName().equals(SecurityConstant.REFRESH_TOKEN_COOKIE_NAME))
+                .findFirst();
+
+        if (cookieOpt.isEmpty())
             throw new JwtInvalidException(ErrorCode.JWT_INVALID);
+
+        String refreshToken = cookieOpt.get().getValue();
 
         if (!this.jwtService.validateToken(refreshToken))
             throw new JwtInvalidException(ErrorCode.JWT_INVALID);
@@ -129,13 +156,19 @@ public class AuthFacadeImpl implements AuthFacade {
             throw new EntityNotFoundException(ErrorCode.USER_NOT_FOUND);
 
         String accessToken = jwtService.generateAccessToken(email);
+        String acceptTokenCookie = this.cookieBuilder
+                .buildCookie(SecurityConstant.ACCESS_TOKEN_COOKIE_NAME,accessToken,"/",this.accessMaxAge);
 
-        return BaseResponse.build(Map.of("accessToken", accessToken));
+        servletResponse.addHeader("Set-Cookie", acceptTokenCookie);
+
+        return BaseResponse.build(true);
     }
 
     @Override
-    public BaseResponse<ProfileResponse> findProfile(String email) {
-        User user = this.userService.findByEmailAndFetchRoles(email)
+    public BaseResponse<ProfileResponse> findProfile() {
+        UserSecurityDetailsPrincipal principal = this.currentUser.get();
+
+        User user = this.userService.findByEmailAndFetchRoles(principal.getEmail())
                 .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND));
 
         ProfileResponse response = ProfileResponse.builder()
@@ -212,8 +245,8 @@ public class AuthFacadeImpl implements AuthFacade {
 
     @Override
     public BaseResponse<Boolean> forgotPassword(ForgotPasswordRequest request) {
-        if (this.userService.hasUserByEmail(request.getEmail()))
-            throw new PermissionDeniedException(ErrorCode.EMAIL_ALREADY_EXISTS);
+        if (!this.userService.hasUserByEmail(request.getEmail()))
+            throw new PermissionDeniedException(ErrorCode.USER_NOT_FOUND);
 
         String forgotPasswordUrl = this.buildForgotPasswordUrl(request.getEmail());
 
@@ -235,8 +268,12 @@ public class AuthFacadeImpl implements AuthFacade {
 
         String email = this.jwtService.getEmailFromJwtToken(token);
 
-        if (this.userService.hasUserByEmail(email))
-            throw new PermissionDeniedException(ErrorCode.EMAIL_ALREADY_EXISTS);
+        if (!this.userService.hasUserByEmail(email)){
+            URI failure = UriBuilder.fromUri(this.frontendResetPasswordFailureUrl)
+                    .queryParam("status", "user-not-found")
+                    .build();
+            return  Response.seeOther(failure).build();
+        }
 
         String resetToken = this.jwtService.generateForgotPasswordToken(email);
 
@@ -256,6 +293,28 @@ public class AuthFacadeImpl implements AuthFacade {
         builder.header(HttpHeaders.SET_COOKIE, resetPasswordCookie);
 
         return builder.build();
+    }
+
+    @Override
+    @DatabaseTransactional
+    public BaseResponse<Boolean> changePassword(ChangePasswordRequest request) {
+
+        boolean isMathPasswords = request.getConfirmPassword().equals(request.getPassword());
+        if (!isMathPasswords)
+            throw new PermissionDeniedException(ErrorCode.PASSWORD_NOT_MATCH);
+
+        UserSecurityDetailsPrincipal principal = this.currentUser.get();
+
+        User user = this.userService.findByEmail(principal.getEmail())
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND));
+
+        String encodedPassword = PasswordEncoderUtil.encode(request.getPassword());
+
+        user.changePassword(encodedPassword);
+
+        this.userService.save(user);
+
+        return BaseResponse.build(true);
     }
 
 
