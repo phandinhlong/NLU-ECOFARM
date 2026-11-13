@@ -2,6 +2,7 @@ package jakarta.ecofarm_backend.modules.auth.facade.impl;
 
 import jakarta.ecofarm_backend.common.anotation.DatabaseTransactional;
 import jakarta.ecofarm_backend.common.constant.SecurityConstant;
+import jakarta.ecofarm_backend.common.dto.request.ChangePasswordRequest;
 import jakarta.ecofarm_backend.common.dto.request.ForgotPasswordRequest;
 import jakarta.ecofarm_backend.common.dto.request.LoginRequest;
 import jakarta.ecofarm_backend.common.dto.request.SignupRequest;
@@ -28,7 +29,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.transaction.Transactional;
 import jakarta.servlet.http.Cookie;
 import jakarta.ws.rs.core.*;
 import org.apache.logging.log4j.LogManager;
@@ -37,7 +37,6 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.net.URI;
 import java.util.Arrays;
-import java.util.Map;
 import java.util.Optional;
 
 @ApplicationScoped
@@ -59,10 +58,8 @@ public class AuthFacadeImpl implements AuthFacade {
     private CookieBuilderUtil cookieBuilder;
 
     @Inject
-//    @Context
     private HttpServletResponse servletResponse;
 
-//    @Context
     @Inject
     private HttpServletRequest servletRequest;
 
@@ -248,8 +245,8 @@ public class AuthFacadeImpl implements AuthFacade {
 
     @Override
     public BaseResponse<Boolean> forgotPassword(ForgotPasswordRequest request) {
-        if (this.userService.hasUserByEmail(request.getEmail()))
-            throw new PermissionDeniedException(ErrorCode.EMAIL_ALREADY_EXISTS);
+        if (!this.userService.hasUserByEmail(request.getEmail()))
+            throw new PermissionDeniedException(ErrorCode.USER_NOT_FOUND);
 
         String forgotPasswordUrl = this.buildForgotPasswordUrl(request.getEmail());
 
@@ -271,8 +268,12 @@ public class AuthFacadeImpl implements AuthFacade {
 
         String email = this.jwtService.getEmailFromJwtToken(token);
 
-        if (this.userService.hasUserByEmail(email))
-            throw new PermissionDeniedException(ErrorCode.EMAIL_ALREADY_EXISTS);
+        if (!this.userService.hasUserByEmail(email)){
+            URI failure = UriBuilder.fromUri(this.frontendResetPasswordFailureUrl)
+                    .queryParam("status", "user-not-found")
+                    .build();
+            return  Response.seeOther(failure).build();
+        }
 
         String resetToken = this.jwtService.generateForgotPasswordToken(email);
 
@@ -292,6 +293,28 @@ public class AuthFacadeImpl implements AuthFacade {
         builder.header(HttpHeaders.SET_COOKIE, resetPasswordCookie);
 
         return builder.build();
+    }
+
+    @Override
+    @DatabaseTransactional
+    public BaseResponse<Boolean> changePassword(ChangePasswordRequest request) {
+
+        boolean isMathPasswords = request.getConfirmPassword().equals(request.getPassword());
+        if (!isMathPasswords)
+            throw new PermissionDeniedException(ErrorCode.PASSWORD_NOT_MATCH);
+
+        UserSecurityDetailsPrincipal principal = this.currentUser.get();
+
+        User user = this.userService.findByEmail(principal.getEmail())
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND));
+
+        String encodedPassword = PasswordEncoderUtil.encode(request.getPassword());
+
+        user.changePassword(encodedPassword);
+
+        this.userService.save(user);
+
+        return BaseResponse.build(true);
     }
 
 
