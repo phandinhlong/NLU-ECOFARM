@@ -47,7 +47,7 @@ public class GreenhouseRepository {
 
     public List<Greenhouse> findPage(int page, int size, String status, String q) {
         StringBuilder jpql = new StringBuilder("""
-                SELECT g, (SELECT COUNT(b) FROM Batch b WHERE b.greenhouseId = g.id)
+                SELECT g, (SELECT COUNT(b) FROM Batch b WHERE b.greenhouse.id = g.id)
                 FROM Greenhouse g
                 WHERE g.isActive = true
                 """);
@@ -102,7 +102,7 @@ public class GreenhouseRepository {
 
     public long countBatches(Long greenhouseId) {
         TypedQuery<Long> query = em.createQuery(
-                "SELECT COUNT(b) FROM Batch b WHERE b.greenhouseId = :greenhouseId",
+                "SELECT COUNT(b) FROM Batch b WHERE b.greenhouse.id = :greenhouseId",
                 Long.class);
         query.setParameter("greenhouseId", greenhouseId);
         return query.getSingleResult();
