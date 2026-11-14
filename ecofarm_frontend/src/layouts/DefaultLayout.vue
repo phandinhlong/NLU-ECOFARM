@@ -35,7 +35,9 @@ const currentLabel = computed(() => (route.meta.title as string | undefined) ?? 
         <span class="small text-body-secondary">{{ currentLabel }}</span>
 
         <div class="d-flex align-items-center gap-2 ms-auto">
-          <span class="ef-avatar rounded-circle bg-primary-subtle text-primary d-grid fw-bold">
+          <span
+            class="ef-avatar d-flex align-items-center justify-content-center flex-shrink-0 rounded-circle bg-primary-subtle text-primary fw-bold"
+          >
             {{ initials }}
           </span>
           <span class="d-none d-sm-block lh-sm">
@@ -58,10 +60,6 @@ const currentLabel = computed(() => (route.meta.title as string | undefined) ?? 
 </template>
 
 <style scoped>
-.ef-admin {
-  background: var(--bs-tertiary-bg);
-}
-
 .ef-main,
 .ef-content {
   min-width: 0;
@@ -75,8 +73,6 @@ const currentLabel = computed(() => (route.meta.title as string | undefined) ?? 
   width: 34px;
   height: 34px;
   font-size: 0.78rem;
-  flex-shrink: 0;
-  place-items: center;
 }
 
 .ef-user-name {
