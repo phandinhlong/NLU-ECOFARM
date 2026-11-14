@@ -20,6 +20,7 @@ const navSections = [
       { label: 'Nhà màng', to: '/greenhouses' },
       { label: 'Giống dưa', to: '/varieties' },
       { label: 'Chứng nhận VietGAP', to: '/certificates' },
+      { label: 'Kích hoạt lô & In tem', to: '/batch-activation' },
     ],
   },
 ]
