@@ -169,7 +169,7 @@ const formatArea = (value: number | null) =>
     <section class="border rounded-3 bg-body">
       <div class="p-3 border-bottom d-flex flex-wrap gap-2 justify-content-between align-items-center">
         <div>
-          <p class="mb-1 fw-semibold text-body">Danh sách nhà màng</p>
+          <p class="mb-1 fw-semibold">Danh sách nhà màng</p>
           <p class="small text-body-secondary mb-0">
             Mã nhà màng không thể đổi khi đã có lô tham chiếu.
           </p>
@@ -207,7 +207,7 @@ const formatArea = (value: number | null) =>
             <tr v-for="row in page.content" :key="row.id">
               <td class="fw-semibold">{{ row.code }}</td>
               <td>
-                <div class="fw-medium">{{ row.name }}</div>
+                <div class="fw-semibold">{{ row.name }}</div>
                 <div class="small text-body-secondary">ID #{{ row.id }} · phiên bản {{ row.version }}</div>
               </td>
               <td class="text-nowrap">{{ formatGps(row.gpsLat, row.gpsLng) }}</td>
@@ -243,32 +243,32 @@ const formatArea = (value: number | null) =>
       </BAlert>
       <form class="d-flex flex-column gap-3" novalidate @submit.prevent="submit">
         <div>
-          <label class="form-label small fw-medium mb-1" for="gh-code">Mã nhà màng</label>
+          <label class="form-label small fw-semibold mb-1" for="gh-code">Mã nhà màng</label>
           <BFormInput id="gh-code" v-model="form.code" required maxlength="32" :disabled="isCodeLocked" />
           <p v-if="isCodeLocked" class="small text-body-secondary mt-2 mb-0">
             Không thể đổi mã khi nhà màng đã có lô tham chiếu.
           </p>
         </div>
         <div>
-          <label class="form-label small fw-medium mb-1" for="gh-name">Tên nhà màng</label>
+          <label class="form-label small fw-semibold mb-1" for="gh-name">Tên nhà màng</label>
           <BFormInput id="gh-name" v-model="form.name" required maxlength="128" />
         </div>
         <div class="row g-3">
           <div class="col-6">
-            <label class="form-label small fw-medium mb-1" for="gh-lat">Vĩ độ (GPS)</label>
+            <label class="form-label small fw-semibold mb-1" for="gh-lat">Vĩ độ (GPS)</label>
             <BFormInput id="gh-lat" v-model="form.gpsLat" type="number" step="any" min="-90" max="90" />
           </div>
           <div class="col-6">
-            <label class="form-label small fw-medium mb-1" for="gh-lng">Kinh độ (GPS)</label>
+            <label class="form-label small fw-semibold mb-1" for="gh-lng">Kinh độ (GPS)</label>
             <BFormInput id="gh-lng" v-model="form.gpsLng" type="number" step="any" min="-180" max="180" />
           </div>
         </div>
         <div>
-          <label class="form-label small fw-medium mb-1" for="gh-area">Diện tích (m²)</label>
+          <label class="form-label small fw-semibold mb-1" for="gh-area">Diện tích (m²)</label>
           <BFormInput id="gh-area" v-model="form.areaM2" type="number" step="any" min="0" />
         </div>
         <div>
-          <label class="form-label small fw-medium mb-1" for="gh-status">Trạng thái</label>
+          <label class="form-label small fw-semibold mb-1" for="gh-status">Trạng thái</label>
           <BFormSelect id="gh-status" v-model="form.status">
             <option v-for="[value, label] in statuses" :key="value" :value="value">
               {{ label }}

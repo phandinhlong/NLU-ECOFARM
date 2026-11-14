@@ -103,7 +103,7 @@ const resetFilter = () => {
       <div v-for="card in statCards" :key="card.label" class="col-12 col-sm-6 col-xl-3">
         <div class="border rounded-3 bg-body p-3 h-100">
           <p class="small text-uppercase fw-bold text-body-secondary mb-1">{{ card.label }}</p>
-          <p class="fs-3 fw-bold text-body mb-1">{{ card.value }}</p>
+          <p class="fs-3 fw-bold mb-1">{{ card.value }}</p>
           <p class="small text-body-secondary mb-0">{{ card.hint }}</p>
         </div>
       </div>
@@ -142,7 +142,7 @@ const resetFilter = () => {
     <section class="border rounded-3 bg-body">
       <div class="p-3 border-bottom d-flex flex-wrap gap-2 justify-content-between align-items-center">
         <div>
-          <p class="mb-1 fw-semibold text-body">Chứng nhận sắp hết hạn</p>
+          <p class="mb-1 fw-semibold">Chứng nhận sắp hết hạn</p>
           <p class="small text-body-secondary mb-0">
             Danh sách chứng nhận có ngày hết hạn trong {{ windowDays }} ngày tới.
           </p>
@@ -177,7 +177,7 @@ const resetFilter = () => {
               </td>
             </tr>
             <tr v-for="row in pageData.content" :key="row.id">
-              <td class="fw-medium">{{ greenhouseLabel(row.greenhouseId) }}</td>
+              <td class="fw-semibold">{{ greenhouseLabel(row.greenhouseId) }}</td>
               <td>{{ row.certNo }}</td>
               <td>{{ CERT_TYPE_LABELS[row.certType] ?? row.certType }}</td>
               <td class="text-nowrap">

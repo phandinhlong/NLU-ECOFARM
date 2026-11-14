@@ -163,7 +163,7 @@ const goToPage = (next: number) => {
     <section class="border rounded-3 bg-body">
       <div class="p-3 border-bottom d-flex flex-wrap gap-2 justify-content-between align-items-center">
         <div>
-          <p class="mb-1 fw-semibold text-body">Danh sách chứng nhận</p>
+          <p class="mb-1 fw-semibold">Danh sách chứng nhận</p>
           <p class="small text-body-secondary mb-0">
             Hệ thống cảnh báo khi chứng nhận còn dưới 30 ngày hiệu lực.
           </p>
@@ -222,7 +222,7 @@ const goToPage = (next: number) => {
                 >
                   Tải PDF
                 </a>
-                <span v-else class="small text-body-secondary d-inline-block text-truncate" style="max-width: 170px">
+                <span v-else class="small text-body-secondary text-break">
                   {{ row.fileKey ?? '—' }}
                 </span>
               </td>
@@ -247,7 +247,7 @@ const goToPage = (next: number) => {
       </BAlert>
       <form class="d-flex flex-column gap-3" novalidate @submit.prevent="submit">
         <div>
-          <label class="form-label small fw-medium mb-1" for="cert-greenhouse">Nhà màng</label>
+          <label class="form-label small fw-semibold mb-1" for="cert-greenhouse">Nhà màng</label>
           <BFormSelect id="cert-greenhouse" v-model="form.greenhouseId" required>
             <option value="" disabled>Chọn nhà màng</option>
             <option v-for="item in greenhouses" :key="item.id" :value="String(item.id)">
@@ -256,7 +256,7 @@ const goToPage = (next: number) => {
           </BFormSelect>
         </div>
         <div>
-          <label class="form-label small fw-medium mb-1" for="cert-type">Loại chứng nhận</label>
+          <label class="form-label small fw-semibold mb-1" for="cert-type">Loại chứng nhận</label>
           <BFormSelect id="cert-type" v-model="form.certType">
             <option v-for="[value, label] in certTypes" :key="value" :value="value">
               {{ label }}
@@ -264,21 +264,21 @@ const goToPage = (next: number) => {
           </BFormSelect>
         </div>
         <div>
-          <label class="form-label small fw-medium mb-1" for="cert-no">Số chứng nhận</label>
+          <label class="form-label small fw-semibold mb-1" for="cert-no">Số chứng nhận</label>
           <BFormInput id="cert-no" v-model="form.certNo" required maxlength="64" placeholder="VD: VG-DL-2026-001" />
         </div>
         <div class="row g-3">
           <div class="col-6">
-            <label class="form-label small fw-medium mb-1" for="cert-from">Ngày hiệu lực</label>
+            <label class="form-label small fw-semibold mb-1" for="cert-from">Ngày hiệu lực</label>
             <BFormInput id="cert-from" v-model="form.validFrom" type="date" required />
           </div>
           <div class="col-6">
-            <label class="form-label fw-medium mb-1 small" for="cert-to">Ngày hết hạn</label>
+            <label class="form-label small fw-semibold mb-1" for="cert-to">Ngày hết hạn</label>
             <BFormInput id="cert-to" v-model="form.validTo" type="date" required />
           </div>
         </div>
         <div>
-          <label class="form-label small fw-medium mb-1" for="cert-file">Tệp PDF</label>
+          <label class="form-label small fw-semibold mb-1" for="cert-file">Tệp PDF</label>
           <BFormInput
             id="cert-file"
             v-model="form.fileKey"

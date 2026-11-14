@@ -136,7 +136,7 @@ const brixVariant = (value: number | null): 'success' | 'warning' | 'muted' => {
     <section class="border rounded-3 bg-body">
       <div class="p-3 border-bottom d-flex flex-wrap gap-2 justify-content-between align-items-center">
         <div>
-          <p class="mb-1 fw-semibold text-body">Danh sách giống dưa</p>
+          <p class="mb-1 fw-semibold">Danh sách giống dưa</p>
           <p class="small text-body-secondary mb-0">
             Mã giống không thể đổi khi đã có lô tham chiếu.
           </p>
@@ -174,7 +174,7 @@ const brixVariant = (value: number | null): 'success' | 'warning' | 'muted' => {
             <tr v-for="row in page.content" :key="row.id">
               <td class="fw-semibold">{{ row.code }}</td>
               <td>
-                <div class="fw-medium">{{ row.name }}</div>
+                <div class="fw-semibold">{{ row.name }}</div>
                 <div class="small text-body-secondary">ID #{{ row.id }} · phiên bản {{ row.version }}</div>
               </td>
               <td class="text-end text-nowrap">{{ formatDays(row.daysPollinationToHarvest) }}</td>
@@ -207,32 +207,32 @@ const brixVariant = (value: number | null): 'success' | 'warning' | 'muted' => {
       </BAlert>
       <form class="d-flex flex-column gap-3" novalidate @submit.prevent="submit">
         <div>
-          <label class="form-label small fw-medium mb-1" for="v-code">Mã giống</label>
+          <label class="form-label small fw-semibold mb-1" for="v-code">Mã giống</label>
           <BFormInput id="v-code" v-model="form.code" required maxlength="32" :disabled="isCodeLocked" />
           <p v-if="isCodeLocked" class="small text-body-secondary mt-2 mb-0">
             Không thể đổi mã khi giống đã có lô tham chiếu.
           </p>
         </div>
         <div>
-          <label class="form-label small fw-medium mb-1" for="v-name">Tên giống</label>
+          <label class="form-label small fw-semibold mb-1" for="v-name">Tên giống</label>
           <BFormInput id="v-name" v-model="form.name" required maxlength="128" />
         </div>
         <div class="row g-3">
           <div class="col-6">
-            <label class="form-label small fw-medium mb-1" for="v-days">
+            <label class="form-label small fw-semibold mb-1" for="v-days">
               Ngày thụ phấn → thu hoạch
             </label>
             <BFormInput id="v-days" v-model="form.daysPollinationToHarvest" type="number" min="1" max="365" />
           </div>
           <div class="col-6">
-            <label class="form-label small fw-medium mb-1" for="v-isolation">
+            <label class="form-label small fw-semibold mb-1" for="v-isolation">
               Ngày cách ly tối thiểu
             </label>
             <BFormInput id="v-isolation" v-model="form.minIsolationDays" type="number" min="0" max="365" />
           </div>
         </div>
         <div>
-          <label class="form-label small fw-medium mb-1" for="v-brix">
+          <label class="form-label small fw-semibold mb-1" for="v-brix">
             Ngưỡng Brix tối thiểu (°Bx)
           </label>
           <BFormInput id="v-brix" v-model="form.minBrix" type="number" step="0.1" min="0" max="30" />
