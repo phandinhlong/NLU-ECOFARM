@@ -34,7 +34,20 @@ public class User extends BaseEntity {
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     @Builder.Default
     private List<Role> roles = new ArrayList<>();
-
+    @Builder.Default
+    private List<Batch> batches = new ArrayList<>();
+    @Builder.Default
+    private List<BatchAssignment> batchAssignments = new ArrayList<>();
+    @Builder.Default
+    private List<AuditLog> auditLogs = new ArrayList<>();
+    @Builder.Default
+    private List<CultivationEvent> cultivationEvents = new ArrayList<>();
+    @Builder.Default
+    private List<EventAttachment> eventAttachments = new ArrayList<>();
+    @Builder.Default
+    private List<QcRecord> qcRecords = new ArrayList<>();
+    @Builder.Default
+    private List<Recall> recalls = new ArrayList<>();
     public void addRole(Role role) {
         this.roles.add(role);
     }
@@ -43,7 +56,7 @@ public class User extends BaseEntity {
         super.isActive = true;
     }
 
-    public void changePassword(String encodedPassword){
+    public void changePassword(String encodedPassword) {
         this.password = encodedPassword;
     }
 }

@@ -2,11 +2,11 @@ package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "qr_codes")
@@ -43,7 +43,8 @@ public class QrCode extends BaseEntity {
 
     @Column(name = "reprint_count", nullable = false)
     private Integer reprintCount = 0;
-
+    @Builder.Default
+    private List<QrCode> qrCodes = new ArrayList<>();
     @Override
     public String toString() {
         return "QrCode{id=" + getId() + ", code='" + code + "', serial=" + serial + "}";

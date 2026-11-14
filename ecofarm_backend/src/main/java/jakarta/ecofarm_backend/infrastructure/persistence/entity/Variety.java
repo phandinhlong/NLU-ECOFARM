@@ -1,11 +1,11 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "varieties")
@@ -33,6 +33,8 @@ public class Variety extends BaseEntity {
 
     @Transient
     private Long batchCount;
+    @Builder.Default
+    private List<Batch> batches = new ArrayList<>();
 
     @Override
     public String toString() {
