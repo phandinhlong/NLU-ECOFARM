@@ -55,6 +55,9 @@ public class CultivationEvent extends BaseEntity {
     @JoinColumn(name = "amends_event_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     @JsonIgnore
     private CultivationEvent amendsEvent;
+    @OneToMany(mappedBy = "amendsEvent", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<CultivationEvent> amendedEvents = new ArrayList<>();
     @Builder.Default
     private List<EventAttachment> eventAttachments = new ArrayList<>();
     @Builder.Default
