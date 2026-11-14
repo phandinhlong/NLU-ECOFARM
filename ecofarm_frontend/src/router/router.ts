@@ -66,7 +66,7 @@ const router = createRouter({
         {
           path: 'dashboard',
           name: 'dashboard',
-          component: () => import('@/views/PlaceholderView.vue'),
+          component: () => import('@/views/DashboardView.vue'),
           meta: { title: 'Tổng quan' },
         },
         {
