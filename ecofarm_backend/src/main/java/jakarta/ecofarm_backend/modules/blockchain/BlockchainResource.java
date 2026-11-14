@@ -71,6 +71,12 @@ public class BlockchainResource {
         return blockchainFacade.createTestOutbox(data);
     }
 
+    @POST
+    @Path("/admin/outbox/process")
+    public Map<String, Object> triggerProcessOutbox() {
+        return blockchainFacade.triggerProcessOutbox();
+    }
+
     @GET
     @Path("/admin/polygon/status")
     public Map<String, Object> testPolygonStatus() throws Exception {

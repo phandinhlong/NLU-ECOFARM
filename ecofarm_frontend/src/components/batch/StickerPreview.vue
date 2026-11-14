@@ -14,16 +14,19 @@ const props = defineProps<{
 }>()
 
 const targetQrUrl = computed(() => {
-  if (props.traceUrl && props.traceUrl.startsWith('http')) {
-    return props.traceUrl
-  }
+  // Priority 1: Polygon explorer link (on-chain, always public)
   if (props.polygonTxHash) {
     return `https://amoy.polygonscan.com/tx/${props.polygonTxHash}`
   }
+  // Priority 2: Explicit trace URL that is not localhost
+  if (props.traceUrl && props.traceUrl.startsWith('http') && !props.traceUrl.includes('localhost')) {
+    return props.traceUrl
+  }
+  // Priority 3: Stable public trace URL (production domain)
   if (props.batchCode) {
     return `https://ecofarm.vn/t/${props.batchCode}`
   }
-  return `https://amoy.polygonscan.com`
+  return `https://ecofarm.vn`
 })
 
 const qrSvg = computed(() => {
@@ -89,7 +92,7 @@ const qrSvg = computed(() => {
 
       <!-- Bottom footer row -->
       <div class="d-flex align-items-center justify-content-between mt-2 pt-1 border-top text-body-secondary ef-sticker-footer">
-        <span class="font-monospace text-primary text-truncate">{{ traceUrl || `ecofarm.vn/t/${batchCode || 'DL-NM01-141126'}` }}</span>
+        <span class="font-monospace text-primary text-truncate">{{ targetQrUrl.replace('https://', '') }}</span>
         <span class="text-end text-truncate">{{ polygonBlock || 'Polygon #4,821,902' }}</span>
       </div>
     </div>

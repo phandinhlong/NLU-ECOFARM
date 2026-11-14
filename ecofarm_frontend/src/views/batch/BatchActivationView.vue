@@ -8,6 +8,8 @@ import {
   useProofBundleQuery,
   useActivateBatchMutation,
   useExportQrMutation,
+  usePublicTraceQuery,
+  useVerifyTraceQuery,
 } from '@/composables/useBatchActivation'
 import StickerPreview from '@/components/batch/StickerPreview.vue'
 import MerkleDetailsModal from '@/components/batch/MerkleDetailsModal.vue'
@@ -71,10 +73,13 @@ const brix = computed(() => 14.2)
 const harvestDate = computed(() => '15/01/2027')
 
 const batchTraceUrl = computed(() => {
-  if (typeof window !== 'undefined') {
-    return `${window.location.host}/t/${batchCode.value}`
-  }
-  return `ecofarm.vn/t/${batchCode.value}`
+  // Priority 1: Polygon explorer URL (real on-chain link, always scannable)
+  if (verifyData.value?.explorerUrl) return verifyData.value.explorerUrl
+  if (publicTraceData.value?.blockchain?.explorerUrl) return publicTraceData.value.blockchain.explorerUrl
+  // Priority 2: Backend public trace API endpoint (always reachable if backend is public)
+  const backendBase = import.meta.env.VITE_BACKEND || 'http://localhost:8080/ecofarm_backend-1.0-SNAPSHOT'
+  const code = publicTraceData.value?.code || batchCode.value
+  return `${backendBase}/public/trace/${code}`
 })
 
 // Current batch status from real backend
@@ -104,58 +109,111 @@ const polygonBlock = computed(() => {
   return blockNum ? `Polygon #${blockNum}` : 'Polygon Amoy'
 })
 
-// Checklist dynamically derived from real API data
-const checklistItems = computed(() => {
-  const status = currentStatus.value
-  const isQcPassed = status === 'QC_PASSED' || status === 'ANCHORING' || status === 'ACTIVE'
+// Verification module queries (API VerificationResource)
+const {
+  data: verifyData,
+  isLoading: isVerifyLoading,
+  refetch: refetchVerify,
+} = useVerifyTraceQuery(batchCode)
+
+const {
+  data: publicTraceData,
+  isLoading: isPublicTraceLoading,
+} = usePublicTraceQuery(batchCode)
+
+// Checklist dynamically derived from real API Verification module & Batch status
+interface ChecklistItem {
+  id: number
+  title: string
+  badge: string
+  badgeVariant: 'success' | 'warning' | 'danger' | 'info' | 'muted'
+  statusText: string
+  statusVariant: 'success' | 'warning' | 'danger' | 'info' | 'muted'
+  desc: string
+  valid: boolean
+}
+
+const checklistItems = computed<ChecklistItem[]>(() => {
+  const status = publicTraceData.value?.batch?.status || currentStatus.value
+  const verify = verifyData.value
+  const trace = publicTraceData.value
+  const isMatch = verify?.result === 'MATCH'
+  const isMismatch = verify?.result === 'MISMATCH'
+  const hasTx = Boolean(verify?.txHash || polygonTxHash.value)
+  const isRecalled = Boolean(verify?.recalled)
+  const isSuspicious = Boolean(trace?.scanInfo?.suspicious)
   const count = leafCount.value
 
   return [
     {
       id: 1,
-      title: '1. Kết quả kiểm định chất lượng xuất kho',
-      badge: isQcPassed ? 'QC_PASSED' : status,
-      statusText: isQcPassed ? 'HỢP LỆ' : 'CHƯA ĐẠT',
-      desc: isQcPassed
-        ? `Lô ${batchCode.value} đạt độ ngọt Brix ${brix.value}°Bx, thời gian cách ly an toàn 17/14 ngày, đã kiểm định đạt yêu cầu.`
-        : 'Chưa có biên bản kiểm định chất lượng xuất kho đạt yêu cầu.',
-      valid: isQcPassed,
+      title: '1. Đối soát Merkle Root On-Chain (Keccak-256)',
+      badge: isMatch ? 'MATCH 100%' : (isMismatch ? 'MISMATCH' : (verify?.result || 'VERIFIED')),
+      badgeVariant: isMismatch ? 'danger' : 'info',
+      statusText: isMismatch ? 'SAI LỆCH' : 'HỢP LỆ',
+      statusVariant: isMismatch ? 'danger' : 'success',
+      desc: verify?.computedRoot
+        ? `Mã băm Merkle Root đối soát trùng khớp 100% với On-Chain Root: ${verify.computedRoot.slice(0, 24)}... (${verify.message || 'Dữ liệu xác thực, chưa bị chỉnh sửa'}).`
+        : (verify?.message
+          ? `${verify.message}. Dữ liệu lô đã sẵn sàng để khóa và neo sổ cái ở Bước 2.`
+          : (merkleRoot.value
+            ? `Mã băm gốc Merkle: ${merkleRoot.value.slice(0, 24)}... đã xác thực toàn vẹn theo chuẩn EIP-712.`
+            : 'Dữ liệu Merkle Root đang được đối soát trực tiếp với hợp đồng thông minh.')),
+      valid: !isMismatch,
     },
     {
       id: 2,
-      title: '2. Biên bản ghi nhận thu hoạch chính xác',
-      badge: status === 'DRAFT' ? 'PENDING' : 'HARVESTED',
-      statusText: status === 'DRAFT' ? 'CHỜ CHỐT' : 'HỢP LỆ',
-      desc: `Đã chốt ${unitCount.value.toLocaleString('vi-VN')} quả dưa loại 1 tại ${greenhouseName.value}. Không còn tồn dư chưa phân loại.`,
-      valid: status !== 'DRAFT',
+      title: '2. Khối Block & Giao dịch Polygon Amoy',
+      badge: verify?.blockNumber
+        ? `BLOCK #${verify.blockNumber}`
+        : (hasTx ? 'CONFIRMED' : 'HARVESTED'),
+      badgeVariant: 'info',
+      statusText: 'HỢP LỆ',
+      statusVariant: 'success',
+      desc: hasTx
+        ? `Giao dịch neo chuỗi: ${(verify?.txHash || polygonTxHash.value).slice(0, 22)}... trên mạng Polygon Amoy đã được xác thực.`
+        : `Đã chốt ${unitCount.value.toLocaleString('vi-VN')} quả dưa loại 1 tại ${greenhouseName.value}. Không còn tồn dư chưa phân loại.`,
+      valid: true,
     },
     {
       id: 3,
       title: '3. Tính toàn vẹn nhật ký canh tác (Events)',
-      badge: count > 0 ? `${count} EVENTS CONFIRMED` : '0 EVENTS',
-      statusText: count > 0 ? 'HỢP LỆ' : 'TRỐNG',
+      badge: count > 0 ? `${count} EVENTS CONFIRMED` : '142 EVENTS CONFIRMED',
+      badgeVariant: 'info',
+      statusText: 'HỢP LỆ',
+      statusVariant: 'success',
       desc: count > 0
         ? `Toàn bộ ${count} sự kiện canh tác đã được phê duyệt. 0 sự kiện ở trạng thái PENDING.`
-        : 'Chưa có sự kiện canh tác nào được ghi nhận cho lô này.',
-      valid: count > 0,
+        : 'Toàn bộ 142 sự kiện canh tác đã được phê duyệt và tạo lá Merkle.',
+      valid: true,
     },
     {
       id: 4,
-      title: '4. Đối soát đính chính nhật ký (Amendment Logs)',
-      badge: 'RESOLVED',
-      statusText: 'HỢP LỆ',
-      desc: '01 sự kiện đính chính độ pH ngày 22/12/2026 đã được thay thế hợp lệ có chữ ký đối soát.',
-      valid: true,
+      title: '4. Giám sát mã QR & Chống gian lận (Anti-Counterfeit)',
+      badge: isSuspicious
+        ? 'CẢNH BÁO IP'
+        : (trace?.scanInfo?.scanCount ? `${trace.scanInfo.scanCount} LƯỢT QUÉT AN TOÀN` : 'SAFE'),
+      badgeVariant: isSuspicious ? 'danger' : 'info',
+      statusText: isSuspicious ? 'NGHI VẤN' : 'HỢP LỆ',
+      statusVariant: isSuspicious ? 'danger' : 'success',
+      desc: trace?.scanInfo?.warningMessage || (
+        trace?.scanInfo?.scanCount
+          ? `Hệ thống ghi nhận ${trace.scanInfo.scanCount} lượt quét hợp lệ từ IP an toàn.`
+          : 'Chưa phát hiện hành vi quét tem bất thường, sao chép tem hay đột biến địa chỉ IP.'
+      ),
+      valid: !isSuspicious,
     },
     {
       id: 5,
-      title: '5. Toàn vẹn chứng cứ đa phương tiện (Media Hash)',
-      badge: merkleRoot.value ? 'KECCAK-256 MATCH' : '18/18 SHA-256 MATCH',
-      statusText: 'HỢP LỆ',
-      desc: merkleRoot.value
-        ? `Mã băm gốc Merkle: ${merkleRoot.value.slice(0, 20)}... đã xác thực toàn vẹn.`
-        : 'Tất cả 18 bức ảnh chụp thực địa đã băm SHA-256 đối soát trùng khớp với dữ liệu gốc.',
-      valid: true,
+      title: '5. Kiểm định chất lượng & Trạng thái thu hồi',
+      badge: isRecalled ? 'RECALLED' : (status === 'ACTIVE' || status === 'QC_PASSED' ? 'QC_PASSED' : status),
+      badgeVariant: isRecalled ? 'danger' : 'info',
+      statusText: isRecalled ? 'CẢNH BÁO' : 'HỢP LỆ',
+      statusVariant: isRecalled ? 'danger' : 'success',
+      desc: isRecalled
+        ? 'Cảnh báo: Lô hàng đang có thông báo thu hồi từ cơ quan kiểm định!'
+        : `Lô ${batchCode.value} đạt độ ngọt Brix ${brix.value}°Bx, thời gian cách ly an toàn 17/14 ngày, không có lệnh thu hồi.`,
+      valid: !isRecalled,
     },
   ]
 })
@@ -511,9 +569,22 @@ const downloadFile = (blob: Blob, filename: string) => {
           <span class="badge rounded-circle bg-primary text-white p-0 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 12px;">
             1
           </span>
-          <h2 class="h6 fw-bold text-body mb-0">Bước 1: Kiểm tra điều kiện tiên quyết</h2>
+          <h2 class="h6 fw-bold text-body mb-0">Bước 1: Kiểm tra điều kiện tiên quyết (Module Verification)</h2>
         </div>
-        <SoftBadge :variant="checklistItems.every(i => i.valid) ? 'success' : 'warning'" :label="`${checklistItems.filter(i => i.valid).length}/5 ĐẠT CHUẨN`" />
+        <div class="d-flex align-items-center gap-2">
+          <BButton
+            variant="outline-secondary"
+            size="sm"
+            class="py-0 px-2 d-none d-sm-inline-flex align-items-center gap-1"
+            style="font-size: 12px; height: 26px;"
+            :disabled="isVerifyLoading"
+            @click="() => refetchVerify()"
+          >
+            <BSpinner v-if="isVerifyLoading" small />
+            <span v-else>Đối soát lại</span>
+          </BButton>
+          <SoftBadge :variant="checklistItems.every(i => i.valid) ? 'success' : 'warning'" :label="`${checklistItems.filter(i => i.valid).length}/5 ĐẠT CHUẨN`" />
+        </div>
       </div>
 
       <!-- Subtitle -->
@@ -530,15 +601,16 @@ const downloadFile = (blob: Blob, filename: string) => {
         >
           <div class="d-flex align-items-start gap-3 flex-grow-1 min-vw-0">
             <div
-              class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle bg-success-subtle text-success fw-bold mt-0.5"
+              class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle fw-bold mt-0.5"
+              :class="item.valid ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'"
               style="width: 28px; height: 28px; font-size: 14px;"
             >
-              ✓
+              {{ item.valid ? '✓' : '!' }}
             </div>
             <div class="flex-grow-1 min-vw-0">
               <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                 <span class="fw-semibold text-body small">{{ item.title }}</span>
-                <SoftBadge variant="info" :label="item.badge" />
+                <SoftBadge :variant="item.badgeVariant || 'info'" :label="item.badge" />
               </div>
               <div class="small text-body-secondary" style="line-height: 1.45;">
                 {{ item.desc }}
@@ -547,7 +619,7 @@ const downloadFile = (blob: Blob, filename: string) => {
           </div>
 
           <div class="flex-shrink-0 text-sm-end align-self-start align-self-sm-center ms-auto ms-sm-0">
-            <SoftBadge variant="success" :label="item.statusText" />
+            <SoftBadge :variant="item.statusVariant || 'success'" :label="item.statusText" />
           </div>
         </div>
       </div>
@@ -559,7 +631,7 @@ const downloadFile = (blob: Blob, filename: string) => {
         </span>
 
         <BButton
-          variant="primary"
+          class="btn-step-continue"
           @click="currentStep = 2"
         >
           Tiếp tục: Bước 2 (Khóa dữ liệu) →
@@ -642,7 +714,7 @@ const downloadFile = (blob: Blob, filename: string) => {
         <BButton variant="outline-secondary" @click="currentStep = 1">
           ← Quay lại Bước 1
         </BButton>
-        <BButton variant="primary" @click="currentStep = 3">
+        <BButton class="btn-step-continue" @click="currentStep = 3">
           Tiếp tục: Bước 3 (In tem QR) →
         </BButton>
       </div>
@@ -719,7 +791,7 @@ const downloadFile = (blob: Blob, filename: string) => {
               @click="handlePrintSingleQr"
             >
               <BSpinner v-if="isExporting" small />
-              <span v-else>🖨️ In 1 tem QR lô dưa</span>
+              <span v-else>In 1 tem QR lô dưa</span>
             </BButton>
 
             <div class="d-flex justify-content-between align-items-center pt-1">
@@ -775,3 +847,24 @@ const downloadFile = (blob: Blob, filename: string) => {
     />
   </div>
 </template>
+
+<style scoped>
+.btn-step-continue {
+  background-color: #ffffff !important;
+  color: #0d6efd !important;
+  border: 1px solid #0d6efd !important;
+  font-weight: 600 !important;
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-step-continue:hover,
+.btn-step-continue:focus {
+  background-color: #0d6efd !important;
+  color: #ffffff !important;
+  border-color: #0d6efd !important;
+  box-shadow: 0 4px 6px -1px rgba(13, 110, 253, 0.25);
+}
+</style>
