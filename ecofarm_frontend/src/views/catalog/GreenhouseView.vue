@@ -125,11 +125,7 @@ const formatArea = (value: number | null) =>
 
 <template>
   <div>
-    <PageHeader
-      title="Quản lý nhà màng"
-      subtitle="Danh mục nhà màng phục vụ truy xuất nguồn gốc lô dưa lưới."
-      :breadcrumb="['Trang chủ', 'Quản lý danh mục', 'Nhà màng']"
-    >
+    <PageHeader title="Quản lý nhà màng">
       <template #actions>
         <BButton variant="primary" @click="openCreate">+ Thêm nhà màng</BButton>
       </template>

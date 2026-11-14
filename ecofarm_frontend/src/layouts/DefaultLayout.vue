@@ -23,12 +23,12 @@ const currentLabel = computed(() => (route.meta.title as string | undefined) ?? 
 </script>
 
 <template>
-  <div class="ef-admin d-flex min-vh-100 bg-body-tertiary">
-    <Sidebar />
+  <div class="ef-admin d-flex vh-100 overflow-hidden bg-body-tertiary">
+    <Sidebar class="h-100 overflow-y-auto" />
 
-    <div class="ef-main flex-grow-1 d-flex flex-column">
+    <div class="ef-main flex-grow-1 d-flex flex-column h-100 overflow-hidden">
       <header
-        class="ef-topbar bg-body border-bottom d-flex flex-wrap align-items-center gap-2 gap-sm-3 px-3 px-lg-4 py-2"
+        class="ef-topbar flex-shrink-0 bg-body border-bottom d-flex flex-wrap align-items-center gap-2 gap-sm-3 px-3 px-lg-4 py-2"
       >
         <span class="fw-bold small text-body">EcoFarm LEDGER</span>
         <span class="text-body-tertiary">›</span>
@@ -52,7 +52,7 @@ const currentLabel = computed(() => (route.meta.title as string | undefined) ?? 
         </div>
       </header>
 
-      <main class="ef-content flex-grow-1 p-3 p-lg-4">
+      <main class="ef-content flex-grow-1 p-3 p-lg-4 overflow-y-auto">
         <RouterView />
       </main>
     </div>

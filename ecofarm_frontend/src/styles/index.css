@@ -328,3 +328,22 @@ body {
   background-color: var(--ef-bg-secondary);
   border-bottom: 1px solid #e0e0e0;
 }
+
+/* --- Print overrides: chỉ in tem dán quả QR khổ 50x30mm --- */
+@media print {
+  @page {
+    size: 50mm 30mm;
+    margin: 0;
+  }
+
+  html, body {
+    width: 50mm !important;
+    height: 30mm !important;
+    max-width: 50mm !important;
+    max-height: 30mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    overflow: hidden !important;
+  }
+}
