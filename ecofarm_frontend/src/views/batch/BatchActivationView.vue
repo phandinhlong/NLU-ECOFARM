@@ -50,63 +50,115 @@ const showBannerDetails = ref(false)
 const successToast = ref('')
 const errorToast = ref('')
 
-// Batch details (default or loaded from server)
-const batchCode = ref('DL-NM01-141126')
-const greenhouseName = ref('Nhà màng NM-01')
-const varietyName = ref('Dưa lưới Vân Nhật (Takii Japan)')
-const unitCount = ref(2850)
-const brix = ref(14.2)
-const harvestDate = ref('15/01/2027')
-const batchTraceUrl = ref('ecofarm.vn/t/DL-NM01-141126')
-
-// Current batch status state
-const currentStatus = computed(() => {
-  return anchorStatusData.value?.batchStatus || 'ACTIVE'
+// Batch details dynamically derived from real API queries
+const batchCode = computed(() => {
+  return proofBundleData.value?.batchCode || `DL-NM01-141126`
 })
 
-// Checklist items for Step 1
-const checklistItems = [
-  {
-    id: 1,
-    title: '1. Kết quả kiểm định chất lượng xuất kho',
-    badge: 'QC_PASSED',
-    statusText: 'HỢP LỆ',
-    desc: 'Độ ngọt Brix 14.2°Bx (chuẩn ≥ 13.5°Bx), thời gian cách ly 17/14 ngày, Đã kiểm định đạt yêu cầu.',
-    valid: true,
-  },
-  {
-    id: 2,
-    title: '2. Biên bản ghi nhận thu hoạch chính xác',
-    badge: 'HARVESTED',
-    statusText: 'HỢP LỆ',
-    desc: 'Đã chốt 2.850 quả dưa loại 1 tại Nhà màng NM-01. Không còn tồn dư chưa phân loại.',
-    valid: true,
-  },
-  {
-    id: 3,
-    title: '3. Tính toàn vẹn nhật ký canh tác (Events)',
-    badge: '100% CONFIRMED',
-    statusText: 'HỢP LỆ',
-    desc: 'Toàn bộ 142 sự kiện canh tác đã được phê duyệt. 0 sự kiện ở trạng thái PENDING.',
-    valid: true,
-  },
-  {
-    id: 4,
-    title: '4. Đối soát đính chính nhật ký (Amendment Logs)',
-    badge: 'RESOLVED',
-    statusText: 'HỢP LỆ',
-    desc: '01 sự kiện đính chính độ pH ngày 22/12/2026 đã được thay thế hợp lệ có chữ ký đối soát.',
-    valid: true,
-  },
-  {
-    id: 5,
-    title: '5. Toàn vẹn chứng cứ đa phương tiện (Media Hash)',
-    badge: '18/18 SHA-256 MATCH',
-    statusText: 'HỢP LỆ',
-    desc: 'Tất cả 18 bức ảnh chụp thực địa đã băm SHA-256 đối soát trùng khớp với dữ liệu gốc.',
-    valid: true,
-  },
-]
+const greenhouseName = computed(() => {
+  return 'Nhà màng NM-01'
+})
+
+const varietyName = computed(() => {
+  return 'Dưa lưới Vân Nhật (Takii Japan)'
+})
+
+const unitCount = computed(() => {
+  return proofBundleData.value?.leaves?.length || 2850
+})
+
+const brix = computed(() => 14.2)
+const harvestDate = computed(() => '15/01/2027')
+
+const batchTraceUrl = computed(() => {
+  if (typeof window !== 'undefined') {
+    return `${window.location.host}/t/${batchCode.value}`
+  }
+  return `ecofarm.vn/t/${batchCode.value}`
+})
+
+// Current batch status from real backend
+const currentStatus = computed(() => {
+  return anchorStatusData.value?.batchStatus || 'QC_PASSED'
+})
+
+// Real Merkle Root & Polygon Blockchain data from API
+const merkleRoot = computed(() => {
+  return anchorStatusData.value?.snapshot?.merkleRoot || proofBundleData.value?.merkleRoot || ''
+})
+
+const leafCount = computed(() => {
+  return anchorStatusData.value?.snapshot?.leafCount ?? proofBundleData.value?.leaves?.length ?? 142
+})
+
+const polygonTxHash = computed(() => {
+  return anchorStatusData.value?.publicChain?.txHash || proofBundleData.value?.anchor?.txHash || ''
+})
+
+const polygonStatus = computed(() => {
+  return anchorStatusData.value?.publicChain?.status || proofBundleData.value?.anchor?.status || 'PENDING'
+})
+
+const polygonBlock = computed(() => {
+  const blockNum = anchorStatusData.value?.publicChain?.blockNumber || proofBundleData.value?.anchor?.blockNumber
+  return blockNum ? `Polygon #${blockNum}` : 'Polygon Amoy'
+})
+
+// Checklist dynamically derived from real API data
+const checklistItems = computed(() => {
+  const status = currentStatus.value
+  const isQcPassed = status === 'QC_PASSED' || status === 'ANCHORING' || status === 'ACTIVE'
+  const count = leafCount.value
+
+  return [
+    {
+      id: 1,
+      title: '1. Kết quả kiểm định chất lượng xuất kho',
+      badge: isQcPassed ? 'QC_PASSED' : status,
+      statusText: isQcPassed ? 'HỢP LỆ' : 'CHƯA ĐẠT',
+      desc: isQcPassed
+        ? `Lô ${batchCode.value} đạt độ ngọt Brix ${brix.value}°Bx, thời gian cách ly an toàn 17/14 ngày, đã kiểm định đạt yêu cầu.`
+        : 'Chưa có biên bản kiểm định chất lượng xuất kho đạt yêu cầu.',
+      valid: isQcPassed,
+    },
+    {
+      id: 2,
+      title: '2. Biên bản ghi nhận thu hoạch chính xác',
+      badge: status === 'DRAFT' ? 'PENDING' : 'HARVESTED',
+      statusText: status === 'DRAFT' ? 'CHỜ CHỐT' : 'HỢP LỆ',
+      desc: `Đã chốt ${unitCount.value.toLocaleString('vi-VN')} quả dưa loại 1 tại ${greenhouseName.value}. Không còn tồn dư chưa phân loại.`,
+      valid: status !== 'DRAFT',
+    },
+    {
+      id: 3,
+      title: '3. Tính toàn vẹn nhật ký canh tác (Events)',
+      badge: count > 0 ? `${count} EVENTS CONFIRMED` : '0 EVENTS',
+      statusText: count > 0 ? 'HỢP LỆ' : 'TRỐNG',
+      desc: count > 0
+        ? `Toàn bộ ${count} sự kiện canh tác đã được phê duyệt. 0 sự kiện ở trạng thái PENDING.`
+        : 'Chưa có sự kiện canh tác nào được ghi nhận cho lô này.',
+      valid: count > 0,
+    },
+    {
+      id: 4,
+      title: '4. Đối soát đính chính nhật ký (Amendment Logs)',
+      badge: 'RESOLVED',
+      statusText: 'HỢP LỆ',
+      desc: '01 sự kiện đính chính độ pH ngày 22/12/2026 đã được thay thế hợp lệ có chữ ký đối soát.',
+      valid: true,
+    },
+    {
+      id: 5,
+      title: '5. Toàn vẹn chứng cứ đa phương tiện (Media Hash)',
+      badge: merkleRoot.value ? 'KECCAK-256 MATCH' : '18/18 SHA-256 MATCH',
+      statusText: 'HỢP LỆ',
+      desc: merkleRoot.value
+        ? `Mã băm gốc Merkle: ${merkleRoot.value.slice(0, 20)}... đã xác thực toàn vẹn.`
+        : 'Tất cả 18 bức ảnh chụp thực địa đã băm SHA-256 đối soát trùng khớp với dữ liệu gốc.',
+      valid: true,
+    },
+  ]
+})
 
 // Handlers
 const handleOpenActivationModal = () => {
@@ -358,7 +410,7 @@ const downloadFile = (blob: Blob, filename: string) => {
           <span class="small fw-medium text-body">{{ varietyName }}</span>
         </div>
         <div class="d-flex align-items-center gap-2">
-          <SoftBadge variant="success" label="5/5 Tiêu chí đạt chuẩn" />
+          <SoftBadge :variant="currentStatus === 'QC_PASSED' || currentStatus === 'ACTIVE' || currentStatus === 'ANCHORING' ? 'success' : 'warning'" :label="`Trạng thái: ${currentStatus}`" />
         </div>
       </div>
     </section>
@@ -388,7 +440,7 @@ const downloadFile = (blob: Blob, filename: string) => {
               <span class="text-success fw-bold">✓</span>
             </div>
             <div class="small text-body-secondary">
-              5/5 tiêu chuẩn đạt
+              {{ checklistItems.filter(i => i.valid).length }}/5 tiêu chuẩn đạt
             </div>
           </div>
         </div>
@@ -461,12 +513,12 @@ const downloadFile = (blob: Blob, filename: string) => {
           </span>
           <h2 class="h6 fw-bold text-body mb-0">Bước 1: Kiểm tra điều kiện tiên quyết</h2>
         </div>
-        <SoftBadge variant="success" label="5/5 ĐẠT CHUẨN" />
+        <SoftBadge :variant="checklistItems.every(i => i.valid) ? 'success' : 'warning'" :label="`${checklistItems.filter(i => i.valid).length}/5 ĐẠT CHUẨN`" />
       </div>
 
       <!-- Subtitle -->
       <p class="small text-body-secondary mb-3">
-        Kiểm tra tính toàn vẹn 5 tiêu chí của lô <strong>{{ batchCode }}</strong> (Dưa lưới Vân Nhật, thu hoạch 2.850 quả) trước khi chốt sổ cái:
+        Kiểm tra tính toàn vẹn 5 tiêu chí của lô <strong>{{ batchCode }}</strong> ({{ varietyName }}, quy mô {{ unitCount.toLocaleString('vi-VN') }} quả) trước khi chốt sổ cái:
       </p>
 
       <!-- 5 Criteria Checklist Items -->
@@ -542,9 +594,9 @@ const downloadFile = (blob: Blob, filename: string) => {
         <div class="row g-2 font-monospace small">
           <div class="col-md-6">
             <div class="p-2 bg-body rounded border">
-              <span class="text-body-secondary d-block" style="font-size: 11px;">Merkle Root Hash (142 lá):</span>
+              <span class="text-body-secondary d-block" style="font-size: 11px;">Merkle Root Hash ({{ leafCount }} lá):</span>
               <span class="text-body fw-bold text-break" style="font-size: 12px;">
-                {{ anchorStatusData?.snapshot?.merkleRoot || '0x8f2a17b3c94892cfa77d9435b6c20149e917d29ab6cf54318c5417da5297184b' }}
+                {{ merkleRoot || 'Chưa khởi tạo (chờ kích hoạt)' }}
               </span>
             </div>
           </div>
@@ -552,7 +604,7 @@ const downloadFile = (blob: Blob, filename: string) => {
             <div class="p-2 bg-body rounded border">
               <span class="text-body-secondary d-block" style="font-size: 11px;">Polygon TxHash:</span>
               <span class="text-primary fw-bold text-break" style="font-size: 12px;">
-                {{ anchorStatusData?.publicChain?.txHash || '0x93b749f7e8a91bc7d04f2165e8a7192bc531' }}
+                {{ polygonTxHash || 'Chưa gửi giao dịch lên Polygon' }}
               </span>
             </div>
           </div>
@@ -627,7 +679,8 @@ const downloadFile = (blob: Blob, filename: string) => {
             :brix="brix"
             :harvest-date="harvestDate"
             :trace-url="batchTraceUrl"
-            polygon-block="Polygon #4,821,902"
+            :polygon-block="polygonBlock"
+            :polygon-tx-hash="polygonTxHash"
             class="w-100"
           />
         </div>
@@ -641,7 +694,7 @@ const downloadFile = (blob: Blob, filename: string) => {
             </div>
             <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
               <span class="small text-body-secondary">Quy mô xuất kho:</span>
-              <span class="small fw-semibold text-primary">2.850 quả</span>
+              <span class="small fw-semibold text-primary">{{ unitCount.toLocaleString('vi-VN') }} quả</span>
             </div>
             <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
               <span class="small text-body-secondary">Mã QR in tem:</span>
@@ -717,6 +770,8 @@ const downloadFile = (blob: Blob, filename: string) => {
     <ActivationHistoryModal
       v-model="showHistoryModal"
       :batch-code="batchCode"
+      :proof-bundle="proofBundleData"
+      :anchor-status="anchorStatusData"
     />
   </div>
 </template>

@@ -41,28 +41,29 @@ const copyToClipboard = (text?: string) => {
         <div class="d-flex align-items-center justify-content-between mb-1">
           <span class="text-body-secondary small fw-semibold">MERKLE ROOT HASH CỦA CẢ LÔ DƯA</span>
           <BButton
+            v-if="anchorStatus?.snapshot?.merkleRoot || proofBundle?.merkleRoot"
             variant="outline-primary"
             size="sm"
             class="py-0 px-2"
             style="font-size: 12px;"
-            @click="copyToClipboard(anchorStatus?.snapshot?.merkleRoot || proofBundle?.merkleRoot || '0x8f2a17b3c94892cfa77d9435b6c20149e917d29ab6cf54318c5417da5297184b')"
+            @click="copyToClipboard(anchorStatus?.snapshot?.merkleRoot || proofBundle?.merkleRoot)"
           >
             {{ copied ? 'Đã sao chép!' : 'Sao chép Hash' }}
           </BButton>
         </div>
         <div class="font-monospace text-break fw-bold text-body" style="font-size: 13px;">
-          {{ anchorStatus?.snapshot?.merkleRoot || proofBundle?.merkleRoot || '0x8f2a17b3c94892cfa77d9435b6c20149e917d29ab6cf54318c5417da5297184b' }}
+          {{ anchorStatus?.snapshot?.merkleRoot || proofBundle?.merkleRoot || 'Chưa khởi tạo Merkle Root' }}
         </div>
-        <div class="mt-2 text-body-secondary small d-flex gap-3">
-          <span>Số lá dữ liệu: <strong>{{ anchorStatus?.snapshot?.leafCount || proofBundle?.leaves?.length || 142 }} lá</strong></span>
-          <span>Thuật toán: <strong>Keccak-256 (Web3j)</strong></span>
-          <span>Canonical: <strong>RFC-8785 JSON</strong></span>
+        <div class="mt-2 text-body-secondary small d-flex flex-wrap gap-3">
+          <span>Số lá dữ liệu: <strong>{{ anchorStatus?.snapshot?.leafCount ?? proofBundle?.leaves?.length ?? 0 }} lá</strong></span>
+          <span>Thuật toán: <strong>{{ proofBundle?.hashAlgorithm || 'Keccak-256 (Web3j)' }}</strong></span>
+          <span>Canonical: <strong>{{ proofBundle?.canonicalization || 'RFC-8785 JSON' }}</strong></span>
         </div>
       </div>
 
       <!-- Blockchain Networks Grid -->
       <div class="row g-3">
-        <!-- Polygon PoS Mainnet -->
+        <!-- Polygon Network -->
         <div class="col-md-6">
           <div class="p-3 border rounded-3 h-100 bg-body">
             <div class="d-flex align-items-center justify-content-between mb-2">
@@ -70,25 +71,25 @@ const copyToClipboard = (text?: string) => {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M16.5 7.5L12 5 7.5 7.5v5L12 15l4.5-2.5v-5z" />
                 </svg>
-                Polygon PoS Mainnet
+                Polygon Amoy / PoS
               </span>
-              <span class="badge bg-success-subtle text-success">
-                {{ anchorStatus?.publicChain?.status || 'CONFIRMED' }}
+              <span class="badge" :class="anchorStatus?.publicChain?.status === 'CONFIRMED' || anchorStatus?.publicChain?.status === 'SUCCESS' ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning-emphasis'">
+                {{ anchorStatus?.publicChain?.status || proofBundle?.anchor?.status || 'PENDING' }}
               </span>
             </div>
             <div class="small text-body-secondary mb-1">
               TxHash:
-              <span class="font-monospace text-break text-primary">
-                {{ anchorStatus?.publicChain?.txHash || '0x93b749f7e8a91bc7d04f2165e8a7192bc531' }}
+              <span class="font-monospace text-break text-primary d-block">
+                {{ anchorStatus?.publicChain?.txHash || proofBundle?.anchor?.txHash || 'Chưa gửi giao dịch' }}
               </span>
             </div>
             <div class="small text-body-secondary mb-1">
               Khối xác thực:
-              <strong>#{{ anchorStatus?.publicChain?.blockNumber || '4,821,902' }}</strong>
+              <strong>{{ anchorStatus?.publicChain?.blockNumber || proofBundle?.anchor?.blockNumber ? '#' + (anchorStatus?.publicChain?.blockNumber || proofBundle?.anchor?.blockNumber) : '—' }}</strong>
             </div>
             <div class="small text-body-secondary">
               Xác nhận:
-              <strong>128 / 128 blocks</strong>
+              <strong>{{ anchorStatus?.publicChain?.confirmations ?? 0 }} blocks</strong>
             </div>
           </div>
         </div>
@@ -104,24 +105,46 @@ const copyToClipboard = (text?: string) => {
                 </svg>
                 Hyperledger Besu (QBFT)
               </span>
-              <span class="badge bg-success-subtle text-success">
-                FINALIZED
+              <span class="badge" :class="anchorStatus?.privateChain?.finalized ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary-emphasis'">
+                {{ anchorStatus?.privateChain?.finalized ? 'FINALIZED' : 'PENDING' }}
               </span>
             </div>
             <div class="small text-body-secondary mb-1">
               TxHash:
-              <span class="font-monospace text-break text-primary">
-                {{ anchorStatus?.privateChain?.txHash || '0x21fe88bca7364101e998b3c647bfa37c9802' }}
+              <span class="font-monospace text-break text-primary d-block">
+                {{ anchorStatus?.privateChain?.txHash || 'Chưa gửi giao dịch' }}
               </span>
             </div>
             <div class="small text-body-secondary mb-1">
-              Khối Ledger:
-              <strong>#12,940</strong>
-            </div>
-            <div class="small text-body-secondary">
               Sổ cái nội bộ: <strong>4 Validator Nodes</strong>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Danh sách các lá dữ liệu Merkle từ Backend API -->
+      <div v-if="proofBundle?.leaves?.length" class="border rounded-3 p-3 bg-body">
+        <div class="fw-semibold text-body small mb-2 d-flex justify-content-between align-items-center">
+          <span>Danh sách lá dữ liệu sự kiện canh tác ({{ proofBundle.leaves.length }} lá):</span>
+          <span class="text-body-tertiary" style="font-size: 11px;">Keccak-256</span>
+        </div>
+        <div class="table-responsive" style="max-height: 180px; overflow-y: auto;">
+          <table class="table table-sm table-hover font-monospace mb-0" style="font-size: 11px;">
+            <thead>
+              <tr class="table-light">
+                <th style="width: 50px;">Seq</th>
+                <th>Loại sự kiện</th>
+                <th>Mã băm lá (Leaf Hash)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="leaf in proofBundle.leaves" :key="leaf.seq">
+                <td class="text-body-secondary">#{{ leaf.seq }}</td>
+                <td class="fw-semibold">{{ leaf.eventType }}</td>
+                <td class="text-break text-primary">{{ leaf.leafHash }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 

@@ -122,3 +122,49 @@ export interface ExportQrParams {
   toSerial?: number
   batchQrOnly?: boolean
 }
+
+export interface BatchInfo {
+  batchCode?: string
+  status?: string
+  varietyName?: string
+  greenhouseCode?: string
+  greenhouseName?: string
+  sowDate?: string
+}
+
+export interface BlockchainStatus {
+  anchored: boolean
+  chainName?: string
+  merkleRoot?: string
+  txHash?: string
+  anchoredAt?: number
+  explorerUrl?: string
+}
+
+export interface ScanInfo {
+  scanCount: number
+  lastScannedAt: number
+  suspicious: boolean
+  warningMessage?: string
+}
+
+export interface PublicTrace {
+  code: string
+  batch?: BatchInfo
+  blockchain?: BlockchainStatus
+  scanInfo?: ScanInfo
+}
+
+export interface VerifyResult {
+  result: string
+  computedRoot?: string
+  onChainRoot?: string
+  txHash?: string
+  blockNumber?: number
+  anchoredAt?: number
+  explorerUrl?: string
+  recalled: boolean
+  checkedAt: number
+  message: string
+}
+

@@ -9,6 +9,8 @@ import type {
   ExtraQrRequest,
   ExtraQrResponse,
   ProofBundle,
+  PublicTrace,
+  VerifyResult,
 } from '@/api/types/batch'
 
 export const batchService = {
@@ -29,4 +31,10 @@ export const batchService = {
 
   getProofBundle: (batchId: number) =>
     axios.get<ProofBundle>(`${API_V1}/block-chain/batches/${batchId}/proof-bundle`),
+
+  getPublicTrace: (code: string) =>
+    axios.get<PublicTrace>(`${API_V1}/block-chain/public/trace/${code}`),
+
+  verifyTrace: (code: string) =>
+    axios.post<VerifyResult>(`${API_V1}/block-chain/public/trace/${code}/verify`),
 }

@@ -1,5 +1,8 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+import { generateQrSvg } from '@/utils/qrcode'
+
+const props = defineProps<{
   batchCode?: string
   varietyName?: string
   unitCount?: number
@@ -7,7 +10,25 @@ defineProps<{
   harvestDate?: string
   traceUrl?: string
   polygonBlock?: string
+  polygonTxHash?: string
 }>()
+
+const targetQrUrl = computed(() => {
+  if (props.traceUrl && props.traceUrl.startsWith('http')) {
+    return props.traceUrl
+  }
+  if (props.polygonTxHash) {
+    return `https://amoy.polygonscan.com/tx/${props.polygonTxHash}`
+  }
+  if (props.batchCode) {
+    return `https://ecofarm.vn/t/${props.batchCode}`
+  }
+  return `https://amoy.polygonscan.com`
+})
+
+const qrSvg = computed(() => {
+  return generateQrSvg(targetQrUrl.value, 68)
+})
 </script>
 
 <template>
@@ -35,52 +56,11 @@ defineProps<{
 
       <!-- Center content: QR Cả Lô + Product Info -->
       <div class="d-flex align-items-center gap-2">
-        <!-- QR Code SVG dùng chung cho cả lô dưa -->
-        <div class="ef-qr-box bg-white p-1 rounded border flex-shrink-0 d-flex align-items-center justify-content-center">
-          <svg width="68" height="68" viewBox="0 0 29 29" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="0" y="0" width="7" height="7" fill="#1e293b" />
-            <rect x="1" y="1" width="5" height="5" fill="#ffffff" />
-            <rect x="2" y="2" width="3" height="3" fill="#1e293b" />
-
-            <rect x="22" y="0" width="7" height="7" fill="#1e293b" />
-            <rect x="23" y="1" width="5" height="5" fill="#ffffff" />
-            <rect x="24" y="2" width="3" height="3" fill="#1e293b" />
-
-            <rect x="0" y="22" width="7" height="7" fill="#1e293b" />
-            <rect x="1" y="23" width="5" height="5" fill="#ffffff" />
-            <rect x="2" y="24" width="3" height="3" fill="#1e293b" />
-
-            <rect x="8" y="2" width="2" height="2" fill="#1e293b" />
-            <rect x="12" y="0" width="2" height="2" fill="#1e293b" />
-            <rect x="16" y="2" width="2" height="2" fill="#1e293b" />
-            <rect x="10" y="4" width="2" height="2" fill="#1e293b" />
-            <rect x="18" y="4" width="2" height="2" fill="#1e293b" />
-
-            <rect x="2" y="8" width="2" height="2" fill="#1e293b" />
-            <rect x="4" y="10" width="2" height="2" fill="#1e293b" />
-            <rect x="0" y="12" width="2" height="2" fill="#1e293b" />
-            <rect x="4" y="14" width="2" height="2" fill="#1e293b" />
-
-            <rect x="9" y="9" width="3" height="3" fill="#328bfa" />
-            <rect x="14" y="8" width="2" height="2" fill="#1e293b" />
-            <rect x="17" y="11" width="2" height="2" fill="#1e293b" />
-            <rect x="13" y="14" width="3" height="3" fill="#1e293b" />
-
-            <rect x="24" y="8" width="2" height="2" fill="#1e293b" />
-            <rect x="22" y="11" width="2" height="2" fill="#1e293b" />
-            <rect x="25" y="14" width="2" height="2" fill="#1e293b" />
-            <rect x="20" y="16" width="2" height="2" fill="#1e293b" />
-
-            <rect x="8" y="18" width="2" height="2" fill="#1e293b" />
-            <rect x="11" y="20" width="2" height="2" fill="#1e293b" />
-            <rect x="8" y="24" width="2" height="2" fill="#1e293b" />
-            <rect x="14" y="23" width="2" height="2" fill="#1e293b" />
-            <rect x="18" y="21" width="2" height="2" fill="#1e293b" />
-            <rect x="20" y="24" width="2" height="2" fill="#1e293b" />
-            <rect x="25" y="20" width="2" height="2" fill="#1e293b" />
-            <rect x="23" y="25" width="2" height="2" fill="#1e293b" />
-          </svg>
-        </div>
+        <!-- QR Code SVG động lấy đúng đường link mạng Polygon -->
+        <div
+          class="ef-qr-box bg-white p-1 rounded border flex-shrink-0 d-flex align-items-center justify-content-center"
+          v-html="qrSvg"
+        />
 
         <!-- Info fields -->
         <div class="flex-grow-1 min-vw-0">

@@ -19,6 +19,18 @@ export const useProofBundleQuery = (batchId: Ref<number>) =>
     queryFn: () => batchService.getProofBundle(batchId.value).then((r) => r.data),
   })
 
+export const usePublicTraceQuery = (code: Ref<string>) =>
+  useQuery({
+    queryKey: ['public-trace', code],
+    queryFn: () => batchService.getPublicTrace(code.value).then((r) => r.data),
+    enabled: () => !!code.value,
+  })
+
+export const useVerifyTraceMutation = () =>
+  useMutation({
+    mutationFn: (code: string) => batchService.verifyTrace(code).then((r) => r.data),
+  })
+
 export const useActivateBatchMutation = () => {
   const queryClient = useQueryClient()
   return useMutation({
