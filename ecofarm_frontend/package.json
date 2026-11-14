@@ -11,6 +11,9 @@
     "type-check": "vue-tsc --build"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^7.3.1",
+    "@fortawesome/free-solid-svg-icons": "^7.3.1",
+    "@fortawesome/vue-fontawesome": "^3.3.3",
     "@tanstack/vue-query": "^5.107.1",
     "axios": "^1.21.0",
     "bootstrap": "^5.3.8",

@@ -70,6 +70,18 @@ const router = createRouter({
           meta: { title: 'Tổng quan' },
         },
         {
+          path: 'batches',
+          name: 'batches',
+          component: () => import('@/views/batches/BatchListView.vue'),
+          meta: { title: 'Quản lý lô dưa' },
+        },
+        {
+          path: 'batches/:id',
+          name: 'batch-detail',
+          component: () => import('@/views/batches/BatchDetailView.vue'),
+          meta: { title: 'Chi tiết lô' },
+        },
+        {
           path: 'farms',
           name: 'farms',
           component: () => import('@/views/PlaceholderView.vue'),
