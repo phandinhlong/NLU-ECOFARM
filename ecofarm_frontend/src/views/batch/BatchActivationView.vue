@@ -73,10 +73,13 @@ const brix = computed(() => 14.2)
 const harvestDate = computed(() => '15/01/2027')
 
 const batchTraceUrl = computed(() => {
-  if (typeof window !== 'undefined') {
-    return `${window.location.host}/t/${batchCode.value}`
-  }
-  return `ecofarm.vn/t/${batchCode.value}`
+  // Priority 1: Polygon explorer URL (real on-chain link, always scannable)
+  if (verifyData.value?.explorerUrl) return verifyData.value.explorerUrl
+  if (publicTraceData.value?.blockchain?.explorerUrl) return publicTraceData.value.blockchain.explorerUrl
+  // Priority 2: Backend public trace API endpoint (always reachable if backend is public)
+  const backendBase = import.meta.env.VITE_BACKEND || 'http://localhost:8080/ecofarm_backend-1.0-SNAPSHOT'
+  const code = publicTraceData.value?.code || batchCode.value
+  return `${backendBase}/public/trace/${code}`
 })
 
 // Current batch status from real backend

@@ -20,6 +20,7 @@ import jakarta.ecofarm_backend.infrastructure.persistence.repository.OutboxEvent
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.RecallRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.UserRepository;
 import jakarta.ecofarm_backend.modules.blockchain.client.PolygonClient;
+import jakarta.ecofarm_backend.modules.blockchain.service.BlockchainAnchoringService;
 import jakarta.ecofarm_backend.modules.blockchain.facade.BlockchainFacade;
 import jakarta.ecofarm_backend.modules.blockchain.service.ReconciliationService;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -60,6 +61,9 @@ public class BlockchainFacadeImpl implements BlockchainFacade {
 
     @Inject
     private PolygonClient polygonClient;
+
+    @Inject
+    private BlockchainAnchoringService anchoringService;
 
     @Override
     public List<Anchor> getAllAnchors() {
@@ -254,5 +258,17 @@ public class BlockchainFacadeImpl implements BlockchainFacade {
     @Override
     public Map<String, Object> getTransactionDetail(String txHash) throws Exception {
         return polygonClient.getTransactionInfo(txHash);
+    }
+
+    @Override
+    public Map<String, Object> triggerProcessOutbox() {
+        long before = System.currentTimeMillis();
+        anchoringService.processOutbox();
+        long elapsed = System.currentTimeMillis() - before;
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("triggered", true);
+        result.put("elapsedMs", elapsed);
+        result.put("message", "processOutbox() executed manually");
+        return result;
     }
 }

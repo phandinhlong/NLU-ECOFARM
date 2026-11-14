@@ -31,4 +31,6 @@ public interface BlockchainFacade {
     Map<String, Object> getPolygonConfirmations(String txHash) throws Exception;
 
     Map<String, Object> getTransactionDetail(String txHash) throws Exception;
+
+    Map<String, Object> triggerProcessOutbox();
 }
