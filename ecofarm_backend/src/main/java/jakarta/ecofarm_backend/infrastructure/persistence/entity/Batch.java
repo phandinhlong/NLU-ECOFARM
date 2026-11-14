@@ -1,12 +1,14 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
+import jakarta.inject.Inject;
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.time.LocalDate;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import java.util.ArrayList;
+import java.util.List;
+
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @Entity
@@ -51,7 +53,18 @@ public class Batch extends BaseEntity {
 
     @Column(name = "activated_at")
     private Long activatedAt;
-
+    @Builder.Default
+    List<BatchAssignment> batchAssignments=new ArrayList<>();
+    @Builder.Default
+    private List<CultivationEvent> cultivationEvents = new ArrayList<>();
+    @Builder.Default
+    private List<PackageEntity> packageEntities = new ArrayList<>();
+    @Builder.Default
+    private List<QcRecord> qcRecords = new ArrayList<>();
+    @Builder.Default
+    private List<Recall> recalls = new ArrayList<>();
+    @Builder.Default
+    private List<Shipment> shipments = new ArrayList<>();
     @Override
     public String toString() {
         return "Batch{id=" + getId() + ", batchCode='" + batchCode + "', status='" + status + "'}";

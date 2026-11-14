@@ -2,11 +2,11 @@ package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "merkle_snapshots")
@@ -28,6 +28,8 @@ public class MerkleSnapshot extends BaseEntity {
     @JoinColumn(name = "batch_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     @JsonIgnore
     private Batch batch;
+    @Builder.Default
+    private List<MerkleSnapshot> merkleSnapshots = new ArrayList<>();
 
     @Override
     public String toString() {

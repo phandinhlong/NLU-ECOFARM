@@ -2,11 +2,11 @@ package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "cultivation_events")
@@ -55,4 +55,11 @@ public class CultivationEvent extends BaseEntity {
     @JoinColumn(name = "amends_event_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     @JsonIgnore
     private CultivationEvent amendsEvent;
+    @OneToMany(mappedBy = "amendsEvent", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<CultivationEvent> amendedEvents = new ArrayList<>();
+    @Builder.Default
+    private List<EventAttachment> eventAttachments = new ArrayList<>();
+    @Builder.Default
+    private List<LedgerRecord> ledgerRecords = new ArrayList<>();
 }
