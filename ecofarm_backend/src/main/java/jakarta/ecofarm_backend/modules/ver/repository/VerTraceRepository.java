@@ -1,20 +1,29 @@
 package jakarta.ecofarm_backend.modules.ver.repository;
 
-import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
-import jakarta.ecofarm_backend.infrastructure.persistence.entity.Greenhouse;
-import jakarta.ecofarm_backend.infrastructure.persistence.entity.PackageEntity;
-import jakarta.ecofarm_backend.infrastructure.persistence.entity.QrCode;
-import jakarta.ecofarm_backend.infrastructure.persistence.entity.Variety;
 import jakarta.ecofarm_backend.common.dto.response.CertificateInfo;
 import jakarta.ecofarm_backend.common.dto.response.EventData;
 import jakarta.ecofarm_backend.common.dto.response.PublicChainStatus;
 import jakarta.ecofarm_backend.common.dto.response.QcMetricInfo;
 import jakarta.ecofarm_backend.common.dto.response.RecallInfo;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.CultivationEvent;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Greenhouse;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.PackageEntity;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.QrCode;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Recall;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.Variety;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.AnchorRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.CultivationEventRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.QrCodeRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.RecallRepository;
 import jakarta.ejb.Stateless;
+import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Stateless
@@ -23,8 +32,20 @@ public class VerTraceRepository {
     @PersistenceContext
     private EntityManager em;
 
+    @Inject
+    private QrCodeRepository qrCodeRepository;
+
+    @Inject
+    private CultivationEventRepository cultivationEventRepository;
+
+    @Inject
+    private RecallRepository recallRepository;
+
+    @Inject
+    private AnchorRepository anchorRepository;
+
     public TraceData load(String code) {
-        QrCode qr = findQrByCode(code);
+        QrCode qr = qrCodeRepository.findByCode(code);
         if (qr == null) {
             return null;
         }
@@ -43,16 +64,6 @@ public class VerTraceRepository {
             }
         }
         return data;
-    }
-
-    private QrCode findQrByCode(String code) {
-        try {
-            return em.createQuery("select q from QrCode q where q.code = :code", QrCode.class)
-                    .setParameter("code", code)
-                    .getSingleResult();
-        } catch (NoResultException e) {
-            return null;
-        }
     }
 
     private void fillBatch(TraceData data, Batch batch) {
@@ -79,20 +90,73 @@ public class VerTraceRepository {
             data.setVarietyName(variety.getName());
         }
 
-        data.setTimeline(findEventsByBatchId(batch.getId()));
+        List<CultivationEvent> events = cultivationEventRepository.findByBatchIdOrderBySeqAsc(batch.getId());
+        data.setEvents(events);
+        data.setTimeline(mapTimeline(events));
         data.setMetrics(findLatestQcByBatchId(batch.getId()));
 
-        List<RecallInfo> recalls = findRecallsByBatchId(batch.getId());
-        data.setRecalls(recalls);
+        List<Recall> recalls = recallRepository.findByBatchId(batch.getId());
+        data.setRecalls(mapRecalls(recalls));
         data.setRecalled(recalls != null && !recalls.isEmpty());
 
         SnapshotData snapshot = findLatestSnapshotByBatchId(batch.getId());
         if (snapshot != null) {
             data.setMerkleRoot(snapshot.getMerkleRoot());
             data.setLeafCount(snapshot.getLeafCount());
-            data.setLeavesJson(findLeavesJsonBySnapshotId(snapshot.getId()));
-            data.setAnchors(findAnchorsBySnapshotId(snapshot.getId()));
+            data.setAnchors(mapAnchors(anchorRepository.findBySnapshotId(snapshot.getId())));
         }
+    }
+
+    private List<EventData> mapTimeline(List<CultivationEvent> events) {
+        List<EventData> timeline = new ArrayList<>();
+        if (events == null) {
+            return timeline;
+        }
+        for (CultivationEvent e : events) {
+            Long recordedById = e.getRecordedBy() != null ? e.getRecordedBy().getId() : null;
+            timeline.add(new EventData(e.getSeq(), e.getEventType(), e.getStatus(),
+                    e.getRecordedAt(), e.getEventHash(), recordedById));
+        }
+        return timeline;
+    }
+
+    private List<RecallInfo> mapRecalls(List<Recall> recalls) {
+        List<RecallInfo> result = new ArrayList<>();
+        if (recalls == null) {
+            return result;
+        }
+        for (Recall r : recalls) {
+            result.add(RecallInfo.builder()
+                    .reason(r.getReason())
+                    .createdAt(r.getCreatedAt())
+                    .revokeTxHash(r.getRevokeTxHash())
+                    .build());
+        }
+        return result;
+    }
+
+    private List<PublicChainStatus> mapAnchors(List<Anchor> anchors) {
+        List<PublicChainStatus> result = new ArrayList<>();
+        if (anchors == null) {
+            return result;
+        }
+        for (Anchor a : anchors) {
+            PublicChainStatus status = new PublicChainStatus();
+            status.setId(a.getId());
+            status.setSnapshotId(a.getSnapshot() != null ? a.getSnapshot().getId() : null);
+            status.setChainId(a.getChainId());
+            status.setContractAddress(a.getContractAddress());
+            status.setTxHash(a.getTxHash());
+            status.setBlockNumber(a.getBlockNumber());
+            status.setConfirmations(a.getConfirmations());
+            status.setStatus(a.getStatus());
+            status.setAnchoredAt(a.getAnchoredAt());
+            status.setExplorerUrl(a.getExplorerUrl());
+            result.add(status);
+        }
+        result.sort(Comparator.comparing(PublicChainStatus::getId,
+                Comparator.nullsLast(Comparator.reverseOrder())));
+        return result;
     }
 
     private List<CertificateInfo> findCertificatesByGreenhouseId(Long greenhouseId) {
@@ -101,16 +165,6 @@ public class VerTraceRepository {
                         + "from Certificate c where c.greenhouse.id = :greenhouseId order by c.id desc",
                 CertificateInfo.class)
                 .setParameter("greenhouseId", greenhouseId)
-                .getResultList();
-    }
-
-    private List<EventData> findEventsByBatchId(Long batchId) {
-        return em.createQuery(
-                "select new jakarta.ecofarm_backend.common.dto.response.EventData(e.seq, e.eventType, e.status, e.recordedAt, e.eventHash, u.id) "
-                        + "from CultivationEvent e left join e.recordedBy u "
-                        + "where e.batch.id = :batchId order by e.seq asc, e.id asc",
-                EventData.class)
-                .setParameter("batchId", batchId)
                 .getResultList();
     }
 
@@ -126,15 +180,6 @@ public class VerTraceRepository {
                 .orElse(null);
     }
 
-    private List<RecallInfo> findRecallsByBatchId(Long batchId) {
-        return em.createQuery(
-                "select new jakarta.ecofarm_backend.common.dto.response.RecallInfo(r.reason, r.createdAt, r.revokeTxHash) "
-                        + "from Recall r where r.batch.id = :batchId order by r.id desc",
-                RecallInfo.class)
-                .setParameter("batchId", batchId)
-                .getResultList();
-    }
-
     private SnapshotData findLatestSnapshotByBatchId(Long batchId) {
         return em.createQuery(
                 "select new jakarta.ecofarm_backend.modules.ver.repository.SnapshotData(s.id, s.merkleRoot, s.leafCount) "
@@ -145,22 +190,5 @@ public class VerTraceRepository {
                 .getResultStream()
                 .findFirst()
                 .orElse(null);
-    }
-
-    private String findLeavesJsonBySnapshotId(Long snapshotId) {
-        return (String) em.createNativeQuery("select cast(leaves as text) from merkle_snapshots where id = ?1")
-                .setParameter(1, snapshotId)
-                .getResultStream()
-                .findFirst()
-                .orElse(null);
-    }
-
-    private List<PublicChainStatus> findAnchorsBySnapshotId(Long snapshotId) {
-        return em.createQuery(
-                "select new jakarta.ecofarm_backend.common.dto.response.PublicChainStatus(a.id, a.chainId, a.contractAddress, a.txHash, a.blockNumber, a.status, a.anchoredAt, a.explorerUrl) "
-                        + "from Anchor a where a.snapshot.id = :snapshotId order by a.id desc",
-                PublicChainStatus.class)
-                .setParameter("snapshotId", snapshotId)
-                .getResultList();
     }
 }

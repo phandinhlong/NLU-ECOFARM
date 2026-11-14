@@ -13,13 +13,17 @@ import jakarta.ecofarm_backend.common.dto.response.PublicChainStatus;
 import jakarta.ecofarm_backend.common.dto.response.PublicTrace;
 import jakarta.ecofarm_backend.common.dto.response.VarietyInfo;
 import jakarta.ecofarm_backend.common.dto.response.VerifyResult;
+import jakarta.ecofarm_backend.config.BlockchainConfig;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.CultivationEvent;
+import jakarta.ecofarm_backend.modules.blockchain.client.BesuClient;
+import jakarta.ecofarm_backend.modules.blockchain.client.BlockchainClient;
+import jakarta.ecofarm_backend.modules.blockchain.client.PolygonClient;
+import jakarta.ecofarm_backend.modules.packaging.service.MerkleTreeService;
 import jakarta.ecofarm_backend.modules.ver.cache.AnchorRootCache;
-import jakarta.ecofarm_backend.modules.ver.client.ChainRootReader;
 import jakarta.ecofarm_backend.modules.ver.facade.TraceFacade;
 import jakarta.ecofarm_backend.modules.ver.repository.TraceData;
 import jakarta.ecofarm_backend.modules.ver.repository.VerTraceRepository;
-import jakarta.ecofarm_backend.modules.ver.util.MerkleUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.WebApplicationException;
@@ -27,8 +31,14 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.web3j.abi.FunctionEncoder;
+import org.web3j.abi.datatypes.Function;
+import org.web3j.abi.datatypes.generated.Bytes32;
+import org.web3j.crypto.Hash;
+import org.web3j.utils.Numeric;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @ApplicationScoped
@@ -40,11 +50,22 @@ public class TraceFacadeImpl implements TraceFacade {
     private static final String RESULT_MISMATCH = "MISMATCH";
     private static final String RESULT_UNAVAILABLE = "UNAVAILABLE";
 
+    private static final String GET_MERKLE_ROOT = "getMerkleRoot";
+
     @Inject
     private VerTraceRepository traceRepository;
 
     @Inject
-    private ChainRootReader chainRootReader;
+    private PolygonClient polygonClient;
+
+    @Inject
+    private BesuClient besuClient;
+
+    @Inject
+    private BlockchainConfig blockchainConfig;
+
+    @Inject
+    private MerkleTreeService merkleTreeService;
 
     @Inject
     private AnchorRootCache anchorRootCache;
@@ -79,6 +100,56 @@ public class TraceFacadeImpl implements TraceFacade {
         return data;
     }
 
+    // Cùng quy ước batchKey -> batchIdHash với module packaging để contract đọc đúng root
+    private String batchKey(TraceData data) {
+        return data.getBatchCode() != null ? data.getBatchCode() : String.valueOf(data.getBatchId());
+    }
+
+    private BlockchainClient selectClient(Integer chainId) {
+        if (chainId == null) {
+            return null;
+        }
+        if (chainId.equals(blockchainConfig.getPublicChainId())) {
+            return polygonClient;
+        }
+        if (isPrivateChain(chainId)) {
+            return besuClient;
+        }
+        return null;
+    }
+
+    private boolean isPrivateChain(Integer chainId) {
+        try {
+            return blockchainConfig.getPrivateNetworkId() != null
+                    && Long.parseLong(blockchainConfig.getPrivateNetworkId()) == chainId.longValue();
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    private boolean isPublicChain(Integer chainId) {
+        return chainId != null && chainId.equals(blockchainConfig.getPublicChainId());
+    }
+
+    private String chainName(Integer chainId) {
+        if (isPublicChain(chainId)) {
+            return "Polygon Amoy";
+        }
+        if (isPrivateChain(chainId)) {
+            return "Besu Private";
+        }
+        return chainId != null ? "Chain " + chainId : null;
+    }
+
+    // contract BlockchainAnchoring: getMerkleRoot(bytes32 batchId) -> bytes32
+    private String buildGetRootCalldata(TraceData data) {
+        String batchIdHash = Hash.sha3String(batchKey(data));
+        Function function = new Function(GET_MERKLE_ROOT,
+                Collections.singletonList(new Bytes32(Numeric.hexStringToByteArray(batchIdHash))),
+                Collections.emptyList());
+        return FunctionEncoder.encode(function);
+    }
+
     private VerifyResult doVerify(String code, TraceData data) {
         long checkedAt = System.currentTimeMillis();
 
@@ -100,19 +171,21 @@ public class TraceFacadeImpl implements TraceFacade {
 
         String storedRoot = data.getMerkleRoot();
         builder.storedRoot(storedRoot);
-        if (storedRoot == null || data.getLeavesJson() == null) {
+        if (storedRoot == null || data.getEvents() == null || data.getEvents().isEmpty()) {
             return builder.result(RESULT_UNAVAILABLE)
                     .message("Chưa có snapshot Merkle cho mã này")
                     .build();
         }
 
-        String computedRoot = MerkleUtil.computeRoot(MerkleUtil.parseLeaves(data.getLeavesJson()));
-        builder.computedRoot(computedRoot);
-        if (computedRoot == null) {
+        String computedRoot;
+        try {
+            computedRoot = merkleTreeService.buildTree(data.getSaltEnc(), data.getEvents()).merkleRoot();
+        } catch (IllegalArgumentException e) {
             return builder.result(RESULT_UNAVAILABLE)
-                    .message("Snapshot không có leaves để dựng lại Merkle root")
+                    .message("Snapshot không có sự kiện để dựng lại Merkle root")
                     .build();
         }
+        builder.computedRoot(computedRoot);
 
         if (!storedRoot.equalsIgnoreCase(computedRoot)) {
             return builder.result(RESULT_MISMATCH)
@@ -127,8 +200,8 @@ public class TraceFacadeImpl implements TraceFacade {
         }
 
         Integer chainId = anchor.getChainId();
-        String rpcEndpoint = chainRootReader.resolveEndpoint(chainId);
-        if (rpcEndpoint == null) {
+        BlockchainClient client = selectClient(chainId);
+        if (client == null) {
             return builder.result(RESULT_UNAVAILABLE)
                     .message("Chain " + chainId + " chưa được hỗ trợ xác thực (Polygon Amoy và private chain Besu)")
                     .build();
@@ -138,7 +211,12 @@ public class TraceFacadeImpl implements TraceFacade {
         String cacheKey = chainId + ":" + anchor.getContractAddress();
         String onChainRoot = anchorRootCache.get(cacheKey);
         if (onChainRoot == null) {
-            onChainRoot = chainRootReader.callRoot(rpcEndpoint, anchor.getContractAddress());
+            try {
+                onChainRoot = client.callContract(anchor.getContractAddress(), buildGetRootCalldata(data));
+            } catch (Exception e) {
+                log.warn("Không đọc được Merkle root trên chain {}: {}", chainId, e.getMessage());
+                onChainRoot = null;
+            }
             if (onChainRoot != null) {
                 anchorRootCache.put(cacheKey, onChainRoot);
             }
@@ -146,13 +224,13 @@ public class TraceFacadeImpl implements TraceFacade {
         builder.onChainRoot(onChainRoot);
         if (onChainRoot == null) {
             return builder.result(RESULT_UNAVAILABLE)
-                    .message("Không đọc được root trên " + chainRootReader.chainName(chainId) + ", vui lòng thử lại sau")
+                    .message("Không đọc được root trên " + chainName(chainId) + ", vui lòng thử lại sau")
                     .build();
         }
 
         if (onChainRoot.equalsIgnoreCase(computedRoot)) {
             return builder.result(RESULT_MATCH)
-                    .message("Dữ liệu khớp với root trên " + chainRootReader.chainName(chainId) + " — xác thực thành công")
+                    .message("Dữ liệu khớp với root trên " + chainName(chainId) + " — xác thực thành công")
                     .build();
         }
         return builder.result(RESULT_MISMATCH)
@@ -228,12 +306,11 @@ public class TraceFacadeImpl implements TraceFacade {
         String explorerUrl = null;
 
         if (anchor != null) {
-            chainName = chainRootReader.chainName(anchor.getChainId());
+            chainName = chainName(anchor.getChainId());
             txHash = anchor.getTxHash();
             anchoredAt = anchor.getAnchoredAt();
             explorerUrl = anchor.getExplorerUrl();
-            if (explorerUrl == null && anchor.getTxHash() != null
-                    && chainRootReader.isPublicChain(anchor.getChainId())) {
+            if (explorerUrl == null && anchor.getTxHash() != null && isPublicChain(anchor.getChainId())) {
                 explorerUrl = "https://amoy.polygonscan.com/tx/" + anchor.getTxHash();
             }
             if ("CONFIRMED".equalsIgnoreCase(anchor.getStatus())) {
@@ -263,31 +340,35 @@ public class TraceFacadeImpl implements TraceFacade {
     private ProofBundle mapProof(TraceData data) {
         ProofBundle proof = new ProofBundle();
         proof.setBatchCode(data.getBatchCode());
+        proof.setBatchIdHash(Hash.sha3String(batchKey(data)));
+        proof.setHashAlgorithm("keccak256");
+        proof.setCanonicalization("RFC8785");
         proof.setSalt(data.getSaltEnc() != null ? String.valueOf(data.getSaltEnc()) : null);
-        proof.setHashAlgorithm("Keccak-256");
         proof.setMerkleRoot(data.getMerkleRoot());
         proof.setGeneratedAt(System.currentTimeMillis());
 
+        List<String> leafHashes = buildLeafHashes(data);
+        List<CultivationEvent> events = data.getEvents() != null ? data.getEvents() : List.of();
         List<ProofLeaf> leaves = new ArrayList<>();
-        List<String> rawLeaves = MerkleUtil.parseLeaves(data.getLeavesJson());
-        for (int i = 0; i < rawLeaves.size(); i++) {
+        for (int i = 0; i < leafHashes.size(); i++) {
             ProofLeaf leaf = new ProofLeaf();
             leaf.setSeq(i + 1);
-            leaf.setLeaf(rawLeaves.get(i));
+            leaf.setEventHash(i < events.size() ? events.get(i).getEventHash() : null);
+            leaf.setLeaf(leafHashes.get(i));
             leaves.add(leaf);
         }
         proof.setLeaves(leaves);
 
         if (data.getTimeline() != null) {
-            List<ProofEvent> events = new ArrayList<>();
+            List<ProofEvent> proofEvents = new ArrayList<>();
             for (EventData e : data.getTimeline()) {
                 ProofEvent event = new ProofEvent();
                 event.setSeq(e.getSeq());
                 event.setEventType(e.getEventType());
                 event.setPayload(e);
-                events.add(event);
+                proofEvents.add(event);
             }
-            proof.setEvents(events);
+            proof.setEvents(proofEvents);
         }
 
         PublicChainStatus anchor = data.getAnchors() != null && !data.getAnchors().isEmpty()
@@ -305,5 +386,16 @@ public class TraceFacadeImpl implements TraceFacade {
             proof.setAnchor(entity);
         }
         return proof;
+    }
+
+    private List<String> buildLeafHashes(TraceData data) {
+        if (data.getEvents() == null || data.getEvents().isEmpty()) {
+            return List.of();
+        }
+        try {
+            return merkleTreeService.buildTree(data.getSaltEnc(), data.getEvents()).leafHashes();
+        } catch (IllegalArgumentException e) {
+            return List.of();
+        }
     }
 }

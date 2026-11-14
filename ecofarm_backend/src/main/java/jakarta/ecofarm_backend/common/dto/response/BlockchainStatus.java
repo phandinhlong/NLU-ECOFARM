@@ -1,6 +1,5 @@
 package jakarta.ecofarm_backend.common.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,15 +12,10 @@ public class BlockchainStatus {
     String txHash;
     Long anchoredAt;
     String explorerUrl;
-    @JsonInclude(JsonInclude.Include.NON_NULL)
     String status;
-    @JsonInclude(JsonInclude.Include.NON_NULL)
     Integer leafCount;
-    @JsonInclude(JsonInclude.Include.NON_NULL)
     Integer chainId;
-    @JsonInclude(JsonInclude.Include.NON_NULL)
     String contractAddress;
-    @JsonInclude(JsonInclude.Include.NON_NULL)
     Long blockNumber;
 
     public BlockchainStatus() {}

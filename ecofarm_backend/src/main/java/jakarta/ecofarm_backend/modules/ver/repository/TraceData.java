@@ -5,6 +5,7 @@ import jakarta.ecofarm_backend.common.dto.response.EventData;
 import jakarta.ecofarm_backend.common.dto.response.PublicChainStatus;
 import jakarta.ecofarm_backend.common.dto.response.QcMetricInfo;
 import jakarta.ecofarm_backend.common.dto.response.RecallInfo;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.CultivationEvent;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -42,11 +43,11 @@ public class TraceData {
 
     private List<CertificateInfo> certificates;
     private List<EventData> timeline;
+    private List<CultivationEvent> events;
     private QcMetricInfo metrics;
 
     private String merkleRoot;
     private Integer leafCount;
-    private String leavesJson;
     private List<PublicChainStatus> anchors;
     private List<RecallInfo> recalls;
     private Boolean batchActive;
