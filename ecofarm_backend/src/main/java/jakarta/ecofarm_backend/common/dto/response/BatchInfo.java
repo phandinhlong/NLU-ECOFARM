@@ -12,6 +12,10 @@ public class BatchInfo {
     String greenhouseCode;
     String greenhouseName;
     String sowDate;
+    String harvestDate;
+    Long activatedAt;
+    Boolean active;
+    Boolean recalled;
 
     public BatchInfo() {}
 

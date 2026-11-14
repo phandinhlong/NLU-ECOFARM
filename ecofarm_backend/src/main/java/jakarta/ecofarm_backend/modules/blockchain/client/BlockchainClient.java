@@ -9,4 +9,5 @@ public interface BlockchainClient {
     String sendTransaction(String data) throws Exception;
     long getCurrentBlockNumber() throws IOException;
     int getConfirmations(String txHash) throws Exception;
+    String callContract(String contractAddress, String data) throws Exception;
 }
