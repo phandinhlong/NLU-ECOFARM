@@ -9,27 +9,36 @@ const canManageCatalog = computed(() =>
   roles.value.some((role) => role === 'ADMIN' || role === 'ENGINEER'),
 )
 
-const navSections = [
-  {
-    title: 'Tổng quan',
-    items: [{ label: 'Tổng quan', to: '/dashboard' }],
-  },
-  {
-    title: 'Quản lý danh mục',
-    items: [
-      { label: 'Nhà màng', to: '/greenhouses' },
-      { label: 'Giống dưa', to: '/varieties' },
-      { label: 'Chứng nhận VietGAP', to: '/certificates' },
-      { label: 'Kích hoạt lô & In tem', to: '/batch-activation' },
-    ],
-  },
-]
+const navSections = computed(() => {
+  const businessSection = {
+    title: 'Nghiệp vụ',
+    items: [{ label: 'Kích hoạt lô & In tem', to: '/batch-activation' }],
+  }
+
+  if (!canManageCatalog.value) return [businessSection]
+
+  return [
+    {
+      title: 'Tổng quan',
+      items: [{ label: 'Tổng quan', to: '/dashboard' }],
+    },
+    {
+      title: 'Quản lý danh mục',
+      items: [
+        { label: 'Nhà màng', to: '/greenhouses' },
+        { label: 'Giống dưa', to: '/varieties' },
+        { label: 'Chứng nhận VietGAP', to: '/certificates' },
+      ],
+    },
+    businessSection,
+  ]
+})
 </script>
 
 <template>
   <aside class="ef-sidebar flex-shrink-0 bg-body border-end d-flex flex-column">
     <RouterLink
-      to="/dashboard"
+      :to="canManageCatalog ? '/dashboard' : '/batch-activation'"
       class="d-flex align-items-center gap-2 px-3 py-3 border-bottom text-decoration-none"
     >
       <span
