@@ -26,6 +26,13 @@ export const usePublicTraceQuery = (code: Ref<string>) =>
     enabled: () => !!code.value,
   })
 
+export const useVerifyTraceQuery = (code: Ref<string>) =>
+  useQuery({
+    queryKey: ['verify-trace', code],
+    queryFn: () => batchService.verifyTrace(code.value).then((r) => r.data),
+    enabled: () => !!code.value,
+  })
+
 export const useVerifyTraceMutation = () =>
   useMutation({
     mutationFn: (code: string) => batchService.verifyTrace(code).then((r) => r.data),
