@@ -121,11 +121,7 @@ const goToPage = (next: number) => {
 
 <template>
   <div>
-    <PageHeader
-      title="Quản lý chứng nhận"
-      subtitle="Chứng nhận VietGAP, GlobalGAP và Organic gắn với từng nhà màng, kèm cảnh báo hết hạn."
-      :breadcrumb="['Trang chủ', 'Quản lý danh mục', 'Chứng nhận']"
-    >
+    <PageHeader title="Quản lý chứng nhận">
       <template #actions>
         <BButton variant="primary" @click="openCreate">+ Thêm chứng nhận</BButton>
       </template>
