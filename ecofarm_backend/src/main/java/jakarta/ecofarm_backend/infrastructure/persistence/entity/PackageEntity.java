@@ -2,11 +2,11 @@ package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "packages")
@@ -36,6 +36,10 @@ public class PackageEntity extends BaseEntity {
 
     @Column(name = "packed_at")
     private Long packedAt;
+
+    @OneToMany(mappedBy = "pkg", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<QrCode> qrCodes = new ArrayList<>();
 
     @Override
     public String toString() {
