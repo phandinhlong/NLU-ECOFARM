@@ -33,6 +33,8 @@ public class Variety extends BaseEntity {
 
     @Transient
     private Long batchCount;
+
+    @OneToMany(mappedBy = "variety", fetch = FetchType.LAZY)
     @Builder.Default
     private List<Batch> batches = new ArrayList<>();
 

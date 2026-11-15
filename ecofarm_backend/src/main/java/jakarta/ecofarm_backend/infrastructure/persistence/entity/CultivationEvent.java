@@ -58,8 +58,12 @@ public class CultivationEvent extends BaseEntity {
     @OneToMany(mappedBy = "amendsEvent", fetch = FetchType.LAZY)
     @Builder.Default
     private List<CultivationEvent> amendedEvents = new ArrayList<>();
+
+    @OneToMany(mappedBy = "event", fetch = FetchType.LAZY)
     @Builder.Default
     private List<EventAttachment> eventAttachments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "event", fetch = FetchType.LAZY)
     @Builder.Default
     private List<LedgerRecord> ledgerRecords = new ArrayList<>();
 }

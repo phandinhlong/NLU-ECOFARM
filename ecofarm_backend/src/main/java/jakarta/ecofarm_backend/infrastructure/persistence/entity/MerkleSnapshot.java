@@ -28,8 +28,10 @@ public class MerkleSnapshot extends BaseEntity {
     @JoinColumn(name = "batch_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     @JsonIgnore
     private Batch batch;
+
+    @OneToMany(mappedBy = "snapshot", fetch = FetchType.LAZY)
     @Builder.Default
-    private List<MerkleSnapshot> merkleSnapshots = new ArrayList<>();
+    private List<Anchor> anchors = new ArrayList<>();
 
     @Override
     public String toString() {

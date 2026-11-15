@@ -34,20 +34,33 @@ public class User extends BaseEntity {
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     @Builder.Default
     private List<Role> roles = new ArrayList<>();
+    @OneToMany(mappedBy = "createdBy", fetch = FetchType.LAZY)
     @Builder.Default
     private List<Batch> batches = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     @Builder.Default
     private List<BatchAssignment> batchAssignments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "actor", fetch = FetchType.LAZY)
     @Builder.Default
     private List<AuditLog> auditLogs = new ArrayList<>();
+
+    @OneToMany(mappedBy = "recordedBy", fetch = FetchType.LAZY)
     @Builder.Default
     private List<CultivationEvent> cultivationEvents = new ArrayList<>();
-    @Builder.Default
-    private List<EventAttachment> eventAttachments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "inspectedByUser", fetch = FetchType.LAZY)
     @Builder.Default
     private List<QcRecord> qcRecords = new ArrayList<>();
+
+    @OneToMany(mappedBy = "createdByUser", fetch = FetchType.LAZY)
     @Builder.Default
     private List<Recall> recalls = new ArrayList<>();
+
+    @OneToMany(mappedBy = "packedBy", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<PackageEntity> packageEntities = new ArrayList<>();
     public void addRole(Role role) {
         this.roles.add(role);
     }

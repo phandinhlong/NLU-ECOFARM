@@ -36,8 +36,12 @@ public class Greenhouse extends BaseEntity {
 
     @Transient
     private Long batchCount;
+
+    @OneToMany(mappedBy = "greenhouse", fetch = FetchType.LAZY)
     @Builder.Default
     private List<Batch> batches = new ArrayList<>();
+
+    @OneToMany(mappedBy = "greenhouse", fetch = FetchType.LAZY)
     @Builder.Default
     private List<Certificate> certificates = new ArrayList<>();
 
