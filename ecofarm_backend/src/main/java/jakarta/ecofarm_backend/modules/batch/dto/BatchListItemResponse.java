@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.modules.batch.dto;
 
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,12 +23,12 @@ public class BatchListItemResponse {
     private String varietyName;
     private String sowDate;
     private String harvestDate;
-    private Long pollinationDate;
+    private LocalDateTime pollinationDate;
     private String expectedHarvestDate;
     private Long createdBy;
-    private Long activatedAt;
+    private LocalDateTime activatedAt;
     private Long workerCount;
     private Long version;
-    private Long createdAt;
-    private Long updatedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

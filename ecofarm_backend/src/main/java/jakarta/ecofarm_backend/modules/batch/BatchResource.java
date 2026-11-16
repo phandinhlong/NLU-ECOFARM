@@ -28,7 +28,7 @@ import java.util.List;
 
 @Path("/v1/batches")
 @Tag(name = "Batch", description = "Quản lý lô canh tác")
-@RequireRoles(value = {"ADMIN", "ENGINEER", "FARMER", "QUALITY_CONTROL", "PACKER"})
+@RequireRoles(value = {"ADMIN", "ENGINEER", "QUALITY_CONTROL"})
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class BatchResource {

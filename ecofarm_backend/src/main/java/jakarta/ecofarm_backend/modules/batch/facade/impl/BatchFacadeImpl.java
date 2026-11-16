@@ -3,6 +3,7 @@ package jakarta.ecofarm_backend.modules.batch.facade.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ecofarm_backend.common.anotation.DatabaseTransactional;
 import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
+import jakarta.ecofarm_backend.common.dto.request.PageCriteria;
 import jakarta.ecofarm_backend.common.dto.response.PageResponse;
 import jakarta.ecofarm_backend.common.enums.ErrorCode;
 import jakarta.ecofarm_backend.common.enums.RoleEnum;
@@ -36,6 +37,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -80,8 +82,9 @@ public class BatchFacadeImpl implements BatchFacade {
         User actor = requireActor(actorId);
         Long mineUserId = mine && hasRole(actor, RoleEnum.FARMER) ? actorId : null;
 
-        List<Batch> batches = batchRepository.findPage(page, size, statusFilter, greenhouseId, q, mineUserId);
-        long total = batchRepository.countActive(statusFilter, greenhouseId, q, mineUserId);
+        PageCriteria criteria = new PageCriteria(page, size, statusFilter, greenhouseId, q, mineUserId);
+        List<Batch> batches = batchRepository.findPage(criteria);
+        long total = batchRepository.countActive(criteria);
 
         List<Long> ids = batches.stream().map(Batch::getId).toList();
         Map<Long, Long> workerCounts = batchRepository.countAssignmentsByBatchIds(ids);
@@ -234,16 +237,16 @@ public class BatchFacadeImpl implements BatchFacade {
                 .daysPollinationToHarvest(variety == null ? null : variety.getDaysPollinationToHarvest())
                 .sowDate(formatDate(batch.getSowDate()))
                 .harvestDate(formatDate(batch.getHarvestDate()))
-                .pollinationDate(pollinationDate)
+                .pollinationDate(toLocalDateTime(pollinationDate))
                 .expectedHarvestDate(expectedHarvestDate(variety, pollinationDate))
                 .createdBy(batch.getCreatedBy() == null ? null : batch.getCreatedBy().getId())
-                .activatedAt(batch.getActivatedAt())
+                .activatedAt(toLocalDateTime(batch.getActivatedAt()))
                 .workerCount((long) assignments.size())
                 .eventCount(batchRepository.countEvents(batch.getId()))
                 .assignedUsers(assignments.stream().map(BatchAssignment::getUser).map(this::toWorker).toList())
                 .version(batch.getVersion())
-                .createdAt(batch.getCreatedAt())
-                .updatedAt(batch.getUpdatedAt())
+                .createdAt(toLocalDateTime(batch.getCreatedAt()))
+                .updatedAt(toLocalDateTime(batch.getUpdatedAt()))
                 .build();
     }
 
@@ -264,14 +267,14 @@ public class BatchFacadeImpl implements BatchFacade {
                 .varietyName(variety == null ? null : variety.getName())
                 .sowDate(formatDate(batch.getSowDate()))
                 .harvestDate(formatDate(batch.getHarvestDate()))
-                .pollinationDate(pollinationDate)
+                .pollinationDate(toLocalDateTime(pollinationDate))
                 .expectedHarvestDate(expectedHarvestDate(variety, pollinationDate))
                 .createdBy(batch.getCreatedBy() == null ? null : batch.getCreatedBy().getId())
-                .activatedAt(batch.getActivatedAt())
+                .activatedAt(toLocalDateTime(batch.getActivatedAt()))
                 .workerCount(workerCount)
                 .version(batch.getVersion())
-                .createdAt(batch.getCreatedAt())
-                .updatedAt(batch.getUpdatedAt())
+                .createdAt(toLocalDateTime(batch.getCreatedAt()))
+                .updatedAt(toLocalDateTime(batch.getUpdatedAt()))
                 .build();
     }
 
@@ -345,6 +348,11 @@ public class BatchFacadeImpl implements BatchFacade {
         } catch (IllegalArgumentException e) {
             throw new ConflictException(ErrorCode.INVALID_STATUS_FILTER);
         }
+    }
+
+    private static LocalDateTime toLocalDateTime(Long epochMillis) {
+        return epochMillis == null ? null
+                : LocalDateTime.ofInstant(Instant.ofEpochMilli(epochMillis), ZoneId.systemDefault());
     }
 
     private static String formatDate(LocalDate date) {
