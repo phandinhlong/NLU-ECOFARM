@@ -28,7 +28,12 @@ public enum ErrorCode {
     EXTRA_QR_REASON_REQUIRED(2006, "Reason is required when generating extra QR codes"),
     INVALID_SERIAL_RANGE(2007, "Invalid serial range"),
     PACKAGE_NOT_FOUND(2008, "Package not found for batch"),
-    OPTIMISTIC_LOCK_CONFLICT(2009, "Batch version conflict");
+    OPTIMISTIC_LOCK_CONFLICT(2009, "Batch version conflict"),
+    BATCH_LOCKED(2010, "Lô đã khóa dữ liệu, không thể phân công"),
+    BATCH_NOT_ASSIGNED(2011, "Bạn không được giao lô này"),
+    VARIETY_NOT_FOUND(2012, "Giống không tồn tại"),
+    INVALID_WORKER(2013, "Người lao động không hợp lệ"),
+    INVALID_STATUS_FILTER(2014, "Trạng thái lô không hợp lệ");
 
     private final Integer code;
     private final String message;

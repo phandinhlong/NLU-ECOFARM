@@ -1,11 +1,13 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.repository.impl;
 
+import jakarta.ecofarm_backend.common.enums.RoleEnum;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.UserRepository;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
+import java.util.List;
 import java.util.Optional;
 
 @Stateless
@@ -74,5 +76,19 @@ public class UserRepositoryImpl implements UserRepository {
                 .setParameter("email", email)
                 .getResultStream()
                 .findFirst();
+    }
+
+    @Override
+    public List<User> findActiveUsersByRole(RoleEnum role) {
+        return this.entityManager.createQuery(
+                        """
+                        SELECT DISTINCT u
+                        FROM User u
+                        JOIN u.roles r
+                        WHERE r.roleName = :role AND u.isActive = true
+                        ORDER BY u.fullName
+                        """, User.class)
+                .setParameter("role", role)
+                .getResultList();
     }
 }
