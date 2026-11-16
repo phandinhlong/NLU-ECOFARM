@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SoftBadge from '@/components/common/SoftBadge.vue'
+import BatchLogPanel from '@/components/log/BatchLogPanel.vue'
 import {
   useAssignWorkersMutation,
   useBatchLookupQuery,
@@ -29,6 +30,7 @@ const assignMutation = useAssignWorkersMutation()
 const roles = computed(() => userStore.user?.role ?? [])
 const isEngineer = computed(() => roles.value.includes('ENGINEER'))
 const isAdmin = computed(() => roles.value.includes('ADMIN'))
+const canReviewLog = computed(() => isEngineer.value || isAdmin.value)
 
 const problem = computed(() => error.value as (Error & Partial<Problem>) | null)
 const errorStatus = computed(() => problem.value?.status ?? 0)
@@ -219,6 +221,8 @@ const saveAssign = () => {
           </span>
         </div>
       </section>
+
+      <BatchLogPanel :batch-id="data.id" :can-review="canReviewLog" />
     </template>
 
     <BModal v-model="showAssign" title="Phân công công nhân">

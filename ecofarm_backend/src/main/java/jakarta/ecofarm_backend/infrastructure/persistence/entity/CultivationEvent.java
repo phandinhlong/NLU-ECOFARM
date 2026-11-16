@@ -32,6 +32,9 @@ public class CultivationEvent extends BaseEntity {
     @Column(name = "payload")
     private Long payload;
 
+    @Column(name = "payload_json", columnDefinition = "TEXT")
+    private String payloadJson;
+
     @Column(name = "event_hash")
     private String eventHash;
 
@@ -46,6 +49,9 @@ public class CultivationEvent extends BaseEntity {
 
     @Column(name = "recorded_at")
     private Long recordedAt;
+
+    @Column(name = "occurred_at")
+    private Long occurredAt;
 
     @Column(name = "client_event_id", unique = true)
     private String clientEventId;
