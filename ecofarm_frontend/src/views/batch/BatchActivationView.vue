@@ -58,28 +58,26 @@ const batchCode = computed(() => {
 })
 
 const greenhouseName = computed(() => {
-  return 'Nhà màng NM-01'
+  return publicTraceData.value?.greenhouse?.name || publicTraceData.value?.batch?.greenhouseName || '—'
 })
 
 const varietyName = computed(() => {
-  return 'Dưa lưới Vân Nhật (Takii Japan)'
+  return publicTraceData.value?.variety?.name || publicTraceData.value?.batch?.varietyName || '—'
 })
 
 const unitCount = computed(() => {
-  return proofBundleData.value?.leaves?.length || 2850
+  return proofBundleData.value?.leaves?.length || 0
 })
 
-const brix = computed(() => 14.2)
-const harvestDate = computed(() => '15/01/2027')
+const brix = computed(() => publicTraceData.value?.metrics?.brix ?? 0)
+const harvestDate = computed(() => publicTraceData.value?.batch?.harvestDate || '—')
 
 const batchTraceUrl = computed(() => {
-  // Priority 1: Polygon explorer URL (real on-chain link, always scannable)
-  if (verifyData.value?.explorerUrl) return verifyData.value.explorerUrl
-  if (publicTraceData.value?.blockchain?.explorerUrl) return publicTraceData.value.blockchain.explorerUrl
-  // Priority 2: Backend public trace API endpoint (always reachable if backend is public)
-  const backendBase = import.meta.env.VITE_BACKEND || 'http://localhost:8080/ecofarm_backend-1.0-SNAPSHOT'
-  const code = publicTraceData.value?.code || batchCode.value
-  return `${backendBase}/public/trace/${code}`
+  const code = publicTraceData.value?.code || batchCode.value || 'DL-NM01-141126'
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/t/${code}`
+  }
+  return `https://ecofarm.vn/t/${code}`
 })
 
 // Current batch status from real backend
