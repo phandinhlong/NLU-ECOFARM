@@ -20,5 +20,6 @@
     <include file="db/changes/006-cultivation-occurred-at.sql"/>
     <include file="db/changes/007-cultivation-payload.sql"/>
     <include file="db/changes/009-cultivation-sync-flags.sql"/>
+    <include file="db/changes/010-qc-harvest-schema.sql"/>
 
 </databaseChangeLog>

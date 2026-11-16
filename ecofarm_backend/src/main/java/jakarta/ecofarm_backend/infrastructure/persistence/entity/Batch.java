@@ -42,6 +42,11 @@ public class Batch extends BaseEntity {
     @Column(name = "harvest_date")
     private LocalDate harvestDate;
 
+    // Exact harvest instant in epoch milliseconds. harvestDate above is the display-only DATE;
+    // isolation is always computed from this precise value, never the rounded date.
+    @Column(name = "harvested_at")
+    private Long harvestedAt;
+
     @Column(name = "salt_enc")
     private Long saltEnc;
 

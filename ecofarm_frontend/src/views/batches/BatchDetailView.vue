@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SoftBadge from '@/components/common/SoftBadge.vue'
 import BatchLogPanel from '@/components/log/BatchLogPanel.vue'
+import QualityPanel from '@/components/quality/QualityPanel.vue'
 import {
   useAssignWorkersMutation,
   useBatchLookupQuery,
@@ -223,6 +224,8 @@ const saveAssign = () => {
       </section>
 
       <BatchLogPanel :batch-id="data.id" :can-review="canReviewLog" />
+
+      <QualityPanel :batch-id="data.id" :can-qc="canReviewLog" :batch-status="data.status" />
     </template>
 
     <BModal v-model="showAssign" title="Phân công công nhân">

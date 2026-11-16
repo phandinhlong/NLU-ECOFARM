@@ -40,6 +40,34 @@ public class QcRecord extends BaseEntity {
     @Column(name = "inspected_at")
     private Long inspectedAt;
 
+    @Column(name = "size_description")
+    private String sizeDescription;
+
+    @Column(name = "note", columnDefinition = "TEXT")
+    private String note;
+
+    // Thresholds actually used when the server computed the result, kept for audit and for
+    // detecting a stale pass when the isolation basis later changes.
+    @Column(name = "threshold_brix_used")
+    private Double thresholdBrixUsed;
+
+    @Column(name = "min_isolation_days_used")
+    private Integer minIsolationDaysUsed;
+
+    @Column(name = "isolation_eligible_at")
+    private Long isolationEligibleAt;
+
+    @Column(name = "harvested_at_used")
+    private Long harvestedAtUsed;
+
+    // QC_PASSED or REJECTED.
+    @Column(name = "status")
+    private String status;
+
+    // Set true when a later log back-fill/amendment invalidated this result; kept for history.
+    @Column(name = "superseded")
+    private Boolean superseded;
+
     @Override
     public String toString() {
         return "QcRecord{id=" + getId() + ", brix=" + brix + ", passed=" + passed + "}";
