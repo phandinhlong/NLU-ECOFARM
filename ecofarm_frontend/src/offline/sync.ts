@@ -1,4 +1,5 @@
 import { logService } from '@/api/services/log.service'
+import { qualityService } from '@/api/services/quality.service'
 import { offlineQueue, type QueuedEvent } from '@/offline/db'
 
 // Errors that must stop retrying: auth problems keep the entry but halt (user must act),
@@ -16,9 +17,9 @@ export interface SyncOutcome {
 
 /**
  * Drains one user's queue. Entries are grouped by batch and sent in record order; a batch stops at
- * its first business error so a dependent event never jumps ahead. Auth errors abort the whole run
- * without deleting anything. Only one tab runs this at a time via the Web Locks API; the server
- * remains the authority on permission, lock state and duplicates.
+ * its first error so a dependent action (e.g. QC after harvest) never jumps ahead. Auth errors abort
+ * the whole run without deleting anything. Only one tab runs this at a time via the Web Locks API;
+ * the server remains the authority on permission, lock state and duplicates.
  */
 export async function syncUser(userId: number): Promise<SyncOutcome> {
   const runner = async (): Promise<SyncOutcome> => {
@@ -26,6 +27,8 @@ export async function syncUser(userId: number): Promise<SyncOutcome> {
     const byBatch = new Map<number, QueuedEvent[]>()
     for (const entry of entries) {
       if (entry.status === 'SENT') continue
+      // QC that already needs attention is never retried automatically (not idempotent).
+      if (entry.kind === 'QC' && entry.status === 'NEEDS_ATTENTION') continue
       const list = byBatch.get(entry.batchId) ?? []
       list.push(entry)
       byBatch.set(entry.batchId, list)
@@ -45,9 +48,16 @@ export async function syncUser(userId: number): Promise<SyncOutcome> {
           }
           entry.attempts += 1
           entry.lastError = (e as Error).message
-          entry.status = isBusinessError(status) ? 'NEEDS_ATTENTION' : 'PENDING'
+          // QC is not idempotent: a lost response may already have created the record, so a retry
+          // could duplicate it. Any QC failure parks the entry for manual resolution. LOG/harvest
+          // are idempotent via clientEventId, so a transient (non-business) error stays PENDING.
+          if (entry.kind === 'QC') {
+            entry.status = 'NEEDS_ATTENTION'
+          } else {
+            entry.status = isBusinessError(status) ? 'NEEDS_ATTENTION' : 'PENDING'
+          }
           await offlineQueue.put(entry)
-          // Stop this batch so later events do not overtake the failed one.
+          // Stop this batch so later actions do not overtake the failed one.
           outcome.stoppedBatches.push(batchId)
           break
         }
@@ -67,6 +77,42 @@ async function sendOne(entry: QueuedEvent): Promise<void> {
   entry.status = 'SENDING'
   await offlineQueue.put(entry)
 
+  if (entry.kind === 'HARVEST') {
+    await qualityService.harvest(entry.batchId, {
+      clientEventId: entry.clientEventId,
+      harvestedAt: entry.harvestedAt!,
+      estimatedQuantity: entry.estimatedQuantity!,
+      area: entry.area,
+    })
+    entry.status = 'SENT'
+    await offlineQueue.put(entry)
+    return
+  }
+
+  if (entry.kind === 'QC') {
+    // Upload attachments once; reuse the returned keys if this somehow re-runs before parking.
+    if (entry.attachments.length && entry.uploadedFileKeys.length === 0) {
+      const files = entry.attachments.map(
+        (blob, i) => new File([blob], `attachment-${i}`, { type: blob.type }),
+      )
+      const uploaded = await logService.uploadAttachments(entry.batchId, files)
+      entry.uploadedFileKeys = uploaded.map((a) => a.fileKey)
+      await offlineQueue.put(entry)
+    }
+    await qualityService.recordQc(entry.batchId, {
+      brix: entry.brix!,
+      avgWeightKg: entry.avgWeightKg!,
+      confirmPassed: entry.confirmPassed,
+      sizeDescription: entry.sizeDescription,
+      note: entry.note,
+      attachmentFileKeys: entry.uploadedFileKeys,
+    })
+    entry.status = 'SENT'
+    await offlineQueue.put(entry)
+    return
+  }
+
+  // kind === 'LOG'
   // Upload attachments once; reuse the returned keys on any later retry.
   if (entry.attachments.length && entry.uploadedFileKeys.length === 0) {
     const files = entry.attachments.map(
@@ -78,10 +124,10 @@ async function sendOne(entry: QueuedEvent): Promise<void> {
   }
 
   await logService.createEvent(entry.batchId, {
-    eventType: entry.eventType,
-    occurredAt: entry.occurredAt,
+    eventType: entry.eventType!,
+    occurredAt: entry.occurredAt!,
     clientEventId: entry.clientEventId,
-    payload: entry.payload,
+    payload: entry.payload!,
     attachmentFileKeys: entry.uploadedFileKeys,
     deviceSentAt: entry.deviceSentAt,
   })

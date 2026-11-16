@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, toRef } from 'vue'
 import { useHarvestMutation, useQcListQuery, useRecordQcMutation } from '@/composables/useQuality'
+import { useOfflineSync } from '@/composables/useOfflineSync'
+import { useUserStore } from '@/stores'
 import type { QcView } from '@/api/types/quality'
 
 const props = defineProps<{ batchId: number; canQc: boolean; batchStatus: string }>()
@@ -9,6 +11,8 @@ const batchId = toRef(props, 'batchId')
 const { data, isLoading, isError, error, refetch } = useQcListQuery(batchId)
 const harvestMutation = useHarvestMutation(batchId)
 const qcMutation = useRecordQcMutation(batchId)
+const userStore = useUserStore()
+const offline = useOfflineSync()
 
 const records = computed<QcView[]>(() => data.value ?? [])
 const harvested = computed(
@@ -25,13 +29,25 @@ const submitHarvest = async () => {
     harvestError.value = 'Số quả ước tính phải là số dương.'
     return
   }
+  const request = {
+    clientEventId: crypto.randomUUID(),
+    harvestedAt: Date.now(),
+    estimatedQuantity: estimatedQuantity.value,
+    area: area.value.trim() || undefined,
+  }
+  // Offline: queue the harvest; it is idempotent via clientEventId and auto-syncs when online.
+  if (!navigator.onLine) {
+    if (!userStore.user?.id) {
+      harvestError.value = 'Chưa xác định người dùng để lưu offline.'
+      return
+    }
+    await offline.enqueueHarvest({ userId: userStore.user.id, batchId: batchId.value, request })
+    estimatedQuantity.value = null
+    area.value = ''
+    return
+  }
   try {
-    await harvestMutation.mutateAsync({
-      clientEventId: crypto.randomUUID(),
-      harvestedAt: Date.now(),
-      estimatedQuantity: estimatedQuantity.value,
-      area: area.value.trim() || undefined,
-    })
+    await harvestMutation.mutateAsync(request)
     estimatedQuantity.value = null
     area.value = ''
   } catch (e) {
@@ -52,14 +68,30 @@ const submitQc = async () => {
     qcError.value = 'Brix và khối lượng trung bình là bắt buộc.'
     return
   }
+  const request = {
+    brix: brix.value,
+    avgWeightKg: avgWeightKg.value,
+    confirmPassed: confirmPassed.value,
+    sizeDescription: sizeDescription.value.trim() || undefined,
+    note: note.value.trim() || undefined,
+  }
+  // Offline: queue the QC. It is NOT idempotent, so the sync engine sends it once and parks it for
+  // manual review on any failure rather than retrying (avoids duplicate QC records).
+  if (!navigator.onLine) {
+    if (!userStore.user?.id) {
+      qcError.value = 'Chưa xác định người dùng để lưu offline.'
+      return
+    }
+    await offline.enqueueQc({ userId: userStore.user.id, batchId: batchId.value, request, attachments: [] })
+    brix.value = null
+    avgWeightKg.value = null
+    sizeDescription.value = ''
+    note.value = ''
+    confirmPassed.value = false
+    return
+  }
   try {
-    await qcMutation.mutateAsync({
-      brix: brix.value,
-      avgWeightKg: avgWeightKg.value,
-      confirmPassed: confirmPassed.value,
-      sizeDescription: sizeDescription.value.trim() || undefined,
-      note: note.value.trim() || undefined,
-    })
+    await qcMutation.mutateAsync(request)
     brix.value = null
     avgWeightKg.value = null
     sizeDescription.value = ''

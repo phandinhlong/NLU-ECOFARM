@@ -27,6 +27,12 @@ const statusVariant = (status: QueueStatus): ColorVariant => {
 }
 
 const formatTime = (ms: number): string => new Date(ms).toLocaleString()
+
+const entryLabel = (entry: { kind: string; eventType?: string }): string => {
+  if (entry.kind === 'HARVEST') return 'Thu hoạch'
+  if (entry.kind === 'QC') return 'Kiểm định chất lượng'
+  return entry.eventType ?? 'Sự kiện'
+}
 </script>
 
 <template>
@@ -46,7 +52,7 @@ const formatTime = (ms: number): string => new Date(ms).toLocaleString()
       <div class="d-flex justify-content-between align-items-start gap-2">
         <div>
           <div class="d-flex align-items-center gap-2">
-            <strong>{{ entry.eventType }}</strong>
+            <strong>{{ entryLabel(entry) }}</strong>
             <BBadge :variant="statusVariant(entry.status)">{{ entry.status }}</BBadge>
             <span class="text-muted small">Lô #{{ entry.batchId }}</span>
           </div>
