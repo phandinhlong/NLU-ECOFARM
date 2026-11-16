@@ -20,7 +20,10 @@ const navSections = computed(() => {
   return [
     {
       title: 'Tổng quan',
-      items: [{ label: 'Tổng quan', to: '/dashboard' }],
+      items: [
+        { label: 'Tổng quan', to: '/dashboard' },
+        { label: 'Quản lý lô dưa', to: '/batches' }, 
+      ],
     },
     {
       title: 'Quản lý danh mục',
