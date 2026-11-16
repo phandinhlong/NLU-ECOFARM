@@ -1,6 +1,7 @@
 package jakarta.ecofarm_backend.modules.batch;
 
 import jakarta.ecofarm_backend.common.anotation.RequireRoles;
+import jakarta.ecofarm_backend.common.dto.request.PageCriteria;
 import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
 import jakarta.ecofarm_backend.common.dto.response.PageResponse;
 import jakarta.ecofarm_backend.common.dto.request.AssignWorkersRequest;
@@ -11,15 +12,14 @@ import jakarta.ecofarm_backend.common.dto.response.WorkerSummaryResponse;
 import jakarta.ecofarm_backend.modules.batch.facade.BatchFacade;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
+import jakarta.ws.rs.BeanParam;
 import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
@@ -37,14 +37,8 @@ public class BatchResource {
     private BatchFacade batchFacade;
 
     @GET
-    public BaseResponse<PageResponse<BatchListItemResponse>> list(
-            @QueryParam("page") @DefaultValue("0") int page,
-            @QueryParam("size") @DefaultValue("20") int size,
-            @QueryParam("status") String status,
-            @QueryParam("greenhouseId") Long greenhouseId,
-            @QueryParam("q") String q,
-            @QueryParam("mine") @DefaultValue("false") boolean mine) {
-        return batchFacade.list(page, size, status, greenhouseId, q, mine);
+    public BaseResponse<PageResponse<BatchListItemResponse>> findBatchesByCriteria(@BeanParam PageCriteria criteria) {
+        return batchFacade.findBatchesByCriteria(criteria);
     }
 
     @GET

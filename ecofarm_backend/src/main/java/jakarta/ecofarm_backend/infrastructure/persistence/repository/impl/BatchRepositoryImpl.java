@@ -22,15 +22,16 @@ public class BatchRepositoryImpl implements BatchRepository {
     private void appendFilters(StringBuilder jpql, PageCriteria criteria) {
         criteria.getStatusFilter().ifPresent(value -> jpql.append(" AND b.status = :status"));
         criteria.getGreenhouseFilter().ifPresent(value -> jpql.append(" AND b.greenhouse.id = :greenhouseId"));
-        criteria.getQueryFilter().ifPresent(value -> jpql.append(" AND LOWER(b.batchCode) LIKE :q"));
+        criteria.getBatchCodeKeywordFilter().ifPresent(value -> jpql.append(" AND LOWER(b.batchCode) LIKE :batchCodeKeyword"));
         criteria.getMineUserFilter().ifPresent(value ->
                 jpql.append(" AND EXISTS (SELECT a FROM BatchAssignment a WHERE a.batch = b AND a.user.id = :mineUserId)"));
     }
 
     private void bindFilters(TypedQuery<?> query, PageCriteria criteria) {
-        criteria.getStatusFilter().ifPresent(value -> query.setParameter("status", value));
+        criteria.getStatusFilter().ifPresent(value -> query.setParameter("status", value.name()));
         criteria.getGreenhouseFilter().ifPresent(value -> query.setParameter("greenhouseId", value));
-        criteria.getQueryFilter().ifPresent(value -> query.setParameter("q", "%" + value.trim().toLowerCase() + "%"));
+        criteria.getBatchCodeKeywordFilter()
+                .ifPresent(value -> query.setParameter("batchCodeKeyword", "%" + value.trim().toLowerCase() + "%"));
         criteria.getMineUserFilter().ifPresent(value -> query.setParameter("mineUserId", value));
     }
 
