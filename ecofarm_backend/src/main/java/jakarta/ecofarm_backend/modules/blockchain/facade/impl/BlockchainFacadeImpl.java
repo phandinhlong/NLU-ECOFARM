@@ -196,7 +196,8 @@ public class BlockchainFacadeImpl implements BlockchainFacade {
     public ProofBundle getProofBundle(Long batchId) {
         MerkleSnapshot snapshot = snapshotRepository.findByBatchId(batchId);
         ProofBundle bundle = new ProofBundle();
-        bundle.setBatchCode("BATCH-" + batchId);
+        Batch batch = batchRepository.findById(batchId);
+        bundle.setBatchCode(batch != null && batch.getBatchCode() != null ? batch.getBatchCode() : "BATCH-" + batchId);
         bundle.setBatchIdHash("0x" + Long.toHexString(batchId));
         bundle.setHashAlgorithm("keccak256");
         bundle.setCanonicalization("RFC8785");

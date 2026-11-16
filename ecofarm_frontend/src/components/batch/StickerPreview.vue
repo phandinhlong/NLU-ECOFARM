@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { generateQrSvg } from '@/utils/qrcode'
+import { ref, watchEffect, computed } from 'vue'
+import { generateQrDataUrl } from '@/utils/qrcode'
 
 const props = defineProps<{
   batchCode?: string
@@ -14,23 +14,24 @@ const props = defineProps<{
 }>()
 
 const targetQrUrl = computed(() => {
-  // Priority 1: Polygon explorer link (on-chain, always public)
-  if (props.polygonTxHash) {
-    return `https://amoy.polygonscan.com/tx/${props.polygonTxHash}`
-  }
-  // Priority 2: Explicit trace URL that is not localhost
-  if (props.traceUrl && props.traceUrl.startsWith('http') && !props.traceUrl.includes('localhost')) {
+  if (props.traceUrl && props.traceUrl.startsWith('http')) {
     return props.traceUrl
   }
-  // Priority 3: Stable public trace URL (production domain)
-  if (props.batchCode) {
-    return `https://ecofarm.vn/t/${props.batchCode}`
+  const code = props.batchCode || 'DL-NM01-141126'
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/t/${code}`
   }
-  return `https://ecofarm.vn`
+  return `https://ecofarm.vn/t/${code}`
 })
 
-const qrSvg = computed(() => {
-  return generateQrSvg(targetQrUrl.value, 68)
+// QR Code dạng PNG Data URL (async, dùng thư viện qrcode chuẩn)
+const qrDataUrl = ref<string>('')
+watchEffect(async () => {
+  try {
+    qrDataUrl.value = await generateQrDataUrl(targetQrUrl.value, 128)
+  } catch {
+    qrDataUrl.value = ''
+  }
 })
 </script>
 
@@ -59,11 +60,20 @@ const qrSvg = computed(() => {
 
       <!-- Center content: QR Cả Lô + Product Info -->
       <div class="d-flex align-items-center gap-2">
-        <!-- QR Code SVG động lấy đúng đường link mạng Polygon -->
+        <!-- QR Code PNG từ thư viện qrcode chuẩn -->
         <div
           class="ef-qr-box bg-white p-1 rounded border flex-shrink-0 d-flex align-items-center justify-content-center"
-          v-html="qrSvg"
-        />
+        >
+          <img
+            v-if="qrDataUrl"
+            :src="qrDataUrl"
+            :alt="`QR Code ${targetQrUrl}`"
+            width="68"
+            height="68"
+            style="display:block; image-rendering: pixelated;"
+          />
+          <div v-else style="width:68px;height:68px;background:#f1f5f9;border-radius:4px;" />
+        </div>
 
         <!-- Info fields -->
         <div class="flex-grow-1 min-vw-0">

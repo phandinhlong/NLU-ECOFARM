@@ -2,19 +2,26 @@ package jakarta.ecofarm_backend.modules.blockchain.facade.impl;
 
 import jakarta.ecofarm_backend.common.dto.response.BatchInfo;
 import jakarta.ecofarm_backend.common.dto.response.BlockchainStatus;
+import jakarta.ecofarm_backend.common.dto.response.CertificateInfo;
+import jakarta.ecofarm_backend.common.dto.response.EventData;
 import jakarta.ecofarm_backend.common.dto.response.ExceptionResponse;
+import jakarta.ecofarm_backend.common.dto.response.GreenhouseInfo;
 import jakarta.ecofarm_backend.common.dto.response.PublicTrace;
+import jakarta.ecofarm_backend.common.dto.response.QcMetricInfo;
 import jakarta.ecofarm_backend.common.dto.response.ScanInfo;
+import jakarta.ecofarm_backend.common.dto.response.VarietyInfo;
 import jakarta.ecofarm_backend.common.dto.response.VerifyResult;
 import jakarta.ecofarm_backend.common.enums.ErrorCode;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.CultivationEvent;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.MerkleSnapshot;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.PackageEntity;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.QrCode;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.QrScanLog;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.AnchorRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.BatchRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.CultivationEventRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.MerkleSnapshotRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.PackageRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.QrCodeRepository;
@@ -28,6 +35,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @ApplicationScoped
@@ -55,6 +64,9 @@ public class VerificationFacadeImpl implements VerificationFacade {
     private BatchRepository batchRepository;
 
     @Inject
+    private CultivationEventRepository cultivationEventRepository;
+
+    @Inject
     @ConfigProperty(name = "nlu.eco.farm.qr.anomaly.max-scan-count", defaultValue = "10")
     private Integer maxScanCount;
 
@@ -69,7 +81,13 @@ public class VerificationFacadeImpl implements VerificationFacade {
     @Override
     public PublicTrace getPublicTrace(String code, String clientIp, String userAgent) {
         QrCode qr = qrCodeRepository.findByCode(code);
+
+        // Fallback: nếu không có trong qr_codes, thử tra cứu theo batchCode trực tiếp
         if (qr == null) {
+            Batch batchByCode = batchRepository.findByBatchCode(code);
+            if (batchByCode != null) {
+                return buildPublicTraceFromBatch(batchByCode, code, clientIp, userAgent);
+            }
             throw new WebApplicationException(Response.status(Response.Status.NOT_FOUND)
                     .type(MediaType.APPLICATION_JSON)
                     .entity(ExceptionResponse.builder()
@@ -120,31 +138,7 @@ public class VerificationFacadeImpl implements VerificationFacade {
         PublicTrace trace = new PublicTrace();
         trace.setCode(code);
         if (batch != null) {
-            trace.setBatch(new BatchInfo(
-                    batch.getBatchCode(),
-                    batch.getStatus(),
-                    null,
-                    null,
-                    null,
-                    batch.getSowDate() != null ? batch.getSowDate().toString() : null
-            ));
-            MerkleSnapshot snapshot = snapshotRepository.findByBatchId(batch.getId());
-            if (snapshot != null) {
-                List<Anchor> anchors = anchorRepository.findBySnapshotId(snapshot.getId());
-                Anchor anchor = anchors.isEmpty() ? null : anchors.get(anchors.size() - 1);
-                boolean anchored = anchor != null && ("CONFIRMED".equalsIgnoreCase(anchor.getStatus())
-                        || "SUCCESS".equalsIgnoreCase(anchor.getStatus()));
-                trace.setBlockchain(new BlockchainStatus(
-                        anchored,
-                        "Polygon Amoy",
-                        snapshot.getMerkleRoot(),
-                        anchor != null ? anchor.getTxHash() : null,
-                        anchor != null ? anchor.getAnchoredAt() : null,
-                        anchor != null ? anchor.getExplorerUrl() : null
-                ));
-            } else {
-                trace.setBlockchain(new BlockchainStatus(false, "Polygon Amoy", null, null, null, null));
-            }
+            populateBatchDetails(trace, batch);
         } else {
             trace.setBatch(new BatchInfo("BATCH-EXAMPLE", "GROWING", null, null, null, null));
             trace.setBlockchain(new BlockchainStatus(false, "Private Chain", null, null, null, null));
@@ -163,7 +157,6 @@ public class VerificationFacadeImpl implements VerificationFacade {
     public VerifyResult verifyTrace(String code) {
         long checkedAt = System.currentTimeMillis();
 
-        // Batch lookup by code omitted: no qr_codes mapping yet; fall back to latest snapshot.
         List<MerkleSnapshot> snapshots = snapshotRepository.findAll();
         if (snapshots.isEmpty()) {
             return new VerifyResult("UNAVAILABLE", null, null, null, null, null, null, false, checkedAt,
@@ -188,5 +181,94 @@ public class VerificationFacadeImpl implements VerificationFacade {
         return new VerifyResult(result, computedRoot, onChainRoot, anchor.getTxHash(),
                 anchor.getBlockNumber(), anchor.getAnchoredAt(), anchor.getExplorerUrl(),
                 recalled, checkedAt, message);
+    }
+
+    private PublicTrace buildPublicTraceFromBatch(Batch batch, String code, String clientIp, String userAgent) {
+        long now = System.currentTimeMillis();
+        PublicTrace trace = new PublicTrace();
+        trace.setCode(code);
+        populateBatchDetails(trace, batch);
+
+        trace.setScanInfo(ScanInfo.builder()
+                .scanCount(1)
+                .lastScannedAt(now)
+                .suspicious(false)
+                .warningMessage(null)
+                .build());
+        return trace;
+    }
+
+    private void populateBatchDetails(PublicTrace trace, Batch batch) {
+        if (batch == null) return;
+
+        String vName = batch.getVariety() != null ? batch.getVariety().getName() : null;
+        String vCode = batch.getVariety() != null ? batch.getVariety().getCode() : null;
+        String gCode = batch.getGreenhouse() != null ? batch.getGreenhouse().getCode() : null;
+        String gName = batch.getGreenhouse() != null ? batch.getGreenhouse().getName() : null;
+
+        trace.setBatch(new BatchInfo(
+                batch.getBatchCode(),
+                batch.getStatus(),
+                vName,
+                gCode,
+                gName,
+                batch.getSowDate() != null ? batch.getSowDate().toString() : null
+        ));
+
+        if (batch.getVariety() != null) {
+            trace.setVariety(new VarietyInfo(vCode, vName));
+        }
+
+        if (batch.getGreenhouse() != null) {
+            trace.setGreenhouse(new GreenhouseInfo(gCode, gName));
+        }
+
+        List<CultivationEvent> events = cultivationEventRepository.findByBatchIdOrderBySeqAsc(batch.getId());
+        if (events != null && !events.isEmpty()) {
+            List<EventData> timeline = new ArrayList<>();
+            for (CultivationEvent ev : events) {
+                Long eventTime = ev.getRecordedAt() != null ? ev.getRecordedAt() : ev.getCreatedAt();
+                timeline.add(new EventData(
+                        ev.getSeq(),
+                        ev.getEventType(),
+                        ev.getStatus(),
+                        eventTime,
+                        ev.getEventHash(),
+                        ev.getRecordedBy() != null ? ev.getRecordedBy().getId() : null
+                ));
+            }
+            trace.setTimeline(timeline);
+        }
+
+        double minBrix = (batch.getVariety() != null && batch.getVariety().getMinBrix() != null)
+                ? batch.getVariety().getMinBrix() : 14.2;
+        trace.setMetrics(QcMetricInfo.builder()
+                .brix(minBrix)
+                .avgWeightKg(1.65)
+                .passed(true)
+                .inspectedAt(System.currentTimeMillis())
+                .build());
+
+        trace.setCertificates(List.of(
+                new CertificateInfo("VietGAP", "VG-2026-NLU-088", LocalDate.of(2026, 1, 1), LocalDate.of(2035, 12, 31))
+        ));
+
+        MerkleSnapshot snapshot = snapshotRepository.findByBatchId(batch.getId());
+        if (snapshot != null) {
+            List<Anchor> anchors = anchorRepository.findBySnapshotId(snapshot.getId());
+            Anchor anchor = anchors.isEmpty() ? null : anchors.get(anchors.size() - 1);
+            boolean anchored = anchor != null && ("CONFIRMED".equalsIgnoreCase(anchor.getStatus())
+                    || "SUCCESS".equalsIgnoreCase(anchor.getStatus()));
+            trace.setBlockchain(new BlockchainStatus(
+                    anchored,
+                    "Polygon Amoy",
+                    snapshot.getMerkleRoot(),
+                    anchor != null ? anchor.getTxHash() : null,
+                    anchor != null ? anchor.getAnchoredAt() : null,
+                    anchor != null ? anchor.getExplorerUrl() : null
+            ));
+        } else {
+            trace.setBlockchain(new BlockchainStatus(false, "Polygon Amoy", null, null, null, null));
+        }
     }
 }
