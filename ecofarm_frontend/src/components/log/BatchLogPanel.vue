@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, toRef } from 'vue'
+import { computed, onMounted, onUnmounted, ref, toRef } from 'vue'
 import CultivationEventTimeline from '@/components/log/CultivationEventTimeline.vue'
 import RecordEventForm from '@/components/log/RecordEventForm.vue'
+import { useOfflineSync } from '@/composables/useOfflineSync'
+import { useUserStore } from '@/stores'
 import {
   useAmendEventMutation,
   useApproveEventMutation,
@@ -28,10 +30,33 @@ const formRef = ref<InstanceType<typeof RecordEventForm> | null>(null)
 const formError = ref('')
 const submitting = computed(() => createMutation.isPending.value || uploadMutation.isPending.value)
 
+const userStore = useUserStore()
+const offline = useOfflineSync()
+const syncCurrentUser = () => {
+  if (userStore.user?.id) offline.sync(userStore.user.id)
+}
+onMounted(() => window.addEventListener('online', syncCurrentUser))
+onUnmounted(() => window.removeEventListener('online', syncCurrentUser))
+
 const events = computed<EventView[]>(() => data.value?.content ?? [])
 
 const onSubmit = async (body: CreateEventRequest, files: File[]) => {
   formError.value = ''
+  // Offline (or no connection): queue locally and let the sync engine send it later.
+  if (!navigator.onLine) {
+    if (!userStore.user?.id) {
+      formError.value = 'Chưa xác định người dùng để lưu offline.'
+      return
+    }
+    await offline.enqueue({
+      userId: userStore.user.id,
+      batchId: batchId.value,
+      request: body,
+      attachments: files,
+    })
+    formRef.value?.resetDraft()
+    return
+  }
   try {
     // Upload attachments first so the create request references stable file keys.
     const fileKeys = files.length ? (await uploadMutation.mutateAsync(files)).map((a) => a.fileKey) : []

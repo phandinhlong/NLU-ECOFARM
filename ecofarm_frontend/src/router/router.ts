@@ -103,6 +103,12 @@ const router = createRouter({
           meta: { title: 'Chi tiết lô' },
         },
         {
+          path: 'log/sync-queue',
+          name: 'log-sync-queue',
+          component: () => import('@/views/log/SyncQueueView.vue'),
+          meta: { title: 'Hàng đợi đồng bộ nhật ký' },
+        },
+        {
           path: 'farms',
           name: 'farms',
           component: () => import('@/views/PlaceholderView.vue'),

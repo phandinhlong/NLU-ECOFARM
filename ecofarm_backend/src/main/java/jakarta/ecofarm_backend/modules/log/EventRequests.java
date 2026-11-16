@@ -20,7 +20,10 @@ public final class EventRequests {
             Long occurredAt,
             String clientEventId,
             JsonNode payload,
-            java.util.List<String> attachmentFileKeys) {
+            java.util.List<String> attachmentFileKeys,
+            // Device wall-clock at submit time (epoch ms). Lets the server flag a skewed clock
+            // without trusting the device to set occurredAt/recordedAt. Optional for online writes.
+            Long deviceSentAt) {
     }
 
     public record RejectRequest(String reason) {

@@ -53,6 +53,13 @@ public class CultivationEvent extends BaseEntity {
     @Column(name = "occurred_at")
     private Long occurredAt;
 
+    // Device/server clock difference reported at sync time, kept outside the hashed payload.
+    @Column(name = "device_clock_skew_ms")
+    private Long deviceClockSkewMs;
+
+    @Column(name = "needs_review")
+    private Boolean needsReview;
+
     @Column(name = "client_event_id", unique = true)
     private String clientEventId;
 

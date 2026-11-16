@@ -32,6 +32,8 @@ export interface EventView {
   recordedBy: number | null
   recordedAt: number | null
   occurredAt: number | null
+  deviceClockSkewMs: number | null
+  needsReview: boolean | null
   clientEventId: string | null
   amendsEventId: number | null
   attachments: AttachmentView[]
@@ -58,6 +60,8 @@ export interface CreateEventRequest {
   clientEventId: string
   payload: Record<string, unknown>
   attachmentFileKeys?: string[]
+  // Device wall-clock at submit time (epoch ms); lets the server flag clock skew.
+  deviceSentAt?: number
 }
 
 export interface AmendRequest {

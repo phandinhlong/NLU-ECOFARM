@@ -53,6 +53,10 @@ public class CultivationEventResource {
     @ConfigProperty(name = "nlu.eco.farm.log.attachment.max-bytes", defaultValue = "5242880")
     private int attachmentMaxBytes;
 
+    @Inject
+    @ConfigProperty(name = "nlu.eco.farm.log.clock-skew.threshold-ms", defaultValue = "300000")
+    private long clockSkewThresholdMs;
+
     private LocalImageStore store() {
         return new LocalImageStore(java.nio.file.Path.of(attachmentRoot), attachmentMaxBytes);
     }
@@ -150,12 +154,16 @@ public class CultivationEventResource {
                 attachments.stream().map(EventAttachment::getSha256).toList());
         int seq = nextSeq(batchId);
 
+        long recordedAt = System.currentTimeMillis();
+        Long skew = ClockSkew.skewMs(request.deviceSentAt(), recordedAt);
         CultivationEvent event = CultivationEvent.builder()
                 .batch(batch).seq(seq).eventType(type.code())
                 .payloadJson(request.payload().toString()).eventHash(eventHash)
                 .status(EventStatus.PENDING.name()).recordedBy(em.getReference(
                         jakarta.ecofarm_backend.infrastructure.persistence.entity.User.class, user.getId()))
-                .recordedAt(System.currentTimeMillis()).occurredAt(request.occurredAt())
+                .recordedAt(recordedAt).occurredAt(request.occurredAt())
+                .deviceClockSkewMs(skew)
+                .needsReview(ClockSkew.needsReview(skew, clockSkewThresholdMs))
                 .clientEventId(request.clientEventId()).build();
         em.persist(event);
         for (EventAttachment a : attachments) { a.setEvent(event); em.persist(a); }
@@ -266,7 +274,8 @@ public class CultivationEventResource {
     }
 
     public record EventView(Long id, Long batchId, Integer seq, String eventType, JsonNode payload, String eventHash, String status,
-            Long recordedBy, Long recordedAt, Long occurredAt, String clientEventId, Long amendsEventId, List<AttachmentView> attachments) {
+            Long recordedBy, Long recordedAt, Long occurredAt, Long deviceClockSkewMs, Boolean needsReview,
+            String clientEventId, Long amendsEventId, List<AttachmentView> attachments) {
         static EventView from(CultivationEvent event, List<AttachmentView> attachments) {
             JsonNode payload;
             try {
@@ -275,7 +284,8 @@ public class CultivationEventResource {
                 throw new IllegalStateException("Invalid stored cultivation event payload", e);
             }
             return new EventView(event.getId(), event.getBatch().getId(), event.getSeq(), event.getEventType(), payload, event.getEventHash(), event.getStatus(),
-                    event.getRecordedBy() == null ? null : event.getRecordedBy().getId(), event.getRecordedAt(), event.getOccurredAt(), event.getClientEventId(),
+                    event.getRecordedBy() == null ? null : event.getRecordedBy().getId(), event.getRecordedAt(), event.getOccurredAt(),
+                    event.getDeviceClockSkewMs(), event.getNeedsReview(), event.getClientEventId(),
                     event.getAmendsEvent() == null ? null : event.getAmendsEvent().getId(), attachments);
         }
     }

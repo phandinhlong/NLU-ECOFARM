@@ -19,5 +19,6 @@
     <include file="db/changes/008-cultivation-schema.sql"/>
     <include file="db/changes/006-cultivation-occurred-at.sql"/>
     <include file="db/changes/007-cultivation-payload.sql"/>
+    <include file="db/changes/009-cultivation-sync-flags.sql"/>
 
 </databaseChangeLog>
