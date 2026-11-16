@@ -24,7 +24,7 @@ public class QrCodeRepository {
 
     public QrCode findByCode(String code) {
         List<QrCode> results = em.createQuery(
-                        "select q from QrCode q where q.code = :code",
+                        "select q from QrCode q left join fetch q.pkg left join fetch q.pkg.batch where q.code = :code",
                         QrCode.class)
                 .setParameter("code", code)
                 .setMaxResults(1)

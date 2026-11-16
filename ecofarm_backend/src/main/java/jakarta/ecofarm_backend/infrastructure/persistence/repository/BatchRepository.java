@@ -11,9 +11,11 @@ public interface BatchRepository {
 
     List<Batch> findPage(PageCriteria criteria);
 
-    Long countActive(PageCriteria criteria);
-
     Batch findById(Long id);
+
+    Batch findByBatchCode(String batchCode);
+
+    Long countActive(PageCriteria criteria);
 
     Batch merge(Batch batch);
 

@@ -136,6 +136,44 @@ export interface BatchInfo {
   greenhouseCode?: string
   greenhouseName?: string
   sowDate?: string
+  harvestDate?: string
+  activatedAt?: number
+  active?: boolean
+  recalled?: boolean
+}
+
+export interface VarietyInfo {
+  code?: string
+  name?: string
+}
+
+export interface GreenhouseInfo {
+  code?: string
+  name?: string
+  location?: string
+}
+
+export interface CertificateInfo {
+  certType?: string
+  certNo?: string
+  validFrom?: string
+  validTo?: string
+}
+
+export interface QcMetricInfo {
+  brix?: number
+  avgWeightKg?: number
+  passed?: boolean
+  inspectedAt?: number
+}
+
+export interface TimelineEvent {
+  seq?: number
+  eventType?: string
+  status?: string
+  recordedAt?: number
+  eventHash?: string
+  actorRef?: string
 }
 
 export interface BlockchainStatus {
@@ -157,8 +195,17 @@ export interface ScanInfo {
 export interface PublicTrace {
   code: string
   batch?: BatchInfo
+  variety?: VarietyInfo
+  greenhouse?: GreenhouseInfo
+  certificates?: CertificateInfo[]
+  metrics?: QcMetricInfo
+  timeline?: TimelineEvent[]
   blockchain?: BlockchainStatus
   scanInfo?: ScanInfo
+  recall?: {
+    reason?: string
+    createdAt?: number
+  }
 }
 
 export interface VerifyResult {

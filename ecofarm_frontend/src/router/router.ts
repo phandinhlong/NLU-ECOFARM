@@ -51,6 +51,18 @@ const router = createRouter({
       meta: { guestOnly: true, title: 'Đặt lại mật khẩu' },
     },
     {
+      path: '/trace/:code?',
+      name: 'customer-trace',
+      component: () => import('@/views/trace/CustomerTraceView.vue'),
+      meta: { title: 'Truy xuất nguồn gốc' },
+    },
+    {
+      path: '/t/:code',
+      name: 'customer-trace-short',
+      component: () => import('@/views/trace/CustomerTraceView.vue'),
+      meta: { title: 'Truy xuất nguồn gốc' },
+    },
+    {
       path: '/',
       component: () => import('@/layouts/PublicLayout.vue'),
       meta: { guestOnly: true },
