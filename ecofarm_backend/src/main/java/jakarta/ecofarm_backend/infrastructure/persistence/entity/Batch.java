@@ -1,12 +1,14 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
+import jakarta.inject.Inject;
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.time.LocalDate;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import java.util.ArrayList;
+import java.util.List;
+
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @Entity
@@ -51,6 +53,34 @@ public class Batch extends BaseEntity {
 
     @Column(name = "activated_at")
     private Long activatedAt;
+
+    @OneToMany(mappedBy = "batch", fetch = FetchType.LAZY)
+    @Builder.Default
+    List<BatchAssignment> batchAssignments=new ArrayList<>();
+
+    @OneToMany(mappedBy = "batch", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<CultivationEvent> cultivationEvents = new ArrayList<>();
+
+    @OneToMany(mappedBy = "batch", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<PackageEntity> packageEntities = new ArrayList<>();
+
+    @OneToMany(mappedBy = "batch", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<QcRecord> qcRecords = new ArrayList<>();
+
+    @OneToMany(mappedBy = "batch", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<Recall> recalls = new ArrayList<>();
+
+    @OneToMany(mappedBy = "batch", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<Shipment> shipments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "batch", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<MerkleSnapshot> merkleSnapshots = new ArrayList<>();
 
     @Override
     public String toString() {

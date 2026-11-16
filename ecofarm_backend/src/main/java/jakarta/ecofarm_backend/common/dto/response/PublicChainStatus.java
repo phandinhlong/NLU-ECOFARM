@@ -17,5 +17,4 @@ public class PublicChainStatus {
     String explorerUrl;
     Long anchoredAt;
     int requiredConfirmations;
-
 }

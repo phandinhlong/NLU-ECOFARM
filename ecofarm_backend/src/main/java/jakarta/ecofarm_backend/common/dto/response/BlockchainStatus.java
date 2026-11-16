@@ -12,6 +12,11 @@ public class BlockchainStatus {
     String txHash;
     Long anchoredAt;
     String explorerUrl;
+    String status;
+    Integer leafCount;
+    Integer chainId;
+    String contractAddress;
+    Long blockNumber;
 
     public BlockchainStatus() {}
 

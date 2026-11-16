@@ -89,11 +89,7 @@ const resetFilter = () => {
 
 <template>
   <div>
-    <PageHeader
-      title="Tổng quan hệ thống EcoFarm"
-      subtitle="Theo dõi nhanh danh mục nhà màng, giống dưa và tình trạng hiệu lực chứng nhận."
-      :breadcrumb="['Trang chủ', 'Quản trị']"
-    >
+    <PageHeader title="Tổng quan hệ thống EcoFarm">
       <template #actions>
         <BButton variant="outline-secondary" @click="applyFilter">Làm mới số liệu</BButton>
       </template>

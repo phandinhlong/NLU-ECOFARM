@@ -1,12 +1,18 @@
 package jakarta.ecofarm_backend.common.dto.response;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
 @Setter
 @Getter
+@Builder
+@AllArgsConstructor
 public class VerifyResult {
+    String code;
     String result;
+    String storedRoot;
     String computedRoot;
     String onChainRoot;
     String txHash;

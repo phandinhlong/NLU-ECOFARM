@@ -11,6 +11,8 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ActivationConfirmModal: typeof import('./src/components/batch/ActivationConfirmModal.vue')['default']
+    ActivationHistoryModal: typeof import('./src/components/batch/ActivationHistoryModal.vue')['default']
     AppLoadingSkeleton: typeof import('./src/components/common/AppLoadingSkeleton.vue')['default']
     BAlert: typeof import('bootstrap-vue-next/components/BAlert')['BAlert']
     BButton: typeof import('bootstrap-vue-next/components/BButton')['BButton']
@@ -22,6 +24,7 @@ declare module 'vue' {
     BrandHeader: typeof import('./src/components/common/BrandHeader.vue')['default']
     BSpinner: typeof import('bootstrap-vue-next/components/BSpinner')['BSpinner']
     LoginForm: typeof import('./src/components/auth/LoginForm.vue')['default']
+    MerkleDetailsModal: typeof import('./src/components/batch/MerkleDetailsModal.vue')['default']
     PageHeader: typeof import('./src/components/common/PageHeader.vue')['default']
     PagerBar: typeof import('./src/components/common/PagerBar.vue')['default']
     RegisterForm: typeof import('./src/components/auth/RegisterForm.vue')['default']
@@ -29,5 +32,7 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     Sidebar: typeof import('./src/components/common/Sidebar.vue')['default']
     SoftBadge: typeof import('./src/components/common/SoftBadge.vue')['default']
+    StickerPreview: typeof import('./src/components/batch/StickerPreview.vue')['default']
+    VietGapModal: typeof import('./src/components/batch/VietGapModal.vue')['default']
   }
 }

@@ -120,6 +120,23 @@ public class BesuClient implements BlockchainClient {
         return (int) Math.max(0L, latest - minedAt);
     }
 
+    @Override
+    public String callContract(String contractAddress, String data) throws Exception {
+        ensureConnected();
+        org.web3j.protocol.core.methods.response.EthCall resp = web3j.ethCall(
+                org.web3j.protocol.core.methods.request.Transaction.createEthCallTransaction(
+                        null, contractAddress, data),
+                DefaultBlockParameterName.LATEST).send();
+        if (resp.hasError()) {
+            throw new RuntimeException("Besu eth_call error: " + resp.getError().getMessage());
+        }
+        String value = resp.getValue();
+        if (value == null || value.isEmpty()) {
+            throw new RuntimeException("Besu eth_call returned no value");
+        }
+        return value;
+    }
+
     private synchronized void ensureConnected() throws IOException {
         if (web3j != null) {
             return;

@@ -1,15 +1,33 @@
+import axios from '@/api/clients/axios'
+import { API_V1 } from '@/api/constants'
+import type { ApiResponse } from '@/api/types/common'
 import type { PageResponse } from '@/api/types/catalog'
 import type {
+  ActivateBatchRequest,
+  ActivateResponse,
+  AnchorStatus,
   Batch,
   BatchCreateInput,
   BatchDetail,
   BatchListParams,
   BatchStatus,
+  ExportQrParams,
+  ExtraQrRequest,
+  ExtraQrResponse,
   Problem,
+  ProofBundle,
+  PublicTrace,
   UserSummary,
+  VerifyResult,
 } from '@/api/types/batch'
 import { isLocked, previewBatchCode } from '@/api/types/batch'
 import { useUserStore } from '@/stores'
+
+// ============================================================================
+// TODO: DELETE everything between here and "END MOCK" when the mock UI is removed
+// (also remove PageResponse, the mock-only type imports, isLocked,
+// previewBatchCode, useUserStore, and the mock entries in batchService below)
+// ============================================================================
 
 interface MockUser {
   id: number
@@ -246,7 +264,33 @@ const listVarieties = async (): Promise<{ id: number; code: string; name: string
   return varieties.map(({ id, code, name, daysPollinationToHarvest }) => ({ id, code, name, daysPollinationToHarvest }))
 }
 
+// ============================ END MOCK ======================================
+
 export const batchService = {
+  activateBatch: (batchId: number, data: ActivateBatchRequest) =>
+    axios.post<ApiResponse<ActivateResponse>>(`${API_V1}/batches/${batchId}/activate`, data),
+
+  exportQrLabels: (batchId: number, params?: ExportQrParams) =>
+    axios.get(`${API_V1}/batches/${batchId}/qr`, {
+      params,
+      responseType: 'blob',
+    }),
+
+  generateExtraQrCodes: (batchId: number, data: ExtraQrRequest) =>
+    axios.post<ApiResponse<ExtraQrResponse>>(`${API_V1}/batches/${batchId}/qr/extra`, data),
+
+  getAnchorStatus: (batchId: number) =>
+    axios.get<AnchorStatus>(`${API_V1}/block-chain/batches/${batchId}/anchor-status`),
+
+  getProofBundle: (batchId: number) =>
+    axios.get<ProofBundle>(`${API_V1}/block-chain/batches/${batchId}/proof-bundle`),
+
+  getPublicTrace: (code: string) =>
+    axios.get<PublicTrace>(`${API_V1}/block-chain/public/trace/${code}`),
+
+  verifyTrace: (code: string) =>
+    axios.post<VerifyResult>(`${API_V1}/block-chain/public/trace/${code}/verify`),
+
   listBatches,
   getBatch,
   createBatch,

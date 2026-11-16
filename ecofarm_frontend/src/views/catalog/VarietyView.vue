@@ -103,11 +103,7 @@ const brixVariant = (value: number | null): 'success' | 'warning' | 'muted' => {
 
 <template>
   <div>
-    <PageHeader
-      title="Quản lý giống dưa"
-      subtitle="Thông tin canh tác của từng giống: thời gian sinh trưởng, độ Brix và ngày cách ly."
-      :breadcrumb="['Trang chủ', 'Quản lý danh mục', 'Giống dưa']"
-    >
+    <PageHeader title="Quản lý giống dưa">
       <template #actions>
         <BButton variant="primary" @click="openCreate">+ Thêm giống</BButton>
       </template>

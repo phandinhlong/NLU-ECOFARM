@@ -12,6 +12,7 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ExceptionResponse {
     private Integer code;
+    private String errorCode;
     private String message;
     private Boolean isSuccess;
     private List<String> errors;
