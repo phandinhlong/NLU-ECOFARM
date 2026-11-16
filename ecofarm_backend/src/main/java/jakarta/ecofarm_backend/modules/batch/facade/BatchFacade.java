@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.modules.batch.facade;
 
+import jakarta.ecofarm_backend.common.dto.request.PageCriteria;
 import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
 import jakarta.ecofarm_backend.common.dto.response.PageResponse;
 import jakarta.ecofarm_backend.common.dto.request.AssignWorkersRequest;
@@ -12,8 +13,7 @@ import java.util.List;
 
 public interface BatchFacade {
 
-    BaseResponse<PageResponse<BatchListItemResponse>> list(int page, int size, String status,
-            Long greenhouseId, String q, boolean mine);
+    BaseResponse<PageResponse<BatchListItemResponse>> findBatchesByCriteria(PageCriteria criteria);
 
     BaseResponse<BatchDetailResponse> detail(Long batchId);
 

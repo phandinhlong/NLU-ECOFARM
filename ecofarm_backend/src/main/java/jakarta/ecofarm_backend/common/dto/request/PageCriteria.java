@@ -1,6 +1,9 @@
 package jakarta.ecofarm_backend.common.dto.request;
 
 import java.util.Optional;
+
+import jakarta.ecofarm_backend.common.enums.BatchStatus;
+import jakarta.ws.rs.QueryParam;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,19 +16,32 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PageCriteria extends BaseCriteria {
+    @QueryParam("page")
     private Integer page;
+
+    @QueryParam("size")
     private Integer size;
-    private String status;
+
+    @QueryParam("status")
+    private BatchStatus status;
+
+    @QueryParam("greenhouseId")
     private Long greenhouseId;
-    private String q;
+
+    @QueryParam("batchCode")
+    private String batchCodeKeyword;
+
     private Long mineUserId;
 
-    public Optional<String> getStatusFilter() {
-        return Optional.ofNullable(status).filter(value -> !value.isBlank());
+    @QueryParam("mine")
+    private Boolean mine;
+
+    public Optional<BatchStatus> getStatusFilter() {
+        return Optional.ofNullable(status);
     }
 
-    public Optional<String> getQueryFilter() {
-        return Optional.ofNullable(q).filter(value -> !value.isBlank());
+    public Optional<String> getBatchCodeKeywordFilter() {
+        return Optional.ofNullable(batchCodeKeyword).filter(value -> !value.isBlank());
     }
 
     public Optional<Long> getGreenhouseFilter() {

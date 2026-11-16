@@ -75,16 +75,13 @@ public class BatchFacadeImpl implements BatchFacade {
 
     @Override
     @DatabaseTransactional
-    public BaseResponse<PageResponse<BatchListItemResponse>> list(int page, int size, String status,
-            Long greenhouseId, String q, boolean mine) {
+    public BaseResponse<PageResponse<BatchListItemResponse>> findBatchesByCriteria(PageCriteria criteria) {
         Long actorId = resolveActorId();
-        String statusFilter = status == null || status.isBlank() ? null : parseStatus(status).name();
         User actor = requireActor(actorId);
-        Long mineUserId = mine && hasRole(actor, RoleEnum.FARMER) ? actorId : null;
+        criteria.setMineUserId(Boolean.TRUE.equals(criteria.getMine()) && hasRole(actor, RoleEnum.FARMER) ? actorId : null);
 
-        PageCriteria criteria = new PageCriteria(page, size, statusFilter, greenhouseId, q, mineUserId);
         List<Batch> batches = batchService.findPage(criteria);
-        long total = batchService.countActive(criteria);
+        Long total = batchService.countActive(criteria);
 
         List<Long> ids = batches.stream().map(Batch::getId).toList();
         Map<Long, Long> workerCounts = batchService.countAssignmentsByBatchIds(ids);
@@ -94,7 +91,7 @@ public class BatchFacadeImpl implements BatchFacade {
                 .map(b -> toListItem(b, workerCounts.getOrDefault(b.getId(), 0L), pollinationDates.get(b.getId())))
                 .toList();
 
-        return BaseResponse.build(new PageResponse<>(content, safePage(page), safeSize(size), total));
+        return BaseResponse.build(new PageResponse<>(content, criteria.getSafePage(), criteria.getSafeSize(), total));
     }
 
     @Override
@@ -342,14 +339,6 @@ public class BatchFacadeImpl implements BatchFacade {
         return batch.getStatus() == null ? BatchStatus.DRAFT : BatchStatus.valueOf(batch.getStatus());
     }
 
-    private static BatchStatus parseStatus(String status) {
-        try {
-            return BatchStatus.valueOf(status.trim().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new ConflictException(ErrorCode.INVALID_STATUS_FILTER);
-        }
-    }
-
     private static LocalDateTime toLocalDateTime(Long epochMillis) {
         return epochMillis == null ? null
                 : LocalDateTime.ofInstant(Instant.ofEpochMilli(epochMillis), ZoneId.systemDefault());
@@ -366,14 +355,6 @@ public class BatchFacadeImpl implements BatchFacade {
         return LocalDate.ofInstant(Instant.ofEpochMilli(pollinationDate), ZoneId.systemDefault())
                 .plusDays(variety.getDaysPollinationToHarvest())
                 .toString();
-    }
-
-    private static int safePage(int page) {
-        return Math.max(page, 0);
-    }
-
-    private static int safeSize(int size) {
-        return size <= 0 ? 20 : Math.min(size, 100);
     }
 
     private AuditLog buildAuditLog(Long actorId, String action, String entity, Long entityId, String detail, String ipAddr) {
