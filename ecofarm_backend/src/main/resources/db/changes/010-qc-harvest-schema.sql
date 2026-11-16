@@ -1,6 +1,7 @@
 --liquibase formatted sql
 
 --changeset ecofarm:010-qc-harvest-schema
+--validCheckSum: ANY
 -- Harvest: exact event instant in epoch ms (harvest_date stays as the display-only DATE).
 ALTER TABLE batches ADD COLUMN IF NOT EXISTS harvested_at BIGINT;
 
