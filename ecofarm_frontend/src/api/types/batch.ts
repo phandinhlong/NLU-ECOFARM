@@ -1,6 +1,4 @@
 import type { ApiResponse } from './common'
-// MOCK-ONLY import: delete with the mock block below
-import type { PageResponse } from '@/api/types/catalog'
 
 // ============================================================================
 // REAL (master)
@@ -221,12 +219,6 @@ export interface VerifyResult {
   message: string
 }
 
-// ============================================================================
-// MOCK (feat/build-ui)
-// TODO: DELETE everything from here to the end of the file, plus the
-// PageResponse import at the top, when the mock UI is removed
-// ============================================================================
-
 export type BatchStatus =
   | 'DRAFT'
   | 'GROWING'
@@ -239,46 +231,39 @@ export type BatchStatus =
   | 'SHIPPED'
   | 'RECALLED'
 
+export interface WorkerSummary {
+  id: number
+  fullName: string
+  email: string
+  roles: string[]
+}
+
 export interface Batch {
   id: number
   batchCode: string
-  greenhouseId: number
-  varietyId: number
   status: BatchStatus
-  sowDate: string
+  locked: boolean
+  greenhouseId: number
+  greenhouseCode: string
+  greenhouseName: string
+  varietyId: number
+  varietyName: string
+  sowDate: string | null
   harvestDate: string | null
   pollinationDate: string | null
   expectedHarvestDate: string | null
   createdBy: number
-  activatedAt: number | null
-  version: number
-  createdAt: number
-  updatedAt: number
-  greenhouseCode: string
-  varietyName: string
+  activatedAt: string | null
   workerCount: number
-}
-
-export interface BatchGreenhouse {
-  id: number
-  code: string
-  name: string
-}
-
-export interface BatchVariety {
-  id: number
-  code: string
-  name: string
-  daysPollinationToHarvest: number | null
+  version: number
+  createdAt: string | null
+  updatedAt: string | null
 }
 
 export interface BatchDetail extends Batch {
-  greenhouse: BatchGreenhouse
-  variety: BatchVariety
-  assignedUserIds: number[]
-  assignedWorkerNames: string[]
+  daysPollinationToHarvest: number | null
   eventCount: number
-  pendingApprovalCount: number
+  assignedUsers: WorkerSummary[]
 }
 
 export interface BatchCreateInput {
@@ -292,30 +277,16 @@ export interface BatchListParams {
   size: number
   status?: BatchStatus
   greenhouseId?: number
-  q?: string
-  mine?: boolean
-}
-
-export interface UserSummary {
-  id: number
-  fullName: string
-  roles: string[]
-  status: 'ACTIVE' | 'LOCKED'
-}
-
-export interface ProblemError {
-  field: string
-  message: string
+  batchCode?: string
 }
 
 export interface Problem {
-  status: number
-  code: string
-  detail: string
-  errors?: ProblemError[]
+  code?: number
+  message?: string
+  isSuccess?: boolean
+  errors?: string[]
+  details?: Record<string, string>
 }
-
-export type BatchPage = PageResponse<Batch>
 
 type Tone = 'success' | 'warning' | 'danger' | 'info' | 'muted'
 
@@ -367,14 +338,4 @@ export const previewBatchCode = (
   const base = `DL-${greenhouseCode.replace(/-/g, '')}-${ddMMyy(sowDate)}`
   const used = existingCodes.filter((code) => code === base || code.startsWith(`${base}-`)).length
   return used === 0 ? base : `${base}-${used + 1}`
-}
-
-export const expectedHarvest = (
-  pollinationDate: string | null,
-  days: number | null | undefined,
-): string | null => {
-  if (!pollinationDate || days == null) return null
-  const date = new Date(`${pollinationDate.slice(0, 10)}T00:00:00Z`)
-  date.setUTCDate(date.getUTCDate() + days)
-  return date.toISOString().slice(0, 10)
 }
