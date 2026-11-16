@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.modules.batch.domain;
+package jakarta.ecofarm_backend.common.enums;
 
 import java.util.Set;
 

@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.modules.batch.dto;
+package jakarta.ecofarm_backend.common.dto.response;
 
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;

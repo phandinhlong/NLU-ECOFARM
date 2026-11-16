@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.modules.batch.dto;
+package jakarta.ecofarm_backend.common.dto.response;
 
 import java.util.List;
 import lombok.AllArgsConstructor;

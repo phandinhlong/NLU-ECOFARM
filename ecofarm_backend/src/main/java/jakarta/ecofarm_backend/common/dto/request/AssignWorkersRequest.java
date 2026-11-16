@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.modules.batch.dto;
+package jakarta.ecofarm_backend.common.dto.request;
 
 import jakarta.validation.constraints.NotNull;
 import java.util.List;

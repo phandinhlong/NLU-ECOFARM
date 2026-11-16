@@ -2,11 +2,11 @@ package jakarta.ecofarm_backend.modules.batch.facade;
 
 import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
 import jakarta.ecofarm_backend.common.dto.response.PageResponse;
-import jakarta.ecofarm_backend.modules.batch.dto.AssignWorkersRequest;
-import jakarta.ecofarm_backend.modules.batch.dto.BatchDetailResponse;
-import jakarta.ecofarm_backend.modules.batch.dto.BatchListItemResponse;
-import jakarta.ecofarm_backend.modules.batch.dto.CreateBatchRequest;
-import jakarta.ecofarm_backend.modules.batch.dto.WorkerSummaryResponse;
+import jakarta.ecofarm_backend.common.dto.request.AssignWorkersRequest;
+import jakarta.ecofarm_backend.common.dto.response.BatchDetailResponse;
+import jakarta.ecofarm_backend.common.dto.response.BatchListItemResponse;
+import jakarta.ecofarm_backend.common.dto.request.CreateBatchRequest;
+import jakarta.ecofarm_backend.common.dto.response.WorkerSummaryResponse;
 
 import java.util.List;
 

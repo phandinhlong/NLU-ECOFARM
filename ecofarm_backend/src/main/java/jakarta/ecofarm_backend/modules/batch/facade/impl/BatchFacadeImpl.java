@@ -18,17 +18,17 @@ import jakarta.ecofarm_backend.infrastructure.persistence.entity.Greenhouse;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Variety;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.AuditLogRepository;
-import jakarta.ecofarm_backend.infrastructure.persistence.repository.BatchRepository;
+import jakarta.ecofarm_backend.infrastructure.service.BatchService;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.GreenhouseRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.UserRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.VarietyRepository;
 import jakarta.ecofarm_backend.infrastructure.security.UserSecurityDetailsPrincipal;
-import jakarta.ecofarm_backend.modules.batch.domain.BatchStatus;
-import jakarta.ecofarm_backend.modules.batch.dto.AssignWorkersRequest;
-import jakarta.ecofarm_backend.modules.batch.dto.BatchDetailResponse;
-import jakarta.ecofarm_backend.modules.batch.dto.BatchListItemResponse;
-import jakarta.ecofarm_backend.modules.batch.dto.CreateBatchRequest;
-import jakarta.ecofarm_backend.modules.batch.dto.WorkerSummaryResponse;
+import jakarta.ecofarm_backend.common.enums.BatchStatus;
+import jakarta.ecofarm_backend.common.dto.request.AssignWorkersRequest;
+import jakarta.ecofarm_backend.common.dto.response.BatchDetailResponse;
+import jakarta.ecofarm_backend.common.dto.response.BatchListItemResponse;
+import jakarta.ecofarm_backend.common.dto.request.CreateBatchRequest;
+import jakarta.ecofarm_backend.common.dto.response.WorkerSummaryResponse;
 import jakarta.ecofarm_backend.modules.batch.facade.BatchFacade;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -53,7 +53,7 @@ public class BatchFacadeImpl implements BatchFacade {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Inject
-    private BatchRepository batchRepository;
+    private BatchService batchService;
 
     @Inject
     private GreenhouseRepository greenhouseRepository;
@@ -83,12 +83,12 @@ public class BatchFacadeImpl implements BatchFacade {
         Long mineUserId = mine && hasRole(actor, RoleEnum.FARMER) ? actorId : null;
 
         PageCriteria criteria = new PageCriteria(page, size, statusFilter, greenhouseId, q, mineUserId);
-        List<Batch> batches = batchRepository.findPage(criteria);
-        long total = batchRepository.countActive(criteria);
+        List<Batch> batches = batchService.findPage(criteria);
+        long total = batchService.countActive(criteria);
 
         List<Long> ids = batches.stream().map(Batch::getId).toList();
-        Map<Long, Long> workerCounts = batchRepository.countAssignmentsByBatchIds(ids);
-        Map<Long, Long> pollinationDates = batchRepository.findPollinationDates(ids);
+        Map<Long, Long> workerCounts = batchService.countAssignmentsByBatchIds(ids);
+        Map<Long, Long> pollinationDates = batchService.findPollinationDates(ids);
 
         List<BatchListItemResponse> content = batches.stream()
                 .map(b -> toListItem(b, workerCounts.getOrDefault(b.getId(), 0L), pollinationDates.get(b.getId())))
@@ -101,13 +101,13 @@ public class BatchFacadeImpl implements BatchFacade {
     @DatabaseTransactional
     public BaseResponse<BatchDetailResponse> detail(Long batchId) {
         Long actorId = resolveActorId();
-        Batch batch = batchRepository.findById(batchId);
+        Batch batch = batchService.findById(batchId);
         if (batch == null) {
             throw new EntityNotFoundException(ErrorCode.BATCH_NOT_FOUND);
         }
 
         User actor = requireActor(actorId);
-        if (hasRole(actor, RoleEnum.FARMER) && !batchRepository.isAssigned(batchId, actorId)) {
+        if (hasRole(actor, RoleEnum.FARMER) && !batchService.isAssigned(batchId, actorId)) {
             throw new PermissionDeniedException(ErrorCode.BATCH_NOT_ASSIGNED);
         }
 
@@ -147,7 +147,7 @@ public class BatchFacadeImpl implements BatchFacade {
                 .saltEnc(SECURE_RANDOM.nextLong())
                 .createdBy(actor)
                 .build();
-        batchRepository.persist(batch);
+        batchService.persist(batch);
 
         auditLogRepository.persist(buildAuditLog(actorId, "BATCH_CREATE", "batches", batch.getId(),
                 toJson(Map.of("batchCode", batch.getBatchCode(), "status", batch.getStatus())), ipAddr));
@@ -166,11 +166,11 @@ public class BatchFacadeImpl implements BatchFacade {
     @Override
     @DatabaseTransactional
     public BaseResponse<List<WorkerSummaryResponse>> listAssignedWorkers(Long batchId) {
-        Batch batch = batchRepository.findById(batchId);
+        Batch batch = batchService.findById(batchId);
         if (batch == null) {
             throw new EntityNotFoundException(ErrorCode.BATCH_NOT_FOUND);
         }
-        return BaseResponse.build(batchRepository.findAssignments(batchId).stream()
+        return BaseResponse.build(batchService.findAssignments(batchId).stream()
                 .map(BatchAssignment::getUser)
                 .map(this::toWorker)
                 .toList());
@@ -183,7 +183,7 @@ public class BatchFacadeImpl implements BatchFacade {
         String ipAddr = resolveClientIp();
         requireEngineer(actorId);
 
-        Batch batch = batchRepository.findById(batchId);
+        Batch batch = batchService.findById(batchId);
         if (batch == null) {
             throw new EntityNotFoundException(ErrorCode.BATCH_NOT_FOUND);
         }
@@ -206,9 +206,9 @@ public class BatchFacadeImpl implements BatchFacade {
             throw new ConflictException(ErrorCode.INVALID_WORKER, errors);
         }
 
-        batchRepository.deleteAssignmentsByBatch(batchId);
+        batchService.deleteAssignmentsByBatch(batchId);
         for (User worker : workers) {
-            batchRepository.persistAssignment(BatchAssignment.builder().batch(batch).user(worker).build());
+            batchService.persistAssignment(BatchAssignment.builder().batch(batch).user(worker).build());
         }
 
         auditLogRepository.persist(buildAuditLog(actorId, "BATCH_ASSIGN_WORKERS", "batches", batchId,
@@ -221,8 +221,8 @@ public class BatchFacadeImpl implements BatchFacade {
         Greenhouse greenhouse = batch.getGreenhouse();
         Variety variety = batch.getVariety();
         BatchStatus status = statusOf(batch);
-        Long pollinationDate = batchRepository.findPollinationDate(batch.getId());
-        List<BatchAssignment> assignments = batchRepository.findAssignments(batch.getId());
+        Long pollinationDate = batchService.findPollinationDate(batch.getId());
+        List<BatchAssignment> assignments = batchService.findAssignments(batch.getId());
 
         return BatchDetailResponse.builder()
                 .id(batch.getId())
@@ -242,7 +242,7 @@ public class BatchFacadeImpl implements BatchFacade {
                 .createdBy(batch.getCreatedBy() == null ? null : batch.getCreatedBy().getId())
                 .activatedAt(toLocalDateTime(batch.getActivatedAt()))
                 .workerCount((long) assignments.size())
-                .eventCount(batchRepository.countEvents(batch.getId()))
+                .eventCount(batchService.countEvents(batch.getId()))
                 .assignedUsers(assignments.stream().map(BatchAssignment::getUser).map(this::toWorker).toList())
                 .version(batch.getVersion())
                 .createdAt(toLocalDateTime(batch.getCreatedAt()))
@@ -292,7 +292,7 @@ public class BatchFacadeImpl implements BatchFacade {
                 + "-" + BATCH_CODE_DATE.format(sowDate);
         String candidate = base;
         int suffix = 1;
-        while (batchRepository.existsByBatchCode(candidate)) {
+        while (batchService.existsByBatchCode(candidate)) {
             suffix++;
             candidate = base + "-" + suffix;
         }
