@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.common.dto.request;
 
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,6 +19,22 @@ public class PageCriteria extends BaseCriteria {
     private Long greenhouseId;
     private String q;
     private Long mineUserId;
+
+    public Optional<String> getStatusFilter() {
+        return Optional.ofNullable(status).filter(value -> !value.isBlank());
+    }
+
+    public Optional<String> getQueryFilter() {
+        return Optional.ofNullable(q).filter(value -> !value.isBlank());
+    }
+
+    public Optional<Long> getGreenhouseFilter() {
+        return Optional.ofNullable(greenhouseId);
+    }
+
+    public Optional<Long> getMineUserFilter() {
+        return Optional.ofNullable(mineUserId);
+    }
 
     public int getSafePage() {
         return page == null ? 0 : Math.max(page, 0);

@@ -20,33 +20,18 @@ public class BatchRepositoryImpl implements BatchRepository {
     private EntityManager em;
 
     private void appendFilters(StringBuilder jpql, PageCriteria criteria) {
-        if (criteria.getStatus() != null && !criteria.getStatus().isBlank()) {
-            jpql.append(" AND b.status = :status");
-        }
-        if (criteria.getGreenhouseId() != null) {
-            jpql.append(" AND b.greenhouse.id = :greenhouseId");
-        }
-        if (criteria.getQ() != null && !criteria.getQ().isBlank()) {
-            jpql.append(" AND LOWER(b.batchCode) LIKE :q");
-        }
-        if (criteria.getMineUserId() != null) {
-            jpql.append(" AND EXISTS (SELECT a FROM BatchAssignment a WHERE a.batch = b AND a.user.id = :mineUserId)");
-        }
+        criteria.getStatusFilter().ifPresent(value -> jpql.append(" AND b.status = :status"));
+        criteria.getGreenhouseFilter().ifPresent(value -> jpql.append(" AND b.greenhouse.id = :greenhouseId"));
+        criteria.getQueryFilter().ifPresent(value -> jpql.append(" AND LOWER(b.batchCode) LIKE :q"));
+        criteria.getMineUserFilter().ifPresent(value ->
+                jpql.append(" AND EXISTS (SELECT a FROM BatchAssignment a WHERE a.batch = b AND a.user.id = :mineUserId)"));
     }
 
     private void bindFilters(TypedQuery<?> query, PageCriteria criteria) {
-        if (criteria.getStatus() != null && !criteria.getStatus().isBlank()) {
-            query.setParameter("status", criteria.getStatus());
-        }
-        if (criteria.getGreenhouseId() != null) {
-            query.setParameter("greenhouseId", criteria.getGreenhouseId());
-        }
-        if (criteria.getQ() != null && !criteria.getQ().isBlank()) {
-            query.setParameter("q", "%" + criteria.getQ().trim().toLowerCase() + "%");
-        }
-        if (criteria.getMineUserId() != null) {
-            query.setParameter("mineUserId", criteria.getMineUserId());
-        }
+        criteria.getStatusFilter().ifPresent(value -> query.setParameter("status", value));
+        criteria.getGreenhouseFilter().ifPresent(value -> query.setParameter("greenhouseId", value));
+        criteria.getQueryFilter().ifPresent(value -> query.setParameter("q", "%" + value.trim().toLowerCase() + "%"));
+        criteria.getMineUserFilter().ifPresent(value -> query.setParameter("mineUserId", value));
     }
 
     @Override
@@ -189,7 +174,7 @@ public class BatchRepositoryImpl implements BatchRepository {
 
     @Override
     public void deleteAssignmentsByBatch(Long batchId) {
-        em.createQuery("DELETE FROM BatchAssignment a WHERE a.batch.id = :batchId")
+        em.createQuery("UPDATE BatchAssignment a SET a.isActive = false WHERE a.batch.id = :batchId")
                 .setParameter("batchId", batchId)
                 .executeUpdate();
     }
