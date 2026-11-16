@@ -28,7 +28,8 @@ const userStore = useUserStore()
 
 const roles = computed(() => userStore.user?.role ?? [])
 const isEngineer = computed(() => roles.value.includes('ENGINEER'))
-const isWorker = computed(() => roles.value.includes('WORKER'))
+const isAdmin = computed(() => roles.value.includes('ADMIN'))
+const canManage = computed(() => isEngineer.value || isAdmin.value)
 
 const toNum = (value: unknown): number | undefined => {
   const parsed = Number(value)
@@ -40,21 +41,18 @@ const params = ref<BatchListParams>({
   size: Number(route.query.size) || 10,
   status: (route.query.status as BatchStatus) || undefined,
   greenhouseId: toNum(route.query.greenhouseId),
-  q: (route.query.q as string) || undefined,
-  mine: route.query.mine === '1',
+  batchCode: (route.query.batchCode as string) || undefined,
 })
 
-const searchText = ref(params.value.q ?? '')
+const searchText = ref(params.value.batchCode ?? '')
 const statusFilter = ref<BatchStatus | ''>(params.value.status ?? '')
 const greenhouseFilter = ref<number | ''>(params.value.greenhouseId ?? '')
-const mineFilter = ref(params.value.mine ?? false)
 
 const syncUrl = () => {
   const query: Record<string, string> = { page: String(params.value.page), size: String(params.value.size) }
   if (params.value.status) query.status = params.value.status
   if (params.value.greenhouseId) query.greenhouseId = String(params.value.greenhouseId)
-  if (params.value.q) query.q = params.value.q
-  if (params.value.mine) query.mine = '1'
+  if (params.value.batchCode) query.batchCode = params.value.batchCode
   router.replace({ query })
 }
 
@@ -70,10 +68,9 @@ const page = computed(
 )
 const hasFilters = computed(
   () =>
-    Boolean(params.value.q) ||
+    Boolean(params.value.batchCode) ||
     Boolean(params.value.status) ||
-    Boolean(params.value.greenhouseId) ||
-    Boolean(params.value.mine),
+    Boolean(params.value.greenhouseId),
 )
 const greenhouseOptions = computed(() => lookups.data.value?.greenhouses ?? [])
 const varietyOptions = computed(() => lookups.data.value?.varieties ?? [])
@@ -88,10 +85,9 @@ const expectedOf = (row: Batch) => formatDate(row.expectedHarvestDate)
 const applyFilter = () => {
   params.value = {
     ...params.value,
-    q: searchText.value.trim() || undefined,
+    batchCode: searchText.value.trim() || undefined,
     status: statusFilter.value || undefined,
     greenhouseId: greenhouseFilter.value || undefined,
-    mine: mineFilter.value || undefined,
     page: 0,
   }
 }
@@ -100,7 +96,6 @@ const resetFilter = () => {
   searchText.value = ''
   statusFilter.value = ''
   greenhouseFilter.value = ''
-  mineFilter.value = false
   params.value = { page: 0, size: params.value.size }
 }
 
@@ -145,10 +140,8 @@ const openCreate = () => {
 
 const mapProblem = (err: unknown) => {
   const problem = err as Problem
-  generalError.value = problem?.detail || 'Đã xảy ra lỗi. Vui lòng thử lại.'
-  const mapped: Record<string, string> = {}
-  for (const item of problem?.errors ?? []) mapped[item.field] = item.message
-  formErrors.value = mapped
+  generalError.value = problem?.message || 'Đã xảy ra lỗi. Vui lòng thử lại.'
+  formErrors.value = { ...(problem?.details ?? {}) }
 }
 
 const submitCreate = () => {
@@ -181,9 +174,9 @@ const submitCreate = () => {
 
 <template>
   <div>
-    <PageHeader title="Quản lý lô dưa" :breadcrumb="['Trang chủ', 'Quản lý lô dưa']">
+    <PageHeader title="Quản lý lô dưa">
       <template #actions>
-        <BButton v-if="isEngineer" variant="primary" @click="openCreate">
+        <BButton v-if="canManage" variant="primary" @click="openCreate">
           <FontAwesomeIcon icon="plus" aria-hidden="true" /> Tạo lô mới
         </BButton>
       </template>
@@ -215,12 +208,6 @@ const submitCreate = () => {
             <option value="">Tất cả trạng thái</option>
             <option v-for="[value, meta] in statuses" :key="value" :value="value">{{ meta.label }}</option>
           </BFormSelect>
-        </div>
-        <div class="col-12 col-md-2">
-          <div class="form-check">
-            <input id="bat-mine" v-model="mineFilter" class="form-check-input" type="checkbox" />
-            <label class="form-check-label small" for="bat-mine">Lô của tôi</label>
-          </div>
         </div>
         <div class="col-12 d-flex gap-2">
           <BButton variant="primary" @click="applyFilter">
@@ -256,12 +243,9 @@ const submitCreate = () => {
             <p class="mb-2"><FontAwesomeIcon icon="magnifying-glass" aria-hidden="true" /> Không tìm thấy lô phù hợp</p>
             <BButton size="sm" variant="outline-secondary" @click="resetFilter">Xóa lọc</BButton>
           </template>
-          <template v-else-if="isWorker">
-            <p class="mb-0"><FontAwesomeIcon icon="user-group" aria-hidden="true" /> Bạn chưa được giao lô nào</p>
-          </template>
           <template v-else>
             <p class="mb-2"><FontAwesomeIcon icon="inbox" aria-hidden="true" /> Chưa có lô nào</p>
-            <BButton v-if="isEngineer" size="sm" variant="primary" @click="openCreate">
+            <BButton v-if="canManage" size="sm" variant="primary" @click="openCreate">
               <FontAwesomeIcon icon="plus" aria-hidden="true" /> Tạo lô mới
             </BButton>
           </template>

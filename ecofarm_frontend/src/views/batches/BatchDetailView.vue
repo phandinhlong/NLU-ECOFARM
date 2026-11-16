@@ -12,7 +12,6 @@ import {
   ALLOWED_NEXT,
   STATUS_META,
   formatDate,
-  isLocked,
   type BatchStatus,
   type Problem,
 } from '@/api/types/batch'
@@ -29,10 +28,11 @@ const assignMutation = useAssignWorkersMutation()
 const roles = computed(() => userStore.user?.role ?? [])
 const isEngineer = computed(() => roles.value.includes('ENGINEER'))
 const isAdmin = computed(() => roles.value.includes('ADMIN'))
+const canManage = computed(() => isEngineer.value || isAdmin.value)
 
-const problem = computed(() => error.value as (Error & Partial<Problem>) | null)
+const problem = computed(() => error.value as (Error & { status?: number } & Partial<Problem>) | null)
 const errorStatus = computed(() => problem.value?.status ?? 0)
-const locked = computed(() => (data.value ? isLocked(data.value.status) : false))
+const locked = computed(() => data.value?.locked ?? false)
 const statusMeta = computed(() => (data.value ? STATUS_META[data.value.status] : null))
 const nextStatuses = computed<BatchStatus[]>(() =>
   data.value ? (ALLOWED_NEXT[data.value.status] ?? []) : [],
@@ -52,7 +52,7 @@ const assignError = ref('')
 const workerOptions = computed(() => lookups.data.value?.workers ?? [])
 
 const openAssign = () => {
-  selected.value = [...(data.value?.assignedUserIds ?? [])]
+  selected.value = [...(data.value?.assignedUsers.map((u) => u.id) ?? [])]
   assignError.value = ''
   showAssign.value = true
 }
@@ -68,7 +68,7 @@ const saveAssign = () => {
         refetch()
       },
       onError: (err) => {
-        assignError.value = (err as unknown as Problem)?.detail || 'Không phân công được. Vui lòng thử lại.'
+        assignError.value = (err as Problem)?.message || 'Không phân công được. Vui lòng thử lại.'
       },
     },
   )
@@ -132,11 +132,11 @@ const saveAssign = () => {
         <div class="row g-3">
           <div class="col-12 col-md-6">
             <div class="small text-body-secondary"><FontAwesomeIcon icon="warehouse" aria-hidden="true" /> Nhà màng</div>
-            <div class="fw-semibold">{{ data.greenhouse.code }} · {{ data.greenhouse.name }}</div>
+            <div class="fw-semibold">{{ data.greenhouseCode }} · {{ data.greenhouseName }}</div>
           </div>
           <div class="col-12 col-md-6">
             <div class="small text-body-secondary"><FontAwesomeIcon icon="seedling" aria-hidden="true" /> Giống</div>
-            <div class="fw-semibold">{{ data.variety.name }}</div>
+            <div class="fw-semibold">{{ data.varietyName }}</div>
           </div>
           <div class="col-6 col-md-3">
             <div class="small text-body-secondary"><FontAwesomeIcon icon="calendar-days" aria-hidden="true" /> Ngày xuống giống</div>
@@ -158,10 +158,6 @@ const saveAssign = () => {
             <div class="small text-body-secondary"><FontAwesomeIcon icon="list-check" aria-hidden="true" /> Số sự kiện</div>
             <div>{{ data.eventCount }}</div>
           </div>
-          <div class="col-6 col-md-3">
-            <div class="small text-body-secondary"><FontAwesomeIcon icon="clock-rotate-left" aria-hidden="true" /> Chờ duyệt</div>
-            <div>{{ data.pendingApprovalCount }}</div>
-          </div>
         </div>
       </section>
 
@@ -169,7 +165,7 @@ const saveAssign = () => {
         <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
           <p class="fw-semibold mb-0"><FontAwesomeIcon icon="users" aria-hidden="true" /> Công nhân phụ trách</p>
           <BButton
-            v-if="isEngineer && !locked"
+            v-if="canManage && !locked"
             size="sm"
             variant="outline-primary"
             @click="openAssign"
@@ -178,15 +174,15 @@ const saveAssign = () => {
           </BButton>
         </div>
         <div class="d-flex flex-wrap gap-2">
-          <span v-if="data.assignedWorkerNames.length === 0" class="small text-body-secondary">
+          <span v-if="data.assignedUsers.length === 0" class="small text-body-secondary">
             <FontAwesomeIcon icon="user-group" aria-hidden="true" /> Chưa phân công công nhân
           </span>
           <span
-            v-for="name in data.assignedWorkerNames"
-            :key="name"
+            v-for="u in data.assignedUsers"
+            :key="u.id"
             class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-semibold"
           >
-            {{ name }}
+            {{ u.fullName }}
           </span>
         </div>
       </section>
