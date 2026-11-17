@@ -58,6 +58,11 @@ public class CultivationEventRepository {
                 .getResultList();
     }
 
+    /** Lấy sự kiện không khóa, dùng để tra cứu batchId trước khi khóa batch rồi khóa sự kiện. */
+    public CultivationEvent findById(Long id) {
+        return em.find(CultivationEvent.class, id);
+    }
+
     /**
      * Lấy sự kiện kèm khóa ghi bi quan, dùng cho luồng duyệt/đính chính. Phải nằm trong transaction.
      */
