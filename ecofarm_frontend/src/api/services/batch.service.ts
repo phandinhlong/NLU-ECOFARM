@@ -1,7 +1,6 @@
 import axios from '@/api/clients/axios'
 import { API_V1 } from '@/api/constants'
 import type { ApiResponse } from '@/api/types/common'
-import type { PageResponse } from '@/api/types/catalog'
 import type {
   ActivateBatchRequest,
   ActivateResponse,
@@ -10,6 +9,7 @@ import type {
   BatchCreateInput,
   BatchDetail,
   BatchListParams,
+  CursorPageResponse,
   ExportQrParams,
   ExtraQrRequest,
   ExtraQrResponse,
@@ -47,7 +47,7 @@ export const batchService = {
 
   listBatches: (params: BatchListParams) =>
     axios
-      .get<ApiResponse<PageResponse<Batch>>>(`${API_V1}/batches`, { params })
+      .get<ApiResponse<CursorPageResponse<Batch>>>(`${API_V1}/batches`, { params })
       .then((r) => r.data.data),
 
   getBatch: (id: number) =>
@@ -56,13 +56,27 @@ export const batchService = {
   createBatch: (input: BatchCreateInput) =>
     axios.post<ApiResponse<BatchDetail>>(`${API_V1}/batches`, input).then((r) => r.data.data),
 
-  assignWorkers: (batchId: number, userIds: number[]) =>
+  addWorkers: (batchId: number, userIds: number[]) =>
     axios
-      .put<ApiResponse<WorkerSummary[]>>(`${API_V1}/batches/${batchId}/workers`, { userIds })
+      .post<ApiResponse<boolean>>(`${API_V1}/batches/${batchId}/workers`, { userIds })
       .then((r) => r.data.data),
 
-  listWorkers: () =>
-    axios.get<ApiResponse<WorkerSummary[]>>(`${API_V1}/batches/workers`).then((r) => r.data.data),
+  removeWorkers: (batchId: number, userIds: number[]) =>
+    axios
+      .delete<ApiResponse<boolean>>(`${API_V1}/batches/${batchId}/workers`, { data: { userIds } })
+      .then((r) => r.data.data),
+
+  listWorkers: (params?: { lastIndex?: number }) =>
+    axios
+      .get<ApiResponse<CursorPageResponse<WorkerSummary>>>(`${API_V1}/batches/workers`, { params })
+      .then((r) => r.data.data),
+
+  listAssignedWorkers: (batchId: number, params?: { lastIndex?: number }) =>
+    axios
+      .get<ApiResponse<CursorPageResponse<WorkerSummary>>>(`${API_V1}/batches/${batchId}/workers`, {
+        params,
+      })
+      .then((r) => r.data.data),
 
   listGreenhouses: () =>
     catalogService.listGreenhouses({ page: 0, size: 100 }).then((r) => r.data.data.content),

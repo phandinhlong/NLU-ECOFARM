@@ -3,6 +3,7 @@ package jakarta.ecofarm_backend.infrastructure.persistence.repository;
 import jakarta.ecofarm_backend.common.dto.request.PageCriteria;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.BatchAssignment;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 
 import java.util.List;
 import java.util.Map;
@@ -11,9 +12,9 @@ public interface BatchRepository {
 
     List<Batch> findPage(PageCriteria criteria);
 
-    Long countActive(PageCriteria criteria);
-
     Batch findById(Long id);
+
+    Batch findByBatchCode(String batchCode);
 
     Batch merge(Batch batch);
 
@@ -33,7 +34,11 @@ public interface BatchRepository {
 
     Boolean isAssigned(Long batchId, Long userId);
 
-    void deleteAssignmentsByBatch(Long batchId);
+    List<User> findAssignedWorkerPage(Long batchId, Long lastIndex, int limit);
+
+    List<Long> findAssignedUserIds(Long batchId);
+
+    void removeAssignments(Long batchId, List<Long> userIds);
 
     void persistAssignment(BatchAssignment assignment);
 }

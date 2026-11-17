@@ -6,6 +6,7 @@ import jakarta.ecofarm_backend.infrastructure.service.UserService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import java.util.List;
 import java.util.Optional;
 
 @ApplicationScoped
@@ -36,5 +37,10 @@ public class UserServiceImpl implements UserService {
     @Override
     public Optional<User> findByEmail(String email) {
         return this.userRepository.findByEmail(email);
+    }
+
+    @Override
+    public List<User> findActiveWorkerPage(Long lastIndex, int limit) {
+        return this.userRepository.findActiveWorkerPage(lastIndex, limit);
     }
 }

@@ -1,10 +1,9 @@
 package jakarta.ecofarm_backend.modules.batch.facade.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ecofarm_backend.common.anotation.DatabaseTransactional;
 import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
 import jakarta.ecofarm_backend.common.dto.request.PageCriteria;
-import jakarta.ecofarm_backend.common.dto.response.PageResponse;
+import jakarta.ecofarm_backend.common.dto.response.CursorPageResponse;
 import jakarta.ecofarm_backend.common.enums.ErrorCode;
 import jakarta.ecofarm_backend.common.enums.RoleEnum;
 import jakarta.ecofarm_backend.common.exception.ConflictException;
@@ -20,8 +19,8 @@ import jakarta.ecofarm_backend.infrastructure.persistence.entity.Variety;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.AuditLogRepository;
 import jakarta.ecofarm_backend.infrastructure.service.BatchService;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.GreenhouseRepository;
-import jakarta.ecofarm_backend.infrastructure.persistence.repository.UserRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.VarietyRepository;
+import jakarta.ecofarm_backend.infrastructure.service.UserService;
 import jakarta.ecofarm_backend.infrastructure.security.UserSecurityDetailsPrincipal;
 import jakarta.ecofarm_backend.common.enums.BatchStatus;
 import jakarta.ecofarm_backend.common.dto.request.AssignWorkersRequest;
@@ -33,6 +32,7 @@ import jakarta.ecofarm_backend.modules.batch.facade.BatchFacade;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.transaction.Transactional;
 
 import java.security.SecureRandom;
 import java.time.Instant;
@@ -42,8 +42,10 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @ApplicationScoped
 public class BatchFacadeImpl implements BatchFacade {
@@ -62,7 +64,7 @@ public class BatchFacadeImpl implements BatchFacade {
     private VarietyRepository varietyRepository;
 
     @Inject
-    private UserRepository userRepository;
+    private UserService userService;
 
     @Inject
     private AuditLogRepository auditLogRepository;
@@ -74,37 +76,35 @@ public class BatchFacadeImpl implements BatchFacade {
     private HttpServletRequest httpRequest;
 
     @Override
-    @DatabaseTransactional
-    public BaseResponse<PageResponse<BatchListItemResponse>> findBatchesByCriteria(PageCriteria criteria) {
-        Long actorId = resolveActorId();
-        User actor = requireActor(actorId);
-        criteria.setMineUserId(Boolean.TRUE.equals(criteria.getMine()) && hasRole(actor, RoleEnum.FARMER) ? actorId : null);
+    public BaseResponse<CursorPageResponse<BatchListItemResponse>> findBatchesByCriteria(PageCriteria criteria) {
+        UserSecurityDetailsPrincipal principal = requirePrincipal();
+        criteria.setMineUserId(Boolean.TRUE.equals(criteria.getMine()) && hasRole(principal, RoleEnum.FARMER) ? principal.getId() : null);
 
         List<Batch> batches = batchService.findPage(criteria);
-        Long total = batchService.countActive(criteria);
+        boolean hasMore = batches.size() > PageCriteria.LENGTH;
+        List<Batch> page = hasMore ? batches.subList(0, PageCriteria.LENGTH) : batches;
 
-        List<Long> ids = batches.stream().map(Batch::getId).toList();
+        List<Long> ids = page.stream().map(Batch::getId).toList();
         Map<Long, Long> workerCounts = batchService.countAssignmentsByBatchIds(ids);
         Map<Long, Long> pollinationDates = batchService.findPollinationDates(ids);
 
-        List<BatchListItemResponse> content = batches.stream()
+        List<BatchListItemResponse> content = page.stream()
                 .map(b -> toListItem(b, workerCounts.getOrDefault(b.getId(), 0L), pollinationDates.get(b.getId())))
                 .toList();
 
-        return BaseResponse.build(new PageResponse<>(content, criteria.getSafePage(), criteria.getSafeSize(), total));
+        Long lastIndex = page.isEmpty() ? null : page.get(page.size() - 1).getId();
+        return BaseResponse.build(new CursorPageResponse<>(content, lastIndex, hasMore));
     }
 
     @Override
-    @DatabaseTransactional
-    public BaseResponse<BatchDetailResponse> detail(Long batchId) {
-        Long actorId = resolveActorId();
+    public BaseResponse<BatchDetailResponse> findBatchDetail(Long batchId) {
+        UserSecurityDetailsPrincipal principal = requirePrincipal();
         Batch batch = batchService.findById(batchId);
         if (batch == null) {
             throw new EntityNotFoundException(ErrorCode.BATCH_NOT_FOUND);
         }
 
-        User actor = requireActor(actorId);
-        if (hasRole(actor, RoleEnum.FARMER) && !batchService.isAssigned(batchId, actorId)) {
+        if (hasRole(principal, RoleEnum.FARMER) && !batchService.isAssigned(batchId, principal.getId())) {
             throw new PermissionDeniedException(ErrorCode.BATCH_NOT_ASSIGNED);
         }
 
@@ -112,8 +112,8 @@ public class BatchFacadeImpl implements BatchFacade {
     }
 
     @Override
-    @DatabaseTransactional
-    public BaseResponse<BatchDetailResponse> create(CreateBatchRequest request) {
+    @Transactional
+    public BaseResponse<BatchDetailResponse> createBatch(CreateBatchRequest request) {
         Long actorId = resolveActorId();
         String ipAddr = resolveClientIp();
         User actor = requireEngineerOrAdmin(actorId);
@@ -153,29 +153,34 @@ public class BatchFacadeImpl implements BatchFacade {
     }
 
     @Override
-    @DatabaseTransactional
-    public BaseResponse<List<WorkerSummaryResponse>> listWorkers() {
-        return BaseResponse.build(userRepository.findActiveUsersByRole(RoleEnum.FARMER).stream()
-                .map(this::toWorker)
-                .toList());
+    public BaseResponse<CursorPageResponse<WorkerSummaryResponse>> findBatchWorkers(Long lastIndex) {
+        Long cursor = lastIndex == null || lastIndex <= 0 ? null : lastIndex;
+        List<User> users = userService.findActiveWorkerPage(cursor, PageCriteria.LENGTH + 1);
+        boolean hasMore = users.size() > PageCriteria.LENGTH;
+        List<User> page = hasMore ? users.subList(0, PageCriteria.LENGTH) : users;
+        Long nextIndex = page.isEmpty() ? null : page.get(page.size() - 1).getId();
+        List<WorkerSummaryResponse> content = page.stream().map(this::toWorker).toList();
+        return BaseResponse.build(new CursorPageResponse<>(content, nextIndex, hasMore));
     }
 
     @Override
-    @DatabaseTransactional
-    public BaseResponse<List<WorkerSummaryResponse>> listAssignedWorkers(Long batchId) {
+    public BaseResponse<CursorPageResponse<WorkerSummaryResponse>> findAssignedWorkersByBatchId(Long batchId, Long lastIndex) {
         Batch batch = batchService.findById(batchId);
         if (batch == null) {
             throw new EntityNotFoundException(ErrorCode.BATCH_NOT_FOUND);
         }
-        return BaseResponse.build(batchService.findAssignments(batchId).stream()
-                .map(BatchAssignment::getUser)
-                .map(this::toWorker)
-                .toList());
+        Long cursor = lastIndex == null || lastIndex <= 0 ? null : lastIndex;
+        List<User> users = batchService.findAssignedWorkerPage(batchId, cursor, PageCriteria.LENGTH + 1);
+        boolean hasMore = users.size() > PageCriteria.LENGTH;
+        List<User> page = hasMore ? users.subList(0, PageCriteria.LENGTH) : users;
+        Long nextIndex = page.isEmpty() ? null : page.get(page.size() - 1).getId();
+        List<WorkerSummaryResponse> content = page.stream().map(this::toWorker).toList();
+        return BaseResponse.build(new CursorPageResponse<>(content, nextIndex, hasMore));
     }
 
     @Override
-    @DatabaseTransactional
-    public BaseResponse<List<WorkerSummaryResponse>> assignWorkers(Long batchId, AssignWorkersRequest request) {
+    @Transactional
+    public BaseResponse<Boolean> addWorkers(Long batchId, AssignWorkersRequest request) {
         Long actorId = resolveActorId();
         String ipAddr = resolveClientIp();
         requireEngineerOrAdmin(actorId);
@@ -189,29 +194,59 @@ public class BatchFacadeImpl implements BatchFacade {
         }
 
         List<Long> userIds = request.getUserIds() == null ? List.of() : request.getUserIds().stream().distinct().toList();
-        List<User> workers = new ArrayList<>();
+        Set<Long> existing = new HashSet<>(batchService.findAssignedUserIds(batchId));
         List<String> errors = new ArrayList<>();
+        List<User> toAdd = new ArrayList<>();
         for (Long userId : userIds) {
-            User worker = userRepository.findById(userId).orElse(null);
+            if (existing.contains(userId)) {
+                continue;
+            }
+            User worker = userService.findById(userId).orElse(null);
             if (worker == null || !worker.isActive() || !hasRole(worker, RoleEnum.FARMER)) {
                 errors.add("Người lao động " + userId + " không hợp lệ");
                 continue;
             }
-            workers.add(worker);
+            toAdd.add(worker);
         }
-        if (!errors.isEmpty()) {
+        boolean hasErrors = errors.size() > 0;
+        if (hasErrors) {
             throw new ConflictException(ErrorCode.INVALID_WORKER, errors);
         }
 
-        batchService.deleteAssignmentsByBatch(batchId);
-        for (User worker : workers) {
+        List<Long> added = new ArrayList<>();
+        for (User worker : toAdd) {
             batchService.persistAssignment(BatchAssignment.builder().batch(batch).user(worker).build());
+            added.add(worker.getId());
         }
 
-        auditLogRepository.persist(buildAuditLog(actorId, "BATCH_ASSIGN_WORKERS", "batches", batchId,
-                toJson(Map.of("userIds", workers.stream().map(User::getId).toList())), ipAddr));
+        auditLogRepository.persist(buildAuditLog(actorId, "BATCH_ADD_WORKERS", "batches", batchId,
+                toJson(Map.of("userIds", added)), ipAddr));
 
-        return BaseResponse.build(workers.stream().map(this::toWorker).toList());
+        return BaseResponse.build(Boolean.TRUE);
+    }
+
+    @Override
+    @Transactional
+    public BaseResponse<Boolean> removeWorkers(Long batchId, AssignWorkersRequest request) {
+        Long actorId = resolveActorId();
+        String ipAddr = resolveClientIp();
+        requireEngineerOrAdmin(actorId);
+
+        Batch batch = batchService.findById(batchId);
+        if (batch == null) {
+            throw new EntityNotFoundException(ErrorCode.BATCH_NOT_FOUND);
+        }
+        if (statusOf(batch).isLocked()) {
+            throw new ConflictException(ErrorCode.BATCH_LOCKED);
+        }
+
+        List<Long> userIds = request.getUserIds() == null ? List.of() : request.getUserIds().stream().distinct().toList();
+        batchService.removeAssignments(batchId, userIds);
+
+        auditLogRepository.persist(buildAuditLog(actorId, "BATCH_REMOVE_WORKERS", "batches", batchId,
+                toJson(Map.of("userIds", userIds)), ipAddr));
+
+        return BaseResponse.build(Boolean.TRUE);
     }
 
     private BatchDetailResponse toDetail(Batch batch) {
@@ -300,7 +335,7 @@ public class BatchFacadeImpl implements BatchFacade {
         if (actorId == null) {
             throw new PermissionDeniedException(ErrorCode.PERMISSION_DENIED);
         }
-        return userRepository.findById(actorId)
+        return userService.findById(actorId)
                 .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND));
     }
 
@@ -310,6 +345,14 @@ public class BatchFacadeImpl implements BatchFacade {
             throw new PermissionDeniedException(ErrorCode.PERMISSION_DENIED);
         }
         return actor;
+    }
+
+    private UserSecurityDetailsPrincipal requirePrincipal() {
+        UserSecurityDetailsPrincipal principal = currentUser.get();
+        if (principal == null || principal.getId() == null) {
+            throw new PermissionDeniedException(ErrorCode.PERMISSION_DENIED);
+        }
+        return principal;
     }
 
     private Long resolveActorId() {
@@ -329,6 +372,10 @@ public class BatchFacadeImpl implements BatchFacade {
             return forwarded.split(",")[0].trim();
         }
         return httpRequest.getRemoteAddr();
+    }
+
+    private static boolean hasRole(UserSecurityDetailsPrincipal principal, RoleEnum role) {
+        return principal.hasRole(role.name());
     }
 
     private static boolean hasRole(User user, RoleEnum role) {
@@ -359,7 +406,7 @@ public class BatchFacadeImpl implements BatchFacade {
 
     private AuditLog buildAuditLog(Long actorId, String action, String entity, Long entityId, String detail, String ipAddr) {
         return AuditLog.builder()
-                .actor(userRepository.findById(actorId).orElse(null))
+                .actor(userService.findById(actorId).orElse(null))
                 .action(action)
                 .entity(entity)
                 .entityId(entityId)

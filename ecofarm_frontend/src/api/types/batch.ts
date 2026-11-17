@@ -273,11 +273,16 @@ export interface BatchCreateInput {
 }
 
 export interface BatchListParams {
-  page: number
-  size: number
+  lastIndex?: number
   status?: BatchStatus
   greenhouseId?: number
   batchCode?: string
+}
+
+export interface CursorPageResponse<T> {
+  content: T[]
+  lastIndex: number | null
+  hasMore: boolean
 }
 
 export interface Problem {

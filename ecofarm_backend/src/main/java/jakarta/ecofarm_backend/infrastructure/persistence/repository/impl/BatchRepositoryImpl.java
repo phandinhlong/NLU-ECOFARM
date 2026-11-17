@@ -3,6 +3,7 @@ package jakarta.ecofarm_backend.infrastructure.persistence.repository.impl;
 import jakarta.ecofarm_backend.common.dto.request.PageCriteria;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.BatchAssignment;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.BatchRepository;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
@@ -44,28 +45,33 @@ public class BatchRepositoryImpl implements BatchRepository {
                 WHERE (b.isActive IS NULL OR b.isActive = true)
                 """);
         appendFilters(jpql, criteria);
-        jpql.append(" ORDER BY b.id DESC");
+        jpql.append(" AND (:lastIndex IS NULL OR b.id < :lastIndex) ORDER BY b.id DESC");
 
         TypedQuery<Batch> query = em.createQuery(jpql.toString(), Batch.class);
         bindFilters(query, criteria);
-        query.setFirstResult(criteria.getSafeOffset());
-        query.setMaxResults(criteria.getSafeSize());
+        query.setParameter("lastIndex", criteria.getLastIndexFilter().orElse(null));
+        query.setMaxResults(PageCriteria.LENGTH + 1);
         return query.getResultList();
     }
 
     @Override
-    public Long countActive(PageCriteria criteria) {
-        StringBuilder jpql = new StringBuilder("SELECT COUNT(b) FROM Batch b WHERE (b.isActive IS NULL OR b.isActive = true)");
-        appendFilters(jpql, criteria);
-
-        TypedQuery<Long> query = em.createQuery(jpql.toString(), Long.class);
-        bindFilters(query, criteria);
-        return query.getSingleResult();
+    public Batch findById(Long id) {
+        return em.createQuery("SELECT b FROM Batch b LEFT JOIN FETCH b.greenhouse LEFT JOIN FETCH b.variety LEFT JOIN FETCH b.createdBy WHERE b.id = :id", Batch.class)
+                .setParameter("id", id)
+                .getResultStream()
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
-    public Batch findById(Long id) {
-        return em.find(Batch.class, id);
+    public Batch findByBatchCode(String batchCode) {
+        try {
+            return em.createQuery("SELECT b FROM Batch b LEFT JOIN FETCH b.greenhouse LEFT JOIN FETCH b.variety WHERE b.batchCode = :code", Batch.class)
+                    .setParameter("code", batchCode)
+                    .getSingleResult();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @Override
@@ -133,8 +139,9 @@ public class BatchRepositoryImpl implements BatchRepository {
     @Override
     public List<BatchAssignment> findAssignments(Long batchId) {
         return em.createQuery("""
-                SELECT a FROM BatchAssignment a
+                SELECT DISTINCT a FROM BatchAssignment a
                 JOIN FETCH a.user
+                LEFT JOIN FETCH a.user.roles
                 WHERE a.batch.id = :batchId AND (a.isActive IS NULL OR a.isActive = true)
                 ORDER BY a.id
                 """, BatchAssignment.class)
@@ -174,9 +181,41 @@ public class BatchRepositoryImpl implements BatchRepository {
     }
 
     @Override
-    public void deleteAssignmentsByBatch(Long batchId) {
-        em.createQuery("UPDATE BatchAssignment a SET a.isActive = false WHERE a.batch.id = :batchId")
+    public List<User> findAssignedWorkerPage(Long batchId, Long lastIndex, int limit) {
+        TypedQuery<User> query = em.createQuery("""
+                SELECT DISTINCT a.user FROM BatchAssignment a JOIN a.user u
+                LEFT JOIN FETCH u.roles
+                WHERE a.batch.id = :batchId AND (a.isActive IS NULL OR a.isActive = true)
+                  AND (:lastIndex IS NULL OR u.id < :lastIndex)
+                ORDER BY u.id DESC
+                """, User.class);
+        query.setParameter("batchId", batchId);
+        query.setParameter("lastIndex", lastIndex);
+        query.setMaxResults(limit);
+        return query.getResultList();
+    }
+
+    @Override
+    public List<Long> findAssignedUserIds(Long batchId) {
+        return em.createQuery("""
+                SELECT a.user.id FROM BatchAssignment a
+                WHERE a.batch.id = :batchId AND (a.isActive IS NULL OR a.isActive = true)
+                """, Long.class)
                 .setParameter("batchId", batchId)
+                .getResultList();
+    }
+
+    @Override
+    public void removeAssignments(Long batchId, List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return;
+        }
+        em.createQuery("""
+                UPDATE BatchAssignment a SET a.isActive = false
+                WHERE a.batch.id = :batchId AND a.user.id IN :userIds
+                """)
+                .setParameter("batchId", batchId)
+                .setParameter("userIds", userIds)
                 .executeUpdate();
     }
 

@@ -1,16 +1,10 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PageHeader from '@/components/common/PageHeader.vue'
-import PagerBar from '@/components/common/PagerBar.vue'
 import SoftBadge from '@/components/common/SoftBadge.vue'
-import {
-  useAssignWorkersMutation,
-  useBatchLookupQuery,
-  useBatchesQuery,
-  useCreateBatchMutation,
-} from '@/composables/useBatches'
-import { useUserStore } from '@/stores'
+import { useBatchLookupQuery, useCreateBatchMutation } from '@/composables/useBatches'
+import { useBatchFormStore, useBatchListStore, useUserStore } from '@/stores'
 import {
   STATUS_META,
   formatDate,
@@ -25,6 +19,8 @@ import {
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const store = useBatchListStore()
+const form = useBatchFormStore()
 
 const roles = computed(() => userStore.user?.role ?? [])
 const isEngineer = computed(() => roles.value.includes('ENGINEER'))
@@ -36,45 +32,45 @@ const toNum = (value: unknown): number | undefined => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
 }
 
-const params = ref<BatchListParams>({
-  page: Number(route.query.page) || 0,
-  size: Number(route.query.size) || 10,
-  status: (route.query.status as BatchStatus) || undefined,
-  greenhouseId: toNum(route.query.greenhouseId),
-  batchCode: (route.query.batchCode as string) || undefined,
+const searchText = ref(
+  store.params.batchCode ?? (typeof route.query.batchCode === 'string' ? route.query.batchCode : ''),
+)
+const statusFilter = ref<BatchStatus | ''>(
+  store.params.status ?? ((route.query.status as BatchStatus) || ''),
+)
+const greenhouseFilter = ref<number | ''>(
+  store.params.greenhouseId ?? toNum(route.query.greenhouseId) ?? '',
+)
+
+const currentFilters = (): BatchListParams => ({
+  batchCode: searchText.value.trim() || undefined,
+  status: statusFilter.value || undefined,
+  greenhouseId: greenhouseFilter.value || undefined,
 })
 
-const searchText = ref(params.value.batchCode ?? '')
-const statusFilter = ref<BatchStatus | ''>(params.value.status ?? '')
-const greenhouseFilter = ref<number | ''>(params.value.greenhouseId ?? '')
-
 const syncUrl = () => {
-  const query: Record<string, string> = { page: String(params.value.page), size: String(params.value.size) }
-  if (params.value.status) query.status = params.value.status
-  if (params.value.greenhouseId) query.greenhouseId = String(params.value.greenhouseId)
-  if (params.value.batchCode) query.batchCode = params.value.batchCode
+  const query: Record<string, string> = {}
+  if (store.params.status) query.status = store.params.status
+  if (store.params.greenhouseId) query.greenhouseId = String(store.params.greenhouseId)
+  if (store.params.batchCode) query.batchCode = store.params.batchCode
   router.replace({ query })
 }
 
-watch(params, syncUrl, { deep: true })
+watch(() => store.params, syncUrl, { deep: true })
 
-const { data, isLoading, isError, error, refetch } = useBatchesQuery(params)
 const lookups = useBatchLookupQuery()
 const createMutation = useCreateBatchMutation()
-const assignMutation = useAssignWorkersMutation()
 
-const page = computed(
-  () => data.value ?? { content: [], page: 0, size: params.value.size, totalElements: 0, totalPages: 0 },
-)
+const rows = computed(() => store.items)
 const hasFilters = computed(
   () =>
-    Boolean(params.value.batchCode) ||
-    Boolean(params.value.status) ||
-    Boolean(params.value.greenhouseId),
+    Boolean(store.params.batchCode) ||
+    Boolean(store.params.status) ||
+    Boolean(store.params.greenhouseId),
 )
+const errorMessage = computed(() => (store.error as Problem | null)?.message ?? 'Đã xảy ra lỗi.')
 const greenhouseOptions = computed(() => lookups.data.value?.greenhouses ?? [])
 const varietyOptions = computed(() => lookups.data.value?.varieties ?? [])
-const workerOptions = computed(() => lookups.data.value?.workers ?? [])
 const statuses = Object.entries(STATUS_META) as [BatchStatus, (typeof STATUS_META)[BatchStatus]][]
 
 const badgeTone = (status: BatchStatus) => STATUS_META[status].tone
@@ -83,39 +79,21 @@ const statusLabel = (status: BatchStatus) => STATUS_META[status].label
 const expectedOf = (row: Batch) => formatDate(row.expectedHarvestDate)
 
 const applyFilter = () => {
-  params.value = {
-    ...params.value,
-    batchCode: searchText.value.trim() || undefined,
-    status: statusFilter.value || undefined,
-    greenhouseId: greenhouseFilter.value || undefined,
-    page: 0,
-  }
+  store.setFilters(currentFilters())
+  store.load()
 }
 
 const resetFilter = () => {
   searchText.value = ''
   statusFilter.value = ''
   greenhouseFilter.value = ''
-  params.value = { page: 0, size: params.value.size }
-}
-
-const goToPage = (next: number) => {
-  params.value = { ...params.value, page: next }
-}
-
-const changeSize = (value: unknown) => {
-  params.value = { ...params.value, size: Number(value) || 10, page: 0 }
+  store.setFilters({})
+  store.load()
 }
 
 const showCreate = ref(false)
 const formErrors = ref<Record<string, string>>({})
 const generalError = ref('')
-const form = reactive<{ greenhouseId: number | ''; varietyId: number | ''; sowDate: string; workerIds: number[] }>({
-  greenhouseId: '',
-  varietyId: '',
-  sowDate: '',
-  workerIds: [],
-})
 
 const selectedVariety = computed(() => varietyOptions.value.find((item) => item.id === form.varietyId))
 const selectedGreenhouse = computed(() => greenhouseOptions.value.find((item) => item.id === form.greenhouseId))
@@ -124,15 +102,12 @@ const codePreview = computed(() => {
   return previewBatchCode(
     selectedGreenhouse.value.code,
     form.sowDate,
-    page.value.content.map((row) => row.batchCode),
+    rows.value.map((row) => row.batchCode),
   )
 })
 
 const openCreate = () => {
-  form.greenhouseId = ''
-  form.varietyId = ''
-  form.sowDate = ''
-  form.workerIds = []
+  form.reset()
   formErrors.value = {}
   generalError.value = ''
   showCreate.value = true
@@ -154,22 +129,21 @@ const submitCreate = () => {
     sowDate: form.sowDate,
   }
   createMutation.mutate(input, {
-    onSuccess: async (batch) => {
-      if (form.workerIds.length > 0) {
-        try {
-          await assignMutation.mutateAsync({ batchId: batch.id, userIds: form.workerIds })
-        } catch {
-          showCreate.value = false
-          router.push({ name: 'batch-detail', params: { id: batch.id }, query: { warn: 'assign' } })
-          return
-        }
-      }
+    onSuccess: (batch) => {
+      form.reset()
       showCreate.value = false
       router.push({ name: 'batch-detail', params: { id: batch.id } })
     },
     onError: (err) => mapProblem(err),
   })
 }
+
+onMounted(() => {
+  if (store.items.length === 0) {
+    store.setFilters(currentFilters())
+    store.load()
+  }
+})
 </script>
 
 <template>
@@ -223,21 +197,21 @@ const submitCreate = () => {
     <section class="border rounded-3 bg-body">
       <div class="p-3 border-bottom d-flex flex-wrap gap-2 justify-content-between align-items-center">
         <p class="mb-0 fw-semibold">Danh sách lô dưa</p>
-        <SoftBadge variant="info" :label="`${page.totalElements} lô`" />
+        <SoftBadge variant="info" :label="`${rows.length} lô`" />
       </div>
 
-      <BAlert v-if="isError" variant="danger" class="mx-3 mt-3 mb-0 d-flex gap-2 align-items-center">
-        <span>Không tải được danh sách lô: {{ error?.message }}</span>
-        <BButton size="sm" variant="outline-danger" @click="refetch()">
+      <BAlert v-if="store.error" variant="danger" class="mx-3 mt-3 mb-0 d-flex gap-2 align-items-center">
+        <span>Không tải được danh sách lô: {{ errorMessage }}</span>
+        <BButton size="sm" variant="outline-danger" @click="store.load()">
           <FontAwesomeIcon icon="rotate" aria-hidden="true" /> Thử lại
         </BButton>
       </BAlert>
 
-      <div v-if="isLoading" class="p-3 d-flex flex-column gap-2">
+      <div v-if="store.loading && rows.length === 0" class="p-3 d-flex flex-column gap-2">
         <div v-for="n in 5" :key="n" class="bg-body-secondary rounded" style="height: 38px" />
       </div>
 
-      <template v-else-if="page.content.length === 0">
+      <template v-else-if="rows.length === 0">
         <div class="text-center text-body-secondary py-5 px-3">
           <template v-if="hasFilters">
             <p class="mb-2"><FontAwesomeIcon icon="magnifying-glass" aria-hidden="true" /> Không tìm thấy lô phù hợp</p>
@@ -267,7 +241,7 @@ const submitCreate = () => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in page.content" :key="row.id">
+              <tr v-for="row in rows" :key="row.id">
                 <td>
                   <RouterLink
                     :to="{ name: 'batch-detail', params: { id: row.id } }"
@@ -290,7 +264,7 @@ const submitCreate = () => {
         </div>
 
         <div class="d-md-none d-flex flex-column">
-          <div v-for="row in page.content" :key="row.id" class="p-3 border-bottom">
+          <div v-for="row in rows" :key="row.id" class="p-3 border-bottom">
             <div class="d-flex justify-content-between align-items-start mb-2">
               <RouterLink
                 :to="{ name: 'batch-detail', params: { id: row.id } }"
@@ -319,25 +293,35 @@ const submitCreate = () => {
         </div>
       </template>
 
-      <div class="d-flex flex-wrap gap-2 align-items-center px-3 py-2 border-top">
-        <label class="small text-body-secondary mb-0" for="bat-size">
-          <FontAwesomeIcon icon="list-check" aria-hidden="true" /> Số dòng
-        </label>
-        <BFormSelect id="bat-size" :model-value="page.size" class="w-auto" @update:model-value="changeSize">
-          <option :value="10">10</option>
-          <option :value="20">20</option>
-          <option :value="50">50</option>
-        </BFormSelect>
+      <div class="px-3 py-2 border-top d-flex flex-wrap gap-2 align-items-center justify-content-between">
+        <BButton
+          size="sm"
+          variant="outline-secondary"
+          :disabled="!store.hasPrev || store.loading"
+          @click="store.first()"
+        >
+          Trang đầu
+        </BButton>
+        <BButton
+          size="sm"
+          variant="outline-secondary"
+          :disabled="!store.hasPrev || store.loading"
+          @click="store.prev()"
+        >
+          <FontAwesomeIcon v-if="store.loading" icon="spinner" spin aria-hidden="true" />
+          Trang trước
+        </BButton>
+        <span class="small text-body-secondary">Trang {{ store.pageIndex + 1 }}</span>
+        <BButton
+          size="sm"
+          variant="outline-secondary"
+          :disabled="!store.hasMore || store.loading"
+          @click="store.next()"
+        >
+          <FontAwesomeIcon v-if="store.loading" icon="spinner" spin aria-hidden="true" />
+          Trang sau
+        </BButton>
       </div>
-
-      <PagerBar
-        :page="page.page"
-        :total-pages="page.totalPages"
-        :total-elements="page.totalElements"
-        :size="page.size"
-        unit="lô"
-        @update:page="goToPage"
-      />
     </section>
 
     <BModal v-model="showCreate" title="Tạo lô dưa mới">
@@ -366,12 +350,6 @@ const submitCreate = () => {
           <label class="form-label small fw-semibold mb-1" for="new-sow">Ngày xuống giống</label>
           <BFormInput id="new-sow" v-model="form.sowDate" type="date" />
           <p v-if="formErrors.sowDate" class="small text-danger mt-1 mb-0">{{ formErrors.sowDate }}</p>
-        </div>
-        <div>
-          <label class="form-label small fw-semibold mb-1" for="new-workers">Công nhân phụ trách</label>
-          <select id="new-workers" v-model="form.workerIds" class="form-select" multiple size="4">
-            <option v-for="w in workerOptions" :key="w.id" :value="w.id">{{ w.fullName }}</option>
-          </select>
         </div>
         <div>
           <label class="form-label small fw-semibold mb-1" for="new-code">Mã lô (dự kiến)</label>

@@ -3,6 +3,7 @@ package jakarta.ecofarm_backend.infrastructure.service.impl;
 import jakarta.ecofarm_backend.common.dto.request.PageCriteria;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.BatchAssignment;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.BatchRepository;
 import jakarta.ecofarm_backend.infrastructure.service.BatchService;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -20,11 +21,6 @@ public class BatchServiceImpl implements BatchService {
     @Override
     public List<Batch> findPage(PageCriteria criteria) {
         return this.batchRepository.findPage(criteria);
-    }
-
-    @Override
-    public Long countActive(PageCriteria criteria) {
-        return this.batchRepository.countActive(criteria);
     }
 
     @Override
@@ -83,8 +79,18 @@ public class BatchServiceImpl implements BatchService {
     }
 
     @Override
-    public void deleteAssignmentsByBatch(Long batchId) {
-        this.batchRepository.deleteAssignmentsByBatch(batchId);
+    public List<User> findAssignedWorkerPage(Long batchId, Long lastIndex, int limit) {
+        return this.batchRepository.findAssignedWorkerPage(batchId, lastIndex, limit);
+    }
+
+    @Override
+    public List<Long> findAssignedUserIds(Long batchId) {
+        return this.batchRepository.findAssignedUserIds(batchId);
+    }
+
+    @Override
+    public void removeAssignments(Long batchId, List<Long> userIds) {
+        this.batchRepository.removeAssignments(batchId, userIds);
     }
 
     @Override
