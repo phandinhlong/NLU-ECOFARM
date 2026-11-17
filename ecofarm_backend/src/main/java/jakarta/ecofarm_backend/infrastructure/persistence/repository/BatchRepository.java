@@ -1,43 +1,50 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.repository;
 
+import jakarta.ecofarm_backend.common.dto.request.PageCriteria;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
-import jakarta.ejb.Stateless;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.LockModeType;
-import jakarta.persistence.PersistenceContext;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.BatchAssignment;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 
-@Stateless
-public class BatchRepository {
+import java.util.List;
+import java.util.Map;
 
-    @PersistenceContext
-    private EntityManager em;
+public interface BatchRepository {
 
-    public Batch findById(Long id) {
-        return em.find(Batch.class, id);
-    }
+    List<Batch> findPage(PageCriteria criteria);
+
+    Batch findById(Long id);
 
     /**
-     * Lấy batch kèm khóa ghi bi quan (pessimistic write lock) để các thao tác ghi harvest/QC/sự kiện
-     * trên cùng một lô được tuần tự hóa. Hàm gọi phải đang nằm trong một transaction.
+     * Fetch a batch with a pessimistic write lock so concurrent harvest/QC/event writes on the same
+     * batch are serialized. The caller must run inside an active transaction.
      */
-    public Batch findByIdForUpdate(Long id) {
-        return em.find(Batch.class, id, LockModeType.PESSIMISTIC_WRITE);
-    }
+    Batch findByIdForUpdate(Long id);
 
-    public Batch merge(Batch batch) {
-        return em.merge(batch);
-    }
+    Batch findByBatchCode(String batchCode);
 
-    /**
-     * Đếm số phân công đang hoạt động giữa một người dùng và một lô, dùng để cấp quyền cho người dùng
-     * không phải kỹ sư.
-     */
-    public long countActiveAssignment(Long batchId, Long userId) {
-        return em.createQuery(
-                        "select count(a) from BatchAssignment a where a.batch.id = :batchId and a.user.id = :userId and a.isActive = true",
-                        Long.class)
-                .setParameter("batchId", batchId)
-                .setParameter("userId", userId)
-                .getSingleResult();
-    }
+    Batch merge(Batch batch);
+
+    void persist(Batch batch);
+
+    Boolean existsByBatchCode(String batchCode);
+
+    Long countEvents(Long batchId);
+
+    Long findPollinationDate(Long batchId);
+
+    Map<Long, Long> findPollinationDates(List<Long> batchIds);
+
+    List<BatchAssignment> findAssignments(Long batchId);
+
+    Map<Long, Long> countAssignmentsByBatchIds(List<Long> batchIds);
+
+    Boolean isAssigned(Long batchId, Long userId);
+
+    List<User> findAssignedWorkerPage(Long batchId, Long lastIndex, int limit);
+
+    List<Long> findAssignedUserIds(Long batchId);
+
+    void removeAssignments(Long batchId, List<Long> userIds);
+
+    void persistAssignment(BatchAssignment assignment);
 }

@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend;
 
+import jakarta.security.enterprise.authentication.mechanism.http.BasicAuthenticationMechanismDefinition;
 import jakarta.ws.rs.ApplicationPath;
 import jakarta.ws.rs.core.Application;
 import org.eclipse.microprofile.openapi.annotations.OpenAPIDefinition;
@@ -11,6 +12,7 @@ import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement
 import org.eclipse.microprofile.openapi.annotations.security.SecurityScheme;
 import org.eclipse.microprofile.openapi.annotations.security.SecuritySchemes;
 
+@BasicAuthenticationMechanismDefinition(realmName = "myapp")
 @ApplicationPath("/api")
 @OpenAPIDefinition(
         info = @Info(

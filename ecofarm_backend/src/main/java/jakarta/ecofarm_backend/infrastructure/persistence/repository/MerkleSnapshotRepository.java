@@ -1,52 +1,18 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.repository;
 
-import jakarta.ejb.Stateless;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.TypedQuery;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.MerkleSnapshot;
 
 import java.util.List;
 
-import jakarta.ecofarm_backend.infrastructure.persistence.entity.MerkleSnapshot;
+public interface MerkleSnapshotRepository {
+    void persist(MerkleSnapshot snapshot);
 
-@Stateless
-public class MerkleSnapshotRepository {
+    void updateLeavesJson(Long snapshotId, String leavesJson);
 
-    @PersistenceContext
-    private EntityManager em;
+    MerkleSnapshot findById(Long id);
 
-    public void persist(MerkleSnapshot snapshot) {
-        em.persist(snapshot);
-    }
+    List<MerkleSnapshot> findAll();
 
-    public void updateLeavesJson(Long snapshotId, String leavesJson) {
-        em.flush();
-        em.createNativeQuery("UPDATE merkle_snapshots SET leaves = CAST(:leaves AS json), is_active = true, version = COALESCE(version, 1) WHERE id = :id")
-                .setParameter("leaves", leavesJson)
-                .setParameter("id", snapshotId)
-                .executeUpdate();
-    }
+    MerkleSnapshot findByBatchId(Long batchId);
 
-    public MerkleSnapshot findById(Long id) {
-        return em.find(MerkleSnapshot.class, id);
-    }
-
-    public List<MerkleSnapshot> findAll() {
-        TypedQuery<MerkleSnapshot> q = em.createQuery("select s from MerkleSnapshot s", MerkleSnapshot.class);
-        return q.getResultList();
-    }
-
-    public MerkleSnapshot findByBatchId(Long batchId) {
-        TypedQuery<MerkleSnapshot> q = em.createQuery(
-            "select s from MerkleSnapshot s where s.batch.id = :batchId order by s.id desc",
-            MerkleSnapshot.class);
-        q.setParameter("batchId", batchId);
-        List<MerkleSnapshot> results = q.getResultList();
-        return results.isEmpty() ? null : results.get(0);
-    }
-
-    public MerkleSnapshot findLatest() {
-        List<MerkleSnapshot> all = findAll();
-        return all.isEmpty() ? null : all.get(all.size() - 1);
-    }
 }

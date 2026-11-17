@@ -1,4 +1,27 @@
 package jakarta.ecofarm_backend.modules.batch.facade;
 
+import jakarta.ecofarm_backend.common.dto.request.PageCriteria;
+import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
+import jakarta.ecofarm_backend.common.dto.response.CursorPageResponse;
+import jakarta.ecofarm_backend.common.dto.request.AssignWorkersRequest;
+import jakarta.ecofarm_backend.common.dto.response.BatchDetailResponse;
+import jakarta.ecofarm_backend.common.dto.response.BatchListItemResponse;
+import jakarta.ecofarm_backend.common.dto.request.CreateBatchRequest;
+import jakarta.ecofarm_backend.common.dto.response.WorkerSummaryResponse;
+
 public interface BatchFacade {
+
+    BaseResponse<CursorPageResponse<BatchListItemResponse>> findBatchesByCriteria(PageCriteria criteria);
+
+    BaseResponse<BatchDetailResponse> findBatchDetail(Long batchId);
+
+    BaseResponse<BatchDetailResponse> createBatch(CreateBatchRequest request);
+
+    BaseResponse<CursorPageResponse<WorkerSummaryResponse>> findBatchWorkers(Long lastIndex);
+
+    BaseResponse<CursorPageResponse<WorkerSummaryResponse>> findAssignedWorkersByBatchId(Long batchId, Long lastIndex);
+
+    BaseResponse<Boolean> addWorkers(Long batchId, AssignWorkersRequest request);
+
+    BaseResponse<Boolean> removeWorkers(Long batchId, AssignWorkersRequest request);
 }

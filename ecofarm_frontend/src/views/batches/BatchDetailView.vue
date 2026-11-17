@@ -1,80 +1,89 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import SoftBadge from '@/components/common/SoftBadge.vue'
 import BatchLogPanel from '@/components/log/BatchLogPanel.vue'
 import QualityPanel from '@/components/quality/QualityPanel.vue'
-import {
-  useAssignWorkersMutation,
-  useBatchLookupQuery,
-  useBatchQuery,
-} from '@/composables/useBatches'
-import { useUserStore } from '@/stores'
+import { useBatchQuery } from '@/composables/useBatches'
+import { useAssignedWorkersStore, useUserStore, useWorkerLookupStore } from '@/stores'
 import {
   ALLOWED_NEXT,
   STATUS_META,
   formatDate,
-  isLocked,
   type BatchStatus,
   type Problem,
+  type WorkerSummary,
 } from '@/api/types/batch'
 
 const route = useRoute()
-const router = useRouter()
 const userStore = useUserStore()
+const assignedStore = useAssignedWorkersStore()
+const workerStore = useWorkerLookupStore()
 
 const id = computed(() => Number(route.params.id) || 0)
 const { data, isLoading, isError, error, refetch } = useBatchQuery(id)
-const lookups = useBatchLookupQuery()
-const assignMutation = useAssignWorkersMutation()
+
+const assigned = computed(() => assignedStore.workers)
 
 const roles = computed(() => userStore.user?.role ?? [])
 const isEngineer = computed(() => roles.value.includes('ENGINEER'))
 const isAdmin = computed(() => roles.value.includes('ADMIN'))
 const canReviewLog = computed(() => isEngineer.value || isAdmin.value)
+const canManage = computed(() => isEngineer.value || isAdmin.value)
 
-const problem = computed(() => error.value as (Error & Partial<Problem>) | null)
+const problem = computed(() => error.value as (Error & { status?: number } & Partial<Problem>) | null)
 const errorStatus = computed(() => problem.value?.status ?? 0)
-const locked = computed(() => (data.value ? isLocked(data.value.status) : false))
+const locked = computed(() => data.value?.locked ?? false)
 const statusMeta = computed(() => (data.value ? STATUS_META[data.value.status] : null))
 const nextStatuses = computed<BatchStatus[]>(() =>
   data.value ? (ALLOWED_NEXT[data.value.status] ?? []) : [],
 )
 
-const warn = ref(route.query.warn === 'assign')
-const clearWarn = () => {
-  warn.value = false
-  const query = { ...route.query }
-  delete query.warn
-  router.replace({ query })
+const showAdd = ref(false)
+const addSelected = ref<number[]>([])
+const addError = ref('')
+const addPending = ref(false)
+const removePending = ref(false)
+const workerOptions = computed(() => workerStore.workers)
+
+onMounted(() => {
+  if (id.value) assignedStore.load(id.value)
+})
+
+watch(id, (value) => {
+  if (value) assignedStore.load(value)
+})
+
+const openAdd = () => {
+  addSelected.value = []
+  addError.value = ''
+  showAdd.value = true
+  workerStore.load()
 }
 
-const showAssign = ref(false)
-const selected = ref<number[]>([])
-const assignError = ref('')
-const workerOptions = computed(() => lookups.data.value?.workers ?? [])
-
-const openAssign = () => {
-  selected.value = [...(data.value?.assignedUserIds ?? [])]
-  assignError.value = ''
-  showAssign.value = true
+const saveAdd = async () => {
+  if (!data.value || addSelected.value.length === 0) return
+  addError.value = ''
+  addPending.value = true
+  try {
+    await assignedStore.add(addSelected.value)
+    showAdd.value = false
+    addSelected.value = []
+  } catch (err) {
+    addError.value = (err as Problem)?.message || 'Không phân công được. Vui lòng thử lại.'
+  } finally {
+    addPending.value = false
+  }
 }
 
-const saveAssign = () => {
+const removeWorker = async (worker: WorkerSummary) => {
   if (!data.value) return
-  assignError.value = ''
-  assignMutation.mutate(
-    { batchId: data.value.id, userIds: selected.value },
-    {
-      onSuccess: () => {
-        showAssign.value = false
-        refetch()
-      },
-      onError: (err) => {
-        assignError.value = (err as unknown as Problem)?.detail || 'Không phân công được. Vui lòng thử lại.'
-      },
-    },
-  )
+  removePending.value = true
+  try {
+    await assignedStore.remove(worker.id)
+  } finally {
+    removePending.value = false
+  }
 }
 </script>
 
@@ -109,11 +118,6 @@ const saveAssign = () => {
     </template>
 
     <template v-else-if="data">
-      <BAlert v-if="warn" variant="warning" dismissible @close="clearWarn">
-        <FontAwesomeIcon icon="circle-exclamation" aria-hidden="true" />
-        Đã tạo lô nhưng chưa phân công được công nhân. Vui lòng thử lại ở trang chi tiết.
-      </BAlert>
-
       <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
         <h1 class="h4 fw-bold mb-0">{{ data.batchCode }}</h1>
         <SoftBadge v-if="statusMeta" :variant="statusMeta.tone" :label="statusMeta.label" />
@@ -135,11 +139,11 @@ const saveAssign = () => {
         <div class="row g-3">
           <div class="col-12 col-md-6">
             <div class="small text-body-secondary"><FontAwesomeIcon icon="warehouse" aria-hidden="true" /> Nhà màng</div>
-            <div class="fw-semibold">{{ data.greenhouse.code }} · {{ data.greenhouse.name }}</div>
+            <div class="fw-semibold">{{ data.greenhouseCode }} · {{ data.greenhouseName }}</div>
           </div>
           <div class="col-12 col-md-6">
             <div class="small text-body-secondary"><FontAwesomeIcon icon="seedling" aria-hidden="true" /> Giống</div>
-            <div class="fw-semibold">{{ data.variety.name }}</div>
+            <div class="fw-semibold">{{ data.varietyName }}</div>
           </div>
           <div class="col-6 col-md-3">
             <div class="small text-body-secondary"><FontAwesomeIcon icon="calendar-days" aria-hidden="true" /> Ngày xuống giống</div>
@@ -161,10 +165,6 @@ const saveAssign = () => {
             <div class="small text-body-secondary"><FontAwesomeIcon icon="list-check" aria-hidden="true" /> Số sự kiện</div>
             <div>{{ data.eventCount }}</div>
           </div>
-          <div class="col-6 col-md-3">
-            <div class="small text-body-secondary"><FontAwesomeIcon icon="clock-rotate-left" aria-hidden="true" /> Chờ duyệt</div>
-            <div>{{ data.pendingApprovalCount }}</div>
-          </div>
         </div>
       </section>
 
@@ -172,26 +172,47 @@ const saveAssign = () => {
         <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
           <p class="fw-semibold mb-0"><FontAwesomeIcon icon="users" aria-hidden="true" /> Công nhân phụ trách</p>
           <BButton
-            v-if="isEngineer && !locked"
+            v-if="canManage && !locked"
             size="sm"
             variant="outline-primary"
-            @click="openAssign"
+            @click="openAdd"
           >
-            <FontAwesomeIcon icon="pen-to-square" aria-hidden="true" /> Phân công
+            <FontAwesomeIcon icon="plus" aria-hidden="true" /> Thêm công nhân
           </BButton>
         </div>
         <div class="d-flex flex-wrap gap-2">
-          <span v-if="data.assignedWorkerNames.length === 0" class="small text-body-secondary">
+          <span v-if="assigned.length === 0" class="small text-body-secondary">
             <FontAwesomeIcon icon="user-group" aria-hidden="true" /> Chưa phân công công nhân
           </span>
           <span
-            v-for="name in data.assignedWorkerNames"
-            :key="name"
-            class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-semibold"
+            v-for="u in assigned"
+            :key="u.id"
+            class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-semibold d-inline-flex align-items-center gap-1"
           >
-            {{ name }}
+            {{ u.fullName }}
+            <BButton
+              v-if="canManage && !locked"
+              size="sm"
+              variant="link"
+              class="p-0 text-primary-emphasis text-decoration-none"
+              :disabled="removePending"
+              :aria-label="`Gỡ ${u.fullName}`"
+              @click="removeWorker(u)"
+            >
+              &times;
+            </BButton>
           </span>
         </div>
+        <BButton
+          v-if="assignedStore.hasMore"
+          size="sm"
+          variant="outline-secondary"
+          class="mt-2"
+          :disabled="assignedStore.loading"
+          @click="assignedStore.loadMore()"
+        >
+          {{ assignedStore.loading ? 'Đang tải...' : 'Tải thêm' }}
+        </BButton>
       </section>
 
       <section class="border rounded-3 bg-body p-3 p-lg-4 mb-3">
@@ -228,22 +249,32 @@ const saveAssign = () => {
       <QualityPanel :batch-id="data.id" :can-qc="canReviewLog" :batch-status="data.status" />
     </template>
 
-    <BModal v-model="showAssign" title="Phân công công nhân">
+    <BModal v-model="showAdd" title="Thêm công nhân">
       <template #title>
-        <FontAwesomeIcon icon="pen-to-square" aria-hidden="true" /> Phân công công nhân
+        <FontAwesomeIcon icon="user-plus" aria-hidden="true" /> Thêm công nhân
       </template>
-      <BAlert v-if="assignError" variant="danger">{{ assignError }}</BAlert>
-      <label class="form-label small fw-semibold mb-1" for="assign-workers">Công nhân phụ trách</label>
-      <select id="assign-workers" v-model="selected" class="form-select" multiple size="5">
+      <BAlert v-if="addError" variant="danger">{{ addError }}</BAlert>
+      <label class="form-label small fw-semibold mb-1" for="add-workers">Công nhân phụ trách</label>
+      <select id="add-workers" v-model="addSelected" class="form-select" multiple size="5">
         <option v-for="w in workerOptions" :key="w.id" :value="w.id">{{ w.fullName }}</option>
       </select>
+      <BButton
+        v-if="workerStore.hasMore"
+        size="sm"
+        variant="outline-secondary"
+        class="mt-2"
+        :disabled="workerStore.loading"
+        @click="workerStore.loadMore()"
+      >
+        {{ workerStore.loading ? 'Đang tải...' : 'Tải thêm' }}
+      </BButton>
       <template #footer>
-        <BButton variant="outline-secondary" :disabled="assignMutation.isPending.value" @click="showAssign = false">
+        <BButton variant="outline-secondary" :disabled="addPending" @click="showAdd = false">
           Hủy
         </BButton>
-        <BButton variant="primary" :disabled="assignMutation.isPending.value" @click="saveAssign">
-          <FontAwesomeIcon icon="pen-to-square" aria-hidden="true" />
-          {{ assignMutation.isPending.value ? 'Đang lưu...' : 'Lưu' }}
+        <BButton variant="primary" :disabled="addPending" @click="saveAdd">
+          <FontAwesomeIcon icon="plus" aria-hidden="true" />
+          {{ addPending ? 'Đang lưu...' : 'Thêm' }}
         </BButton>
       </template>
     </BModal>

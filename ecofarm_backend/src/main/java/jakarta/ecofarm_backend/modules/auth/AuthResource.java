@@ -1,5 +1,8 @@
 package jakarta.ecofarm_backend.modules.auth;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.ecofarm_backend.common.anotation.RequireRoles;
 import jakarta.ecofarm_backend.common.constant.SecurityConstant;
 import jakarta.ecofarm_backend.common.dto.request.ChangePasswordRequest;
 import jakarta.ecofarm_backend.common.dto.request.ForgotPasswordRequest;
@@ -86,4 +89,9 @@ public class AuthResource {
         return this.authFacade.changePassword(request);
     }
 
+    @POST
+    @Path("/logout")
+    public BaseResponse<Boolean> logout(){
+        return this.authFacade.logout();
+    }
 }
