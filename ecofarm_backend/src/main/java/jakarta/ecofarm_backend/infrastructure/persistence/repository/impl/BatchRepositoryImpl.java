@@ -7,6 +7,7 @@ import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.BatchRepository;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 
@@ -61,6 +62,11 @@ public class BatchRepositoryImpl implements BatchRepository {
                 .getResultStream()
                 .findFirst()
                 .orElse(null);
+    }
+
+    @Override
+    public Batch findByIdForUpdate(Long id) {
+        return em.find(Batch.class, id, LockModeType.PESSIMISTIC_WRITE);
     }
 
     @Override

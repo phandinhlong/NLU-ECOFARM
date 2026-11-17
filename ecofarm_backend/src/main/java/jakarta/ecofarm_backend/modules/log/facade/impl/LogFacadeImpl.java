@@ -183,7 +183,7 @@ public class LogFacadeImpl implements LogFacade {
         if (batchRepository.findById(batchId) == null) throw new EntityNotFoundException(ErrorCode.BATCH_NOT_FOUND);
         if (!engineerOrAdmin && workerOrFarmer) {
             if (actorId == null) throw new PermissionDeniedException(ErrorCode.PERMISSION_DENIED);
-            if (batchRepository.countActiveAssignment(batchId, actorId) == 0) throw new PermissionDeniedException(ErrorCode.PERMISSION_DENIED);
+            if (!batchRepository.isAssigned(batchId, actorId)) throw new PermissionDeniedException(ErrorCode.PERMISSION_DENIED);
         }
         int safePage = Math.max(0, page);
         int safeSize = Math.max(1, Math.min(100, size));
@@ -205,7 +205,7 @@ public class LogFacadeImpl implements LogFacade {
     private void requireAssignedOrEngineer(Long batchId, Long actorId, boolean engineerOrAdmin) {
         if (engineerOrAdmin) return;
         if (actorId == null) throw new PermissionDeniedException(ErrorCode.PERMISSION_DENIED);
-        if (batchRepository.countActiveAssignment(batchId, actorId) == 0) throw new PermissionDeniedException(ErrorCode.PERMISSION_DENIED);
+        if (!batchRepository.isAssigned(batchId, actorId)) throw new PermissionDeniedException(ErrorCode.PERMISSION_DENIED);
     }
 
     private User requireUser(Long actorId) {

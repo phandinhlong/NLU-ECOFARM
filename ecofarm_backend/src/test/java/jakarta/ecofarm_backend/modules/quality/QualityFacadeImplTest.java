@@ -13,6 +13,8 @@ import jakarta.ecofarm_backend.infrastructure.persistence.repository.BatchReposi
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.CultivationEventRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.OutboxEventRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.QcRecordRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.StubBatchRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.StubOutboxEventRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.UserRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.VarietyRepository;
 import jakarta.ecofarm_backend.modules.quality.QualityRequests.QcRequest;
@@ -39,7 +41,7 @@ class QualityFacadeImplTest {
 
     private static final long HARVESTED_AT = 1_000_000_000_000L;
 
-    static class FakeBatchRepo extends BatchRepository {
+    static class FakeBatchRepo extends StubBatchRepository {
         Batch batch;
         boolean failOnUnlockedRead;
         FakeBatchRepo(Batch b) { this.batch = b; }
@@ -50,7 +52,6 @@ class QualityFacadeImplTest {
             return batch;
         }
         @Override public Batch merge(Batch b) { return b; }
-        @Override public long countActiveAssignment(Long batchId, Long userId) { return 1; }
     }
 
     static class FakeEventRepo extends CultivationEventRepository {
@@ -78,6 +79,7 @@ class QualityFacadeImplTest {
         @Override public Boolean hasUserByEmail(String email) { return false; }
         @Override public User save(User user) { return user; }
         @Override public Optional<User> findByEmail(String email) { return Optional.empty(); }
+        @Override public List<User> findActiveWorkerPage(Long lastIndex, int limit) { return List.of(); }
     }
 
     private QualityFacadeImpl facade(Batch batch, Variety variety, List<CultivationEvent> events, FakeQcRepo qc) {
@@ -86,7 +88,7 @@ class QualityFacadeImplTest {
                 new FakeEventRepo(events),
                 qc,
                 new FakeVarietyRepo(variety),
-                new OutboxEventRepository(),
+                new StubOutboxEventRepository() {},
                 new FakeUserRepo());
     }
 
@@ -138,7 +140,7 @@ class QualityFacadeImplTest {
         batchRepo.failOnUnlockedRead = true;
         QualityFacadeImpl f = new QualityFacadeImpl(
                 batchRepo, new FakeEventRepo(List.of()), qc,
-                new FakeVarietyRepo(variety(10.0, 7)), new OutboxEventRepository(), new FakeUserRepo());
+                new FakeVarietyRepo(variety(10.0, 7)), new StubOutboxEventRepository() {}, new FakeUserRepo());
         BaseResponse<List<QcResponse>> res = f.listQc(1L);
         assertNotNull(res.getData());
     }

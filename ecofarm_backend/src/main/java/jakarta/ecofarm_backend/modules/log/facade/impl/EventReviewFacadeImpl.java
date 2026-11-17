@@ -160,7 +160,7 @@ public class EventReviewFacadeImpl implements EventReviewFacade {
     /** Đính chính chỉ cho người được phân công còn hiệu lực của lô, tránh sửa sự kiện của lô khác. */
     private void requireAssignedToBatch(Long batchId, Long actorId) {
         if (actorId == null) throw new PermissionDeniedException(ErrorCode.PERMISSION_DENIED);
-        if (batchRepository.countActiveAssignment(batchId, actorId) == 0) {
+        if (!batchRepository.isAssigned(batchId, actorId)) {
             throw new PermissionDeniedException(ErrorCode.PERMISSION_DENIED);
         }
     }

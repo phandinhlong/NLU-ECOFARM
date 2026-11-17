@@ -10,6 +10,8 @@ import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.BatchRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.CultivationEventRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.OutboxEventRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.StubBatchRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.StubOutboxEventRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.UserRepository;
 import jakarta.ecofarm_backend.modules.log.facade.impl.EventReviewFacadeImpl;
 import org.junit.jupiter.api.Test;
@@ -43,17 +45,17 @@ class EventReviewFacadeImplTest {
         @Override public void persist(CultivationEvent event) { persisted.add(event); }
     }
 
-    /** Khóa batch không có tác dụng phụ trong test; assignment mặc định có hiệu lực (trả 1). */
-    static class FakeBatchRepo extends BatchRepository {
+    /** Khóa batch không có tác dụng phụ trong test; mặc định là đã được phân công (true). */
+    static class FakeBatchRepo extends StubBatchRepository {
         final Batch batch;
-        final long assignment;
-        FakeBatchRepo(Batch batch) { this(batch, 1); }
-        FakeBatchRepo(Batch batch, long assignment) { this.batch = batch; this.assignment = assignment; }
+        final boolean assigned;
+        FakeBatchRepo(Batch batch) { this(batch, true); }
+        FakeBatchRepo(Batch batch, boolean assigned) { this.batch = batch; this.assigned = assigned; }
         @Override public Batch findByIdForUpdate(Long id) { return batch; }
-        @Override public long countActiveAssignment(Long batchId, Long userId) { return assignment; }
+        @Override public Boolean isAssigned(Long batchId, Long userId) { return assigned; }
     }
 
-    static class NoopOutbox extends OutboxEventRepository {
+    static class NoopOutbox extends StubOutboxEventRepository {
         @Override public void persist(OutboxEvent event) { /* không làm gì trong test */ }
     }
 
@@ -63,6 +65,7 @@ class EventReviewFacadeImplTest {
         @Override public Boolean hasUserByEmail(String email) { return false; }
         @Override public User save(User user) { return user; }
         @Override public Optional<User> findByEmail(String email) { return Optional.empty(); }
+        @Override public List<User> findActiveWorkerPage(Long lastIndex, int limit) { return List.of(); }
     }
 
     private static Batch harvestedBatch() {
@@ -176,7 +179,7 @@ class EventReviewFacadeImplTest {
         var payload = m.createObjectNode().put("schemaVersion", 1);
         var req = new jakarta.ecofarm_backend.modules.log.EventRequests.AmendRequest(
                 "cid-amend-2", 123L, payload, "sửa sai số liệu", null);
-        EventReviewFacadeImpl facade = facade(new FakeBatchRepo(batch, 0), repo);
+        EventReviewFacadeImpl facade = facade(new FakeBatchRepo(batch, false), repo);
         assertThrows(PermissionDeniedException.class, () -> facade.amend(10L, req, 99L, true));
         assertEquals(0, repo.persisted.size());
         assertEquals(EventStatus.CONFIRMED.name(), prior.getStatus());

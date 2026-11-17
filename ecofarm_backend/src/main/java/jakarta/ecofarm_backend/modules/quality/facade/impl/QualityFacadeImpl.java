@@ -234,7 +234,7 @@ public class QualityFacadeImpl implements QualityFacade {
     private void requireAssignedOrEngineer(Long batchId, Long actorId, boolean engineerOrAdmin) {
         if (engineerOrAdmin) return;
         if (actorId == null) throw new PermissionDeniedException(ErrorCode.PERMISSION_DENIED);
-        if (batchRepository.countActiveAssignment(batchId, actorId) == 0) throw new PermissionDeniedException(ErrorCode.PERMISSION_DENIED);
+        if (!batchRepository.isAssigned(batchId, actorId)) throw new PermissionDeniedException(ErrorCode.PERMISSION_DENIED);
     }
 
     private User requireUser(Long actorId) {

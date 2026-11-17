@@ -6,6 +6,8 @@ import jakarta.ecofarm_backend.infrastructure.persistence.repository.BatchReposi
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.CultivationEventRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.EventAttachmentRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.OutboxEventRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.StubBatchRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.StubOutboxEventRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.UserRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.common.exception.BadRequestException;
@@ -40,9 +42,12 @@ class LogFacadeImplTest {
     }
 
     /** Batch ACTIVE (không khóa ghi) để luồng upload vượt qua các kiểm tra trước khi lưu DB. */
-    static class FakeBatchRepo extends BatchRepository {
+    static class FakeBatchRepo extends StubBatchRepository {
         @Override public Batch findByIdForUpdate(Long id) { return Batch.builder().id(id).status("ACTIVE").build(); }
-        @Override public long countActiveAssignment(Long batchId, Long userId) { return 1; }
+        @Override public Boolean isAssigned(Long batchId, Long userId) { return true; }
+    }
+
+    static class NoopOutbox extends StubOutboxEventRepository {
     }
 
     /** Luôn ném lỗi khi lưu bản ghi đính kèm, mô phỏng transaction DB thất bại sau khi đã ghi tệp. */
@@ -62,6 +67,7 @@ class LogFacadeImplTest {
         @Override public Boolean hasUserByEmail(String email) { return false; }
         @Override public User save(User user) { return user; }
         @Override public Optional<User> findByEmail(String email) { return Optional.empty(); }
+        @Override public List<User> findActiveWorkerPage(Long lastIndex, int limit) { return List.of(); }
     }
 
     @Test
@@ -71,7 +77,7 @@ class LogFacadeImplTest {
                 new FakeBatchRepo(),
                 new CultivationEventRepository(),
                 new FailingAttachmentRepo(),
-                new OutboxEventRepository(),
+                new NoopOutbox(),
                 new StubUserRepo(),
                 storage);
 
@@ -92,7 +98,7 @@ class LogFacadeImplTest {
                 new FakeBatchRepo(),
                 new CultivationEventRepository(),
                 new FailingAttachmentRepo(),
-                new OutboxEventRepository(),
+                new NoopOutbox(),
                 new StubUserRepo(),
                 new RecordingStorage());
         assertThrows(BadRequestException.class,
