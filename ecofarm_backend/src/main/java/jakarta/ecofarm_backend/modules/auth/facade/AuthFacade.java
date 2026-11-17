@@ -28,4 +28,6 @@ public interface AuthFacade {
     Response verifyForgotPassword(String token);
 
     BaseResponse<Boolean> changePassword(ChangePasswordRequest request);
+
+    BaseResponse<Boolean> logout();
 }
