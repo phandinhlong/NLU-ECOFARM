@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.infrastructure.service.impl;
 
+import jakarta.ecofarm_backend.common.dto.request.PageCriteria;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.BatchAssignment;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
