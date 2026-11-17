@@ -116,7 +116,7 @@ public class BatchFacadeImpl implements BatchFacade {
     public BaseResponse<BatchDetailResponse> create(CreateBatchRequest request) {
         Long actorId = resolveActorId();
         String ipAddr = resolveClientIp();
-        User actor = requireEngineer(actorId);
+        User actor = requireEngineerOrAdmin(actorId);
 
         Greenhouse greenhouse = greenhouseRepository.findById(request.getGreenhouseId());
         if (greenhouse == null) {
@@ -178,7 +178,7 @@ public class BatchFacadeImpl implements BatchFacade {
     public BaseResponse<List<WorkerSummaryResponse>> assignWorkers(Long batchId, AssignWorkersRequest request) {
         Long actorId = resolveActorId();
         String ipAddr = resolveClientIp();
-        requireEngineer(actorId);
+        requireEngineerOrAdmin(actorId);
 
         Batch batch = batchService.findById(batchId);
         if (batch == null) {
@@ -304,9 +304,9 @@ public class BatchFacadeImpl implements BatchFacade {
                 .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND));
     }
 
-    private User requireEngineer(Long actorId) {
+    private User requireEngineerOrAdmin(Long actorId) {
         User actor = requireActor(actorId);
-        if (!hasRole(actor, RoleEnum.ENGINEER)) {
+        if (!hasRole(actor, RoleEnum.ENGINEER) && !hasRole(actor, RoleEnum.ADMIN)) {
             throw new PermissionDeniedException(ErrorCode.PERMISSION_DENIED);
         }
         return actor;

@@ -19,7 +19,7 @@ import java.util.List;
 
 @Path("/v1/varieties")
 @Stateless
-@RequireRoles({"ADMIN", "ENGINEER"})
+@RequireRoles({"ADMIN", "ENGINEER", "QUALITY_CONTROL"})
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class VarietyResource {
