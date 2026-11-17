@@ -8,6 +8,7 @@ import jakarta.ecofarm_backend.common.exception.ConflictException;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Greenhouse;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.GreenhouseRepository;
 import jakarta.ecofarm_backend.modules.catalog.dto.GreenhouseRequest;
+import jakarta.ecofarm_backend.modules.catalog.dto.GreenhouseResponse;
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -28,7 +29,7 @@ public class GreenhouseResource {
     private GreenhouseRepository greenhouseRepository;
 
     @GET
-    public BaseResponse<PageResponse<Greenhouse>> list(
+    public BaseResponse<PageResponse<GreenhouseResponse>> list(
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("20") int size,
             @QueryParam("status") String status,
@@ -37,18 +38,22 @@ public class GreenhouseResource {
         int safePage = Math.max(page, 0);
 
         long total = greenhouseRepository.countActive(status, q);
-        List<Greenhouse> content = greenhouseRepository.findPage(safePage, safeSize, status, q);
+        List<GreenhouseResponse> content = greenhouseRepository
+                .findPage(safePage, safeSize, status, q)
+                .stream()
+                .map(GreenhouseResponse::from)
+                .toList();
         return BaseResponse.build(new PageResponse<>(content, safePage, safeSize, total));
     }
 
     @GET
     @Path("/{id}")
-    public BaseResponse<Greenhouse> detail(@PathParam("id") Long id) {
+    public BaseResponse<GreenhouseResponse> detail(@PathParam("id") Long id) {
         Greenhouse greenhouse = greenhouseRepository.findById(id);
         if (greenhouse == null) {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
         }
-        return BaseResponse.build(greenhouse);
+        return BaseResponse.build(GreenhouseResponse.from(greenhouse));
     }
 
     @POST
@@ -61,12 +66,14 @@ public class GreenhouseResource {
         applyRequest(greenhouse, request);
 
         greenhouseRepository.persist(greenhouse);
-        return Response.status(Response.Status.CREATED).entity(BaseResponse.build(greenhouse)).build();
+        return Response.status(Response.Status.CREATED)
+                .entity(BaseResponse.build(GreenhouseResponse.from(greenhouse)))
+                .build();
     }
 
     @PUT
     @Path("/{id}")
-    public BaseResponse<Greenhouse> update(@PathParam("id") Long id, @Valid GreenhouseRequest request) {
+    public BaseResponse<GreenhouseResponse> update(@PathParam("id") Long id, @Valid GreenhouseRequest request) {
         Greenhouse greenhouse = greenhouseRepository.findById(id);
         if (greenhouse == null) {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
@@ -87,7 +94,7 @@ public class GreenhouseResource {
         applyRequest(greenhouse, request);
         Greenhouse updated = greenhouseRepository.merge(greenhouse);
         updated.setBatchCount(greenhouseRepository.countBatches(id));
-        return BaseResponse.build(updated);
+        return BaseResponse.build(GreenhouseResponse.from(updated));
     }
 
     private void applyRequest(Greenhouse greenhouse, GreenhouseRequest request) {

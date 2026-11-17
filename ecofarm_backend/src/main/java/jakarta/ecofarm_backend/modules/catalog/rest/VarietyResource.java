@@ -8,6 +8,7 @@ import jakarta.ecofarm_backend.common.exception.ConflictException;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Variety;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.VarietyRepository;
 import jakarta.ecofarm_backend.modules.catalog.dto.VarietyRequest;
+import jakarta.ecofarm_backend.modules.catalog.dto.VarietyResponse;
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -28,7 +29,7 @@ public class VarietyResource {
     private VarietyRepository varietyRepository;
 
     @GET
-    public BaseResponse<PageResponse<Variety>> list(
+    public BaseResponse<PageResponse<VarietyResponse>> list(
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("20") int size,
             @QueryParam("q") String q) {
@@ -36,18 +37,22 @@ public class VarietyResource {
         int safePage = Math.max(page, 0);
 
         long total = varietyRepository.countActive(q);
-        List<Variety> content = varietyRepository.findPage(safePage, safeSize, q);
+        List<VarietyResponse> content = varietyRepository
+                .findPage(safePage, safeSize, q)
+                .stream()
+                .map(VarietyResponse::from)
+                .toList();
         return BaseResponse.build(new PageResponse<>(content, safePage, safeSize, total));
     }
 
     @GET
     @Path("/{id}")
-    public BaseResponse<Variety> detail(@PathParam("id") Long id) {
+    public BaseResponse<VarietyResponse> detail(@PathParam("id") Long id) {
         Variety variety = varietyRepository.findById(id);
         if (variety == null) {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
         }
-        return BaseResponse.build(variety);
+        return BaseResponse.build(VarietyResponse.from(variety));
     }
 
     @POST
@@ -60,12 +65,14 @@ public class VarietyResource {
         applyRequest(variety, request);
 
         varietyRepository.persist(variety);
-        return Response.status(Response.Status.CREATED).entity(BaseResponse.build(variety)).build();
+        return Response.status(Response.Status.CREATED)
+                .entity(BaseResponse.build(VarietyResponse.from(variety)))
+                .build();
     }
 
     @PUT
     @Path("/{id}")
-    public BaseResponse<Variety> update(@PathParam("id") Long id, @Valid VarietyRequest request) {
+    public BaseResponse<VarietyResponse> update(@PathParam("id") Long id, @Valid VarietyRequest request) {
         Variety variety = varietyRepository.findById(id);
         if (variety == null) {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
@@ -86,7 +93,7 @@ public class VarietyResource {
         applyRequest(variety, request);
         Variety updated = varietyRepository.merge(variety);
         updated.setBatchCount(varietyRepository.countBatches(id));
-        return BaseResponse.build(updated);
+        return BaseResponse.build(VarietyResponse.from(updated));
     }
 
     private void applyRequest(Variety variety, VarietyRequest request) {
