@@ -19,13 +19,12 @@ import jakarta.ecofarm_backend.infrastructure.persistence.entity.MerkleSnapshot;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.OutboxEvent;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.PackageEntity;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.QrCode;
-import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.AnchorRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.AuditLogRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.BatchRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.CultivationEventRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.MerkleSnapshotRepository;
-import jakarta.ecofarm_backend.infrastructure.persistence.repository.OutboxEventRepository;
+import jakarta.ecofarm_backend.infrastructure.service.OutboxEventService;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.PackageRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.QrCodeRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.UserRepository;
@@ -67,7 +66,7 @@ public class PackagingFacadeImpl implements PackagingFacade {
     private AnchorRepository anchorRepository;
 
     @Inject
-    private OutboxEventRepository outboxEventRepository;
+    private OutboxEventService outboxEventService;
 
     @Inject
     private AuditLogRepository auditLogRepository;
@@ -148,7 +147,7 @@ public class PackagingFacadeImpl implements PackagingFacade {
         // 5. Tạo OutboxEvent finalizeBatch trong cùng transaction
         String batchKey = batch.getBatchCode() != null ? batch.getBatchCode() : String.valueOf(batchId);
         String batchIdHash = Hash.sha3String(batchKey);
-        int nextSeq = outboxEventRepository.findNextSeqByBatchIdHash(batchIdHash);
+        int nextSeq = outboxEventService.findNextSeqByBatchIdHash(batchIdHash);
         String eventPayload = buildFinalizePayload(batch, snapshot, pkg, merkle.merkleRoot());
         OutboxEvent outbox = OutboxEvent.builder()
                 .batchIdHash(batchIdHash)
@@ -157,7 +156,7 @@ public class PackagingFacadeImpl implements PackagingFacade {
                 .status(OutboxEvent.OutboxStatus.PENDING)
                 .attempts(0)
                 .build();
-        outboxEventRepository.persist(outbox);
+        outboxEventService.persist(outbox);
 
         // 6. Ghi AuditLog
         auditLogRepository.persist(buildAuditLog(

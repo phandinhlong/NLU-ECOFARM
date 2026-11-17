@@ -1,0 +1,78 @@
+package jakarta.ecofarm_backend.infrastructure.persistence.repository.impl;
+
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.OutboxEventRepository;
+import jakarta.ejb.Stateless;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
+
+import java.util.List;
+
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.OutboxEvent;
+
+@Stateless
+public class OutboxEventRepositoryImpl implements OutboxEventRepository {
+
+    @PersistenceContext
+    private EntityManager em;
+
+    public void persist(OutboxEvent event) {
+        em.persist(event);
+    }
+
+    public OutboxEvent findById(Long id) {
+        return em.find(OutboxEvent.class, id);
+    }
+
+    public List<OutboxEvent> findPending() {
+        TypedQuery<OutboxEvent> q = em.createQuery(
+                "select e from OutboxEvent e where e.status = :status order by e.createdAt asc",
+                OutboxEvent.class);
+        q.setParameter("status", OutboxEvent.OutboxStatus.PENDING);
+        return q.getResultList();
+    }
+
+    public void incrementAttempts(OutboxEvent event) {
+        int attempts = event.getAttempts() + 1;
+        event.setAttempts(attempts);
+        event.setStatus(attempts >= 5 ? OutboxEvent.OutboxStatus.FAILED : OutboxEvent.OutboxStatus.PENDING);
+        if (event.getStatus() == OutboxEvent.OutboxStatus.PENDING) {
+            long nextAt = System.currentTimeMillis() + (1L << attempts) * 10000;
+            event.setNextAttemptAt(nextAt);
+        }
+        em.merge(event);
+    }
+
+    public void complete(OutboxEvent event) {
+        event.setStatus(OutboxEvent.OutboxStatus.SUCCESS);
+        em.merge(event);
+    }
+
+    public void markFailed(OutboxEvent event, String errorMsg) {
+        event.setStatus(OutboxEvent.OutboxStatus.FAILED);
+        int attempts = event.getAttempts() + 1;
+        event.setAttempts(attempts);
+        event.setNextAttemptAt(null);
+        em.merge(event);
+    }
+
+    public boolean existsProcessedByBatchIdHashAndSeq(String batchIdHash, int seq) {
+        TypedQuery<Long> q = em.createQuery(
+                "select count(e) from OutboxEvent e where e.batchIdHash = :bid and e.seq = :seq and e.status = :status",
+                Long.class);
+        q.setParameter("bid", batchIdHash);
+        q.setParameter("seq", seq);
+        q.setParameter("status", OutboxEvent.OutboxStatus.SUCCESS);
+        Long count = q.getSingleResult();
+        return count > 0;
+    }
+
+    public int findNextSeqByBatchIdHash(String batchIdHash) {
+        Integer maxSeq = em.createQuery(
+                        "select max(e.seq) from OutboxEvent e where e.batchIdHash = :bid",
+                        Integer.class)
+                .setParameter("bid", batchIdHash)
+                .getSingleResult();
+        return maxSeq != null ? maxSeq + 1 : 1;
+    }
+}
