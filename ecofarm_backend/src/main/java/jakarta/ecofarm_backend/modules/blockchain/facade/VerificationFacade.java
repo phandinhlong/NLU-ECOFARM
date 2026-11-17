@@ -5,6 +5,8 @@ import jakarta.ecofarm_backend.common.dto.response.VerifyResult;
 
 public interface VerificationFacade {
 
+    PublicTrace getPublicTrace(String code);
+
     PublicTrace getPublicTrace(String code, String clientIp, String userAgent);
 
     VerifyResult verifyTrace(String code);
