@@ -28,7 +28,22 @@ public enum ErrorCode {
     EXTRA_QR_REASON_REQUIRED(2006, "Reason is required when generating extra QR codes"),
     INVALID_SERIAL_RANGE(2007, "Invalid serial range"),
     PACKAGE_NOT_FOUND(2008, "Package not found for batch"),
-    OPTIMISTIC_LOCK_CONFLICT(2009, "Batch version conflict");
+    OPTIMISTIC_LOCK_CONFLICT(2009, "Batch version conflict"),
+    EVENT_NOT_FOUND(3001, "Cultivation event not found"),
+    ATTACHMENT_NOT_FOUND(3002, "Attachment not found"),
+    ATTACHMENT_NOT_IN_BATCH(3003, "Attachment does not belong to this batch"),
+    TOO_MANY_ATTACHMENTS(3004, "At most 5 attachments are allowed"),
+    ATTACHMENT_NOT_LINKABLE(3005, "Attachment does not exist or is already linked"),
+    INVALID_ATTACHMENT(3006, "Invalid attachment"),
+    UNSUPPORTED_EVENT_TYPE(3007, "Event type is not supported or cannot be recorded by client"),
+    REJECT_REASON_REQUIRED(3008, "A rejection reason is required"),
+    HARVEST_FIELDS_REQUIRED(3009, "clientEventId, harvestedAt and estimatedQuantity are required"),
+    HARVEST_QUANTITY_INVALID(3010, "estimatedQuantity must be positive"),
+    QC_FIELDS_REQUIRED(3011, "brix and avgWeightKg are required"),
+    QC_BRIX_OUT_OF_RANGE(3012, "brix out of range [0,30]"),
+    QC_AVG_WEIGHT_OUT_OF_RANGE(3013, "avgWeightKg out of range [0.1,20]"),
+    QC_MISSING_THRESHOLD(3014, "Variety thresholds (min Brix / isolation days) are not configured"),
+    QC_ISOLATION_NOT_ENOUGH(3015, "Isolation window before harvest is not satisfied");
 
     private final Integer code;
     private final String message;
