@@ -16,7 +16,7 @@ public class EntityNotFoundExceptionMapper implements ExceptionMapper<EntityNotF
     public Response toResponse(EntityNotFoundException e) {
         ExceptionResponse exceptionResponse = ExceptionResponse.builder().code(e.getCode()).isSuccess(false).message(e.getMessage()).build();
 
-        return Response.status(Response.Status.BAD_REQUEST)
+        return Response.status(Response.Status.NOT_FOUND)
                 .type(MediaType.APPLICATION_JSON)
                 .entity(exceptionResponse)
                 .build();
