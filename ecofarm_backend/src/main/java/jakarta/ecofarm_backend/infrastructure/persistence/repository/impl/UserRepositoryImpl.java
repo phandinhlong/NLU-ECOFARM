@@ -1,11 +1,14 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.repository.impl;
 
+import jakarta.ecofarm_backend.common.enums.RoleEnum;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.UserRepository;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
 
+import java.util.List;
 import java.util.Optional;
 
 @Stateless
@@ -74,5 +77,23 @@ public class UserRepositoryImpl implements UserRepository {
                 .setParameter("email", email)
                 .getResultStream()
                 .findFirst();
+    }
+
+    @Override
+    public List<User> findActiveWorkerPage(Long lastIndex, int limit) {
+        String jpql = """
+            SELECT DISTINCT u
+            FROM User u
+            LEFT JOIN FETCH u.roles
+            WHERE u.isActive = true
+              AND EXISTS (SELECT r FROM Role r WHERE r MEMBER OF u.roles AND r.roleName = :role)
+              AND (:lastIndex IS NULL OR u.id < :lastIndex)
+            ORDER BY u.id DESC
+        """;
+        TypedQuery<User> query = this.entityManager.createQuery(jpql, User.class)
+                .setParameter("role", RoleEnum.FARMER)
+                .setParameter("lastIndex", lastIndex);
+        query.setMaxResults(limit);
+        return query.getResultList();
     }
 }
