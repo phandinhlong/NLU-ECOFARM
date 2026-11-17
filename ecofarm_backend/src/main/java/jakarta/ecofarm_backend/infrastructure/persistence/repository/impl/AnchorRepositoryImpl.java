@@ -30,6 +30,14 @@ public class AnchorRepositoryImpl implements AnchorRepository {
         return q.getResultList();
     }
 
+    public void updateAnchorStatus(Long id, String status) {
+        Anchor anchor = em.find(Anchor.class, id);
+        if (anchor != null) {
+            anchor.setStatus(status);
+            em.merge(anchor);
+        }
+    }
+
     public List<Anchor> findAll() {
         return em.createQuery("select a from Anchor a", Anchor.class).getResultList();
     }
