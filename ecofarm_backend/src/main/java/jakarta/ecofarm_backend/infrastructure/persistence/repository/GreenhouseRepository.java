@@ -1,14 +1,18 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.repository;
 
+import jakarta.ecofarm_backend.common.dto.request.GreenhouseCriteria;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Greenhouse;
 
 import java.util.List;
+import java.util.Map;
 
 public interface GreenhouseRepository {
 
-    List<Greenhouse> findPage(int page, int size, String status, String q);
+    List<Greenhouse> findPage(GreenhouseCriteria criteria);
 
-    long countActive(String status, String q);
+    long countActive(GreenhouseCriteria criteria);
+
+    Map<Long, Long> countBatchesByGreenhouseIds(List<Long> greenhouseIds);
 
     Greenhouse findById(Long id);
 
@@ -18,7 +22,5 @@ public interface GreenhouseRepository {
 
     long countBatches(Long greenhouseId);
 
-    void persist(Greenhouse greenhouse);
-
-    Greenhouse merge(Greenhouse greenhouse);
+    Greenhouse save(Greenhouse greenhouse);
 }

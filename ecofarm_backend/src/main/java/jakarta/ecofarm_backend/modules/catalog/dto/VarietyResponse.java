@@ -1,6 +1,5 @@
 package jakarta.ecofarm_backend.modules.catalog.dto;
 
-import jakarta.ecofarm_backend.infrastructure.persistence.entity.Variety;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,20 +21,4 @@ public class VarietyResponse {
     private Long version;
     private Long createdAt;
     private Long updatedAt;
-
-    public static VarietyResponse from(Variety v) {
-        return VarietyResponse.builder()
-                .id(v.getId())
-                .code(v.getCode())
-                .name(v.getName())
-                .daysPollinationToHarvest(v.getDaysPollinationToHarvest())
-                .minBrix(v.getMinBrix())
-                .minIsolationDays(v.getMinIsolationDays())
-                .batchCount(v.getBatchCount())
-                .active(v.isActive())
-                .version(v.getVersion())
-                .createdAt(v.getCreatedAt())
-                .updatedAt(v.getUpdatedAt())
-                .build();
-    }
 }

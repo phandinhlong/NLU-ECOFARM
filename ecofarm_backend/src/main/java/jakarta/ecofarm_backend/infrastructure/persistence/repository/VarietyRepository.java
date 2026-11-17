@@ -1,14 +1,18 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.repository;
 
+import jakarta.ecofarm_backend.common.dto.request.VarietyCriteria;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Variety;
 
 import java.util.List;
+import java.util.Map;
 
 public interface VarietyRepository {
 
-    List<Variety> findPage(int page, int size, String q);
+    List<Variety> findPage(VarietyCriteria criteria);
 
-    long countActive(String q);
+    long countActive(VarietyCriteria criteria);
+
+    Map<Long, Long> countBatchesByVarietyIds(List<Long> varietyIds);
 
     Variety findById(Long id);
 
@@ -18,7 +22,5 @@ public interface VarietyRepository {
 
     long countBatches(Long varietyId);
 
-    void persist(Variety variety);
-
-    Variety merge(Variety variety);
+    Variety save(Variety variety);
 }

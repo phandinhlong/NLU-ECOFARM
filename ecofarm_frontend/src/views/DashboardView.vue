@@ -1,50 +1,61 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import PageHeader from '@/components/common/PageHeader.vue'
-import PagerBar from '@/components/common/PagerBar.vue'
 import SoftBadge from '@/components/common/SoftBadge.vue'
-import { useGreenhousesQuery } from '@/composables/useGreenhouses'
-import { useVarietiesQuery } from '@/composables/useVarieties'
-import { useCertificatesQuery } from '@/composables/useCertificates'
-import {
-  CERT_TYPE_LABELS,
-  type CatalogQuery,
-  type Certificate,
-  type CertificateQuery,
-  type PageResponse,
-} from '@/api/types/catalog'
-
-const listParams = ref<CatalogQuery>({ page: 0, size: 1 })
-const greenhouseOptions = ref<CatalogQuery>({ page: 0, size: 100 })
-
-const { data: greenhouseStat } = useGreenhousesQuery(listParams)
-const { data: varietyStat } = useVarietiesQuery(listParams)
-const { data: greenhousePage } = useGreenhousesQuery(greenhouseOptions)
-
-const totalGreenhouses = computed(() => greenhouseStat.value?.totalElements ?? 0)
-const totalVarieties = computed(() => varietyStat.value?.totalElements ?? 0)
-const greenhouses = computed(() => greenhousePage.value?.content ?? [])
-
-const certStatParams = ref<CertificateQuery>({ page: 0, size: 1 })
-const { data: certStat } = useCertificatesQuery(certStatParams)
-const totalCertificates = computed(() => certStat.value?.totalElements ?? 0)
+import { catalogService } from '@/api/services/catalog.service'
+import { useCertificateList } from '@/composables/useCertificates'
+import { CERT_TYPE_LABELS, type CertificateQuery, type Greenhouse } from '@/api/types/catalog'
 
 const greenhouseFilter = ref('')
 const windowDays = ref(30)
-const page = ref(0)
+
+const greenhouses = ref<Greenhouse[]>([])
 
 const expiringParams = computed<CertificateQuery>(() => ({
-  page: page.value,
-  size: 5,
   expiringInDays: windowDays.value,
   greenhouseId: greenhouseFilter.value === '' ? undefined : Number(greenhouseFilter.value),
 }))
 
-const { data: expiringPage, isLoading, isError, error } = useCertificatesQuery(expiringParams)
+const {
+  items: expiringItems,
+  hasMore,
+  loading,
+  error,
+  load,
+  loadMore,
+} = useCertificateList(expiringParams)
 
-const pageData = computed<PageResponse<Certificate>>(
-  () => expiringPage.value ?? { content: [], page: 0, size: 5, totalElements: 0, totalPages: 0 },
-)
+const totalGreenhouses = ref(0)
+const totalVarieties = ref(0)
+const totalCertificates = ref(0)
+const totalExpiring = ref(0)
+
+const loadStats = async () => {
+  const [gh, va, ce, ex] = await Promise.allSettled([
+    catalogService.countGreenhouses({}),
+    catalogService.countVarieties({}),
+    catalogService.countCertificates({}),
+    catalogService.countCertificates(expiringParams.value),
+  ])
+  if (gh.status === 'fulfilled') totalGreenhouses.value = gh.value
+  if (va.status === 'fulfilled') totalVarieties.value = va.value
+  if (ce.status === 'fulfilled') totalCertificates.value = ce.value
+  if (ex.status === 'fulfilled') totalExpiring.value = ex.value
+}
+
+const refreshAll = () => {
+  load()
+  loadStats()
+}
+
+onMounted(async () => {
+  refreshAll()
+  try {
+    greenhouses.value = await catalogService.fetchAllGreenhouses()
+  } catch {
+    // Bỏ qua — danh sách nhà màng để trống, bảng vẫn hiển thị bình thường
+  }
+})
 
 const daysLeft = (validTo: string | null): number | null => {
   if (!validTo) return null
@@ -73,17 +84,17 @@ const statCards = computed(() => [
   { label: 'Nhà màng', value: totalGreenhouses.value, hint: 'Đang hoạt động trong hệ thống' },
   { label: 'Giống dưa', value: totalVarieties.value, hint: 'Mã giống đang quản lý' },
   { label: 'Chứng nhận', value: totalCertificates.value, hint: 'VietGAP / GlobalGAP / Organic' },
-  { label: 'Sắp hết hạn', value: pageData.value.totalElements, hint: `${windowDays.value} ngày tới` },
+  { label: 'Sắp hết hạn', value: totalExpiring.value, hint: `${windowDays.value} ngày tới` },
 ])
 
 const applyFilter = () => {
-  page.value = 0
+  refreshAll()
 }
 
 const resetFilter = () => {
   greenhouseFilter.value = ''
   windowDays.value = 30
-  page.value = 0
+  refreshAll()
 }
 </script>
 
@@ -91,7 +102,7 @@ const resetFilter = () => {
   <div>
     <PageHeader title="Tổng quan hệ thống EcoFarm">
       <template #actions>
-        <BButton variant="outline-secondary" @click="applyFilter">Làm mới số liệu</BButton>
+        <BButton variant="outline-secondary" @click="refreshAll">Làm mới số liệu</BButton>
       </template>
     </PageHeader>
 
@@ -146,11 +157,11 @@ const resetFilter = () => {
         <SoftBadge variant="info" label="Chỉ đọc" />
       </div>
 
-      <BAlert v-if="isError" variant="danger" class="mx-3 mt-3 mb-0">
-        Không tải được dữ liệu: {{ error?.message }}
+      <BAlert v-if="error" variant="danger" class="mx-3 mt-3 mb-0">
+        Không tải được dữ liệu: {{ error }}
       </BAlert>
 
-      <div v-if="isLoading" class="d-flex justify-content-center py-5">
+      <div v-if="loading && expiringItems.length === 0" class="d-flex justify-content-center py-5">
         <BSpinner />
       </div>
 
@@ -167,12 +178,12 @@ const resetFilter = () => {
             </tr>
           </thead>
           <tbody>
-            <tr v-if="pageData.content.length === 0">
+            <tr v-if="expiringItems.length === 0">
               <td colspan="6" class="text-center text-body-secondary py-4">
                 Không có chứng nhận nào sắp hết hạn trong {{ windowDays }} ngày tới
               </td>
             </tr>
-            <tr v-for="row in pageData.content" :key="row.id">
+            <tr v-for="row in expiringItems" :key="row.id">
               <td class="fw-semibold">{{ greenhouseLabel(row.greenhouseId) }}</td>
               <td>{{ row.certNo }}</td>
               <td>{{ CERT_TYPE_LABELS[row.certType] ?? row.certType }}</td>
@@ -191,14 +202,11 @@ const resetFilter = () => {
         </table>
       </div>
 
-      <PagerBar
-        :page="pageData.page"
-        :total-pages="pageData.totalPages"
-        :total-elements="pageData.totalElements"
-        :size="pageData.size"
-        unit="chứng nhận"
-        @update:page="page = $event"
-      />
+      <div v-if="hasMore" class="p-3 border-top text-center">
+        <BButton variant="outline-secondary" :disabled="loading" @click="loadMore">
+          {{ loading ? 'Đang tải...' : 'Tải thêm' }}
+        </BButton>
+      </div>
     </section>
   </div>
 </template>

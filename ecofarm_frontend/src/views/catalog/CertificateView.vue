@@ -1,28 +1,31 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import PageHeader from '@/components/common/PageHeader.vue'
-import PagerBar from '@/components/common/PagerBar.vue'
 import SoftBadge from '@/components/common/SoftBadge.vue'
-import { useCertificatesQuery, useCreateCertificateMutation } from '@/composables/useCertificates'
-import { useGreenhousesQuery } from '@/composables/useGreenhouses'
+import { catalogService } from '@/api/services/catalog.service'
+import { useCertificateList, useCreateCertificateMutation } from '@/composables/useCertificates'
 import {
   CERT_TYPE_LABELS,
-  type CatalogQuery,
-  type Certificate,
   type CertificateInput,
   type CertificateQuery,
-  type PageResponse,
+  type Greenhouse,
 } from '@/api/types/catalog'
 
-const params = ref<CertificateQuery>({ page: 0, size: 10 })
+const params = ref<CertificateQuery>({})
 
-const { data, isLoading, isError, error } = useCertificatesQuery(params)
-const { mutate: create, isPending: isSaving, error: saveError, reset: resetSaveError } =
-  useCreateCertificateMutation()
+const { items, hasMore, loading, error, load, loadMore } = useCertificateList(params)
+const { create, isSaving, saveError, resetSaveError } = useCreateCertificateMutation()
 
-const greenhouseOptions = ref<CatalogQuery>({ page: 0, size: 100 })
-const { data: greenhousePage } = useGreenhousesQuery(greenhouseOptions)
-const greenhouses = computed(() => greenhousePage.value?.content ?? [])
+const greenhouses = ref<Greenhouse[]>([])
+
+onMounted(async () => {
+  load()
+  try {
+    greenhouses.value = await catalogService.fetchAllGreenhouses()
+  } catch {
+    // Bỏ qua — danh sách nhà màng để trống, bảng vẫn hiển thị bình thường
+  }
+})
 
 const showModal = ref(false)
 const greenhouseFilter = ref('')
@@ -37,11 +40,6 @@ const form = reactive({
 })
 
 const certTypes = Object.entries(CERT_TYPE_LABELS)
-
-const page = computed<PageResponse<Certificate>>(
-  () =>
-    data.value ?? { content: [], page: 0, size: 10, totalElements: 0, totalPages: 0 },
-)
 
 const daysLeft = (validTo: string | null): number | null => {
   if (!validTo) return null
@@ -76,7 +74,7 @@ const openCreate = () => {
   showModal.value = true
 }
 
-const submit = () => {
+const submit = async () => {
   const payload: CertificateInput = {
     greenhouseId: form.greenhouseId === '' ? null : Number(form.greenhouseId),
     certType: form.certType,
@@ -85,37 +83,36 @@ const submit = () => {
     validTo: form.validTo,
     fileKey: form.fileKey.trim() || undefined,
   }
-  create(payload, {
-    onSuccess: () => {
-      showModal.value = false
-    },
-  })
+  try {
+    await create(payload)
+    showModal.value = false
+    await load()
+  } catch {
+    // Lỗi đã được gán vào saveError để hiển thị trong modal
+  }
 }
 
 watch(greenhouseFilter, () => {
   params.value = {
     ...params.value,
     greenhouseId: greenhouseFilter.value === '' ? undefined : Number(greenhouseFilter.value),
-    page: 0,
   }
+  load()
 })
 
 watch(expiringFilter, () => {
   params.value = {
     ...params.value,
     expiringInDays: expiringFilter.value === '' ? undefined : Number(expiringFilter.value),
-    page: 0,
   }
+  load()
 })
 
 const resetFilter = () => {
   greenhouseFilter.value = ''
   expiringFilter.value = ''
-  params.value = { page: 0, size: params.value.size }
-}
-
-const goToPage = (next: number) => {
-  params.value = { ...params.value, page: next }
+  params.value = {}
+  load()
 }
 </script>
 
@@ -164,14 +161,14 @@ const goToPage = (next: number) => {
             Hệ thống cảnh báo khi chứng nhận còn dưới 30 ngày hiệu lực.
           </p>
         </div>
-        <SoftBadge variant="info" :label="`${page.totalElements} chứng nhận`" />
+        <SoftBadge variant="info" :label="`${items.length}${hasMore ? '+' : ''} chứng nhận`" />
       </div>
 
-      <BAlert v-if="isError" variant="danger" class="mx-3 mt-3 mb-0">
-        Không tải được danh sách chứng nhận: {{ error?.message }}
+      <BAlert v-if="error" variant="danger" class="mx-3 mt-3 mb-0">
+        Không tải được danh sách chứng nhận: {{ error }}
       </BAlert>
 
-      <div v-if="isLoading" class="d-flex justify-content-center py-5">
+      <div v-if="loading && items.length === 0" class="d-flex justify-content-center py-5">
         <BSpinner />
       </div>
 
@@ -189,12 +186,12 @@ const goToPage = (next: number) => {
             </tr>
           </thead>
           <tbody>
-            <tr v-if="page.content.length === 0">
+            <tr v-if="items.length === 0">
               <td colspan="7" class="text-center text-body-secondary py-4">
                 Chưa có chứng nhận nào
               </td>
             </tr>
-            <tr v-for="row in page.content" :key="row.id">
+            <tr v-for="row in items" :key="row.id">
               <td class="fw-semibold">{{ row.certNo }}</td>
               <td>
                 <SoftBadge variant="info" :label="CERT_TYPE_LABELS[row.certType] ?? row.certType" />
@@ -227,19 +224,16 @@ const goToPage = (next: number) => {
         </table>
       </div>
 
-      <PagerBar
-        :page="page.page"
-        :total-pages="page.totalPages"
-        :total-elements="page.totalElements"
-        :size="page.size"
-        unit="chứng nhận"
-        @update:page="goToPage"
-      />
+      <div v-if="hasMore" class="p-3 border-top text-center">
+        <BButton variant="outline-secondary" :disabled="loading" @click="loadMore">
+          {{ loading ? 'Đang tải...' : 'Tải thêm' }}
+        </BButton>
+      </div>
     </section>
 
     <BModal v-model="showModal" title="Thêm chứng nhận">
       <BAlert v-if="saveError" variant="danger" dismissible>
-        {{ saveError.message }}
+        {{ saveError }}
       </BAlert>
       <form class="d-flex flex-column gap-3" novalidate @submit.prevent="submit">
         <div>

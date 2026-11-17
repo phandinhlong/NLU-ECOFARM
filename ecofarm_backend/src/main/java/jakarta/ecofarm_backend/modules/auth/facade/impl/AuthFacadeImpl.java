@@ -59,9 +59,6 @@ public class AuthFacadeImpl implements AuthFacade {
     private CookieBuilderUtil cookieBuilder;
 
     @Inject
-    private HttpServletResponse servletResponse;
-
-    @Inject
     private HttpServletRequest servletRequest;
 
     @Inject
@@ -111,7 +108,7 @@ public class AuthFacadeImpl implements AuthFacade {
     private static final Logger log = LogManager.getLogger(AuthFacadeImpl.class);
 
     @Override
-    public BaseResponse<Boolean> login(LoginRequest request) {
+    public BaseResponse<Boolean> login(LoginRequest request, HttpServletResponse servletResponse) {
 
         String email = request.getEmail();
 
@@ -139,7 +136,7 @@ public class AuthFacadeImpl implements AuthFacade {
     }
 
     @Override
-    public BaseResponse<Boolean> refreshToken() {
+    public BaseResponse<Boolean> refreshToken(HttpServletResponse servletResponse) {
         Optional<Cookie> cookieOpt = Arrays.stream(this.servletRequest.getCookies())
                 .filter(c ->c.getName().equals(SecurityConstant.REFRESH_TOKEN_COOKIE_NAME))
                 .findFirst();
@@ -325,7 +322,7 @@ public class AuthFacadeImpl implements AuthFacade {
     }
 
     @Override
-    public BaseResponse<Boolean> logout() {
+    public BaseResponse<Boolean> logout(HttpServletResponse servletResponse) {
 
         String deletedAccessTokenCookie = this.cookieBuilder.buildCookie(
                 SecurityConstant.ACCESS_TOKEN_COOKIE_NAME,

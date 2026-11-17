@@ -1,43 +1,73 @@
 import axios from '@/api/clients/axios'
 import type { ApiResponse } from '@/api/types/common'
 import type {
-  CatalogQuery,
   Certificate,
   CertificateInput,
   CertificateQuery,
+  CursorPageResponse,
   Greenhouse,
   GreenhouseInput,
-  PageResponse,
+  GreenhouseQuery,
   Variety,
   VarietyInput,
+  VarietyQuery,
 } from '@/api/types/catalog'
 import { API_V1 } from '@/api/constants'
 
-export const catalogService = {
-  listGreenhouses: (params: CatalogQuery) =>
-    axios.get<ApiResponse<PageResponse<Greenhouse>>>(`${API_V1}/greenhouses`, { params }),
+const unwrap = <T>(promise: Promise<{ data: ApiResponse<T> }>) => promise.then((r) => r.data.data)
 
-  getGreenhouse: (id: number) =>
-    axios.get<ApiResponse<Greenhouse>>(`${API_V1}/greenhouses/${id}`),
+const fetchAll = async <T>(
+  fetchPage: (lastIndex?: number) => Promise<CursorPageResponse<T>>,
+): Promise<T[]> => {
+  const all: T[] = []
+  let lastIndex: number | undefined
+  let hasMore = true
+  while (hasMore) {
+    const page = await fetchPage(lastIndex)
+    all.push(...page.content)
+    hasMore = page.hasMore
+    lastIndex = page.lastIndex ?? undefined
+  }
+  return all
+}
+
+export const catalogService = {
+  listGreenhouses: (params: GreenhouseQuery = {}) =>
+    unwrap(axios.get<ApiResponse<CursorPageResponse<Greenhouse>>>(`${API_V1}/greenhouses`, { params })),
+
+  countGreenhouses: (params: GreenhouseQuery = {}) =>
+    unwrap(axios.get<ApiResponse<number>>(`${API_V1}/greenhouses/count`, { params })),
 
   createGreenhouse: (data: GreenhouseInput) =>
-    axios.post<ApiResponse<Greenhouse>>(`${API_V1}/greenhouses`, data),
+    unwrap(axios.post<ApiResponse<Greenhouse>>(`${API_V1}/greenhouses`, data)),
 
   updateGreenhouse: (id: number, data: GreenhouseInput) =>
-    axios.put<ApiResponse<Greenhouse>>(`${API_V1}/greenhouses/${id}`, data),
+    unwrap(axios.put<ApiResponse<Greenhouse>>(`${API_V1}/greenhouses/${id}`, data)),
 
-  listVarieties: (params: CatalogQuery) =>
-    axios.get<ApiResponse<PageResponse<Variety>>>(`${API_V1}/varieties`, { params }),
+  listVarieties: (params: VarietyQuery = {}) =>
+    unwrap(axios.get<ApiResponse<CursorPageResponse<Variety>>>(`${API_V1}/varieties`, { params })),
+
+  countVarieties: (params: VarietyQuery = {}) =>
+    unwrap(axios.get<ApiResponse<number>>(`${API_V1}/varieties/count`, { params })),
 
   createVariety: (data: VarietyInput) =>
-    axios.post<ApiResponse<Variety>>(`${API_V1}/varieties`, data),
+    unwrap(axios.post<ApiResponse<Variety>>(`${API_V1}/varieties`, data)),
 
   updateVariety: (id: number, data: VarietyInput) =>
-    axios.put<ApiResponse<Variety>>(`${API_V1}/varieties/${id}`, data),
+    unwrap(axios.put<ApiResponse<Variety>>(`${API_V1}/varieties/${id}`, data)),
 
-  listCertificates: (params: CertificateQuery) =>
-    axios.get<ApiResponse<PageResponse<Certificate>>>(`${API_V1}/certificates`, { params }),
+  listCertificates: (params: CertificateQuery = {}) =>
+    unwrap(
+      axios.get<ApiResponse<CursorPageResponse<Certificate>>>(`${API_V1}/certificates`, { params }),
+    ),
+
+  countCertificates: (params: CertificateQuery = {}) =>
+    unwrap(axios.get<ApiResponse<number>>(`${API_V1}/certificates/count`, { params })),
 
   createCertificate: (data: CertificateInput) =>
-    axios.post<ApiResponse<Certificate>>(`${API_V1}/certificates`, data),
+    unwrap(axios.post<ApiResponse<Certificate>>(`${API_V1}/certificates`, data)),
+
+  fetchAllGreenhouses: () => fetchAll((lastIndex) => catalogService.listGreenhouses({ lastIndex })),
+
+  fetchAllVarieties: () => fetchAll((lastIndex) => catalogService.listVarieties({ lastIndex })),
 }

@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.repository.impl;
 
+import jakarta.ecofarm_backend.common.dto.request.VarietyCriteria;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Variety;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.VarietyRepository;
 import jakarta.ejb.Stateless;
@@ -7,7 +8,9 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Stateless
 public class VarietyRepositoryImpl implements VarietyRepository {
@@ -15,68 +18,70 @@ public class VarietyRepositoryImpl implements VarietyRepository {
     @PersistenceContext
     private EntityManager em;
 
-    private static int safePage(int page) {
-        return Math.max(page, 0);
+    private void appendFilters(StringBuilder jpql, VarietyCriteria criteria) {
+        criteria.getKeywordFilter().ifPresent(value -> jpql.append(" AND (LOWER(v.code) LIKE :q OR LOWER(v.name) LIKE :q)"));
     }
 
-    private static int safeSize(int size) {
-        return size <= 0 ? 20 : Math.min(size, 100);
+    private void bindFilters(TypedQuery<?> query, VarietyCriteria criteria) {
+        criteria.getKeywordFilter().ifPresent(value -> query.setParameter("q", "%" + value.trim().toLowerCase() + "%"));
     }
 
-    private static int safeOffset(int page, int size) {
-        long offset = (long) safePage(page) * safeSize(size);
-        return offset > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) offset;
-    }
-
-    public List<Variety> findPage(int page, int size, String q) {
+    @Override
+    public List<Variety> findPage(VarietyCriteria criteria) {
         StringBuilder jpql = new StringBuilder("""
-                SELECT v, (SELECT COUNT(b) FROM Batch b WHERE b.variety.id = v.id)
-                FROM Variety v
+                SELECT v FROM Variety v
                 WHERE v.isActive = true
                 """);
-        if (q != null && !q.isBlank()) {
-            jpql.append(" AND (LOWER(v.code) LIKE :q OR LOWER(v.name) LIKE :q)");
-        }
-        jpql.append(" ORDER BY v.id DESC");
+        appendFilters(jpql, criteria);
+        jpql.append(" AND (:lastIndex IS NULL OR v.id < :lastIndex) ORDER BY v.id DESC");
 
-        TypedQuery<Object[]> query = em.createQuery(jpql.toString(), Object[].class);
-        if (q != null && !q.isBlank()) {
-            query.setParameter("q", "%" + q.trim().toLowerCase() + "%");
-        }
-        query.setFirstResult(safeOffset(page, size));
-        query.setMaxResults(safeSize(size));
-
-        return query.getResultList().stream().map(row -> {
-            Variety v = (Variety) row[0];
-            v.setBatchCount((Long) row[1]);
-            return v;
-        }).toList();
+        TypedQuery<Variety> query = em.createQuery(jpql.toString(), Variety.class);
+        bindFilters(query, criteria);
+        query.setParameter("lastIndex", criteria.getLastIndexFilter().orElse(null));
+        query.setMaxResults(VarietyCriteria.LENGTH + 1);
+        return query.getResultList();
     }
 
-    public long countActive(String q) {
+    @Override
+    public long countActive(VarietyCriteria criteria) {
         StringBuilder jpql = new StringBuilder("SELECT COUNT(v) FROM Variety v WHERE v.isActive = true");
-        if (q != null && !q.isBlank()) {
-            jpql.append(" AND (LOWER(v.code) LIKE :q OR LOWER(v.name) LIKE :q)");
-        }
+        appendFilters(jpql, criteria);
+
         TypedQuery<Long> query = em.createQuery(jpql.toString(), Long.class);
-        if (q != null && !q.isBlank()) {
-            query.setParameter("q", "%" + q.trim().toLowerCase() + "%");
-        }
+        bindFilters(query, criteria);
         return query.getSingleResult();
     }
 
-    public Variety findById(Long id) {
-        Variety v = em.find(Variety.class, id);
-        if (v != null) {
-            v.setBatchCount(countBatches(id));
+    @Override
+    public Map<Long, Long> countBatchesByVarietyIds(List<Long> varietyIds) {
+        Map<Long, Long> result = new HashMap<>();
+        if (varietyIds == null || varietyIds.isEmpty()) {
+            return result;
         }
-        return v;
+        List<Object[]> rows = em.createQuery("""
+                SELECT b.variety.id, COUNT(b) FROM Batch b
+                WHERE b.variety.id IN :varietyIds
+                GROUP BY b.variety.id
+                """, Object[].class)
+                .setParameter("varietyIds", varietyIds)
+                .getResultList();
+        for (Object[] row : rows) {
+            result.put((Long) row[0], (Long) row[1]);
+        }
+        return result;
     }
 
+    @Override
+    public Variety findById(Long id) {
+        return em.find(Variety.class, id);
+    }
+
+    @Override
     public boolean existsByCode(String code) {
         return existsByCodeAndIdNot(code, null);
     }
 
+    @Override
     public boolean existsByCodeAndIdNot(String code, Long id) {
         StringBuilder jpql = new StringBuilder("SELECT COUNT(v) FROM Variety v WHERE v.isActive = true AND v.code = :code");
         if (id != null) {
@@ -90,6 +95,7 @@ public class VarietyRepositoryImpl implements VarietyRepository {
         return query.getSingleResult() > 0;
     }
 
+    @Override
     public long countBatches(Long varietyId) {
         TypedQuery<Long> query = em.createQuery(
                 "SELECT COUNT(b) FROM Batch b WHERE b.variety.id = :varietyId",
@@ -98,11 +104,12 @@ public class VarietyRepositoryImpl implements VarietyRepository {
         return query.getSingleResult();
     }
 
-    public void persist(Variety variety) {
-        em.persist(variety);
-    }
-
-    public Variety merge(Variety variety) {
+    @Override
+    public Variety save(Variety variety) {
+        if (variety.getId() == null) {
+            em.persist(variety);
+            return variety;
+        }
         return em.merge(variety);
     }
 }

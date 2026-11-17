@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import PageHeader from '@/components/common/PageHeader.vue'
-import PagerBar from '@/components/common/PagerBar.vue'
 import SoftBadge from '@/components/common/SoftBadge.vue'
-import { useSaveVarietyMutation, useVarietiesQuery } from '@/composables/useVarieties'
-import type { PageResponse, Variety, VarietyInput } from '@/api/types/catalog'
+import { useSaveVarietyMutation, useVarietyList } from '@/composables/useVarieties'
+import type { Variety, VarietyInput, VarietyQuery } from '@/api/types/catalog'
 
-const params = ref<{ page: number; size: number; q?: string }>({ page: 0, size: 10 })
+const params = ref<VarietyQuery>({})
 
-const { data, isLoading, isError, error } = useVarietiesQuery(params)
-const { mutate: save, isPending: isSaving, error: saveError, reset: resetSaveError } =
-  useSaveVarietyMutation()
+const { items, hasMore, loading, error, load, loadMore } = useVarietyList(params)
+const { save, isSaving, saveError, resetSaveError } = useSaveVarietyMutation()
+
+onMounted(load)
 
 const showModal = ref(false)
 const editing = ref<Variety | null>(null)
@@ -23,10 +23,6 @@ const form = reactive({
   minIsolationDays: '',
 })
 
-const page = computed<PageResponse<Variety>>(
-  () =>
-    data.value ?? { content: [], page: 0, size: 10, totalElements: 0, totalPages: 0 },
-)
 const isCodeLocked = computed(() => editing.value != null && editing.value.batchCount > 0)
 
 const resetForm = () => {
@@ -57,7 +53,7 @@ const openEdit = (row: Variety) => {
 
 const toNumberOrNull = (value: string) => (value === '' ? null : Number(value))
 
-const submit = () => {
+const submit = async () => {
   const payload: VarietyInput = {
     code: form.code.trim(),
     name: form.name.trim(),
@@ -68,27 +64,24 @@ const submit = () => {
   if (editing.value) {
     payload.version = editing.value.version
   }
-  save(
-    { id: editing.value?.id, data: payload },
-    {
-      onSuccess: () => {
-        showModal.value = false
-      },
-    },
-  )
+  try {
+    await save({ id: editing.value?.id, data: payload })
+    showModal.value = false
+    await load()
+  } catch {
+    // Lỗi đã được gán vào saveError để hiển thị trong modal
+  }
 }
 
 const applyFilter = () => {
-  params.value = { ...params.value, q: searchText.value.trim() || undefined, page: 0 }
+  params.value = { q: searchText.value.trim() || undefined }
+  load()
 }
 
 const resetFilter = () => {
   searchText.value = ''
-  params.value = { page: 0, size: params.value.size }
-}
-
-const goToPage = (next: number) => {
-  params.value = { ...params.value, page: next }
+  params.value = {}
+  load()
 }
 
 const formatDays = (value: number | null) => (value == null ? '—' : `${value} ngày`)
@@ -137,14 +130,14 @@ const brixVariant = (value: number | null): 'success' | 'warning' | 'muted' => {
             Mã giống không thể đổi khi đã có lô tham chiếu.
           </p>
         </div>
-        <SoftBadge variant="info" :label="`${page.totalElements} giống`" />
+        <SoftBadge variant="info" :label="`${items.length}${hasMore ? '+' : ''} giống`" />
       </div>
 
-      <BAlert v-if="isError" variant="danger" class="mx-3 mt-3 mb-0">
-        Không tải được danh sách giống: {{ error?.message }}
+      <BAlert v-if="error" variant="danger" class="mx-3 mt-3 mb-0">
+        Không tải được danh sách giống: {{ error }}
       </BAlert>
 
-      <div v-if="isLoading" class="d-flex justify-content-center py-5">
+      <div v-if="loading && items.length === 0" class="d-flex justify-content-center py-5">
         <BSpinner />
       </div>
 
@@ -162,12 +155,12 @@ const brixVariant = (value: number | null): 'success' | 'warning' | 'muted' => {
             </tr>
           </thead>
           <tbody>
-            <tr v-if="page.content.length === 0">
+            <tr v-if="items.length === 0">
               <td colspan="7" class="text-center text-body-secondary py-4">
                 Chưa có giống dưa nào
               </td>
             </tr>
-            <tr v-for="row in page.content" :key="row.id">
+            <tr v-for="row in items" :key="row.id">
               <td class="fw-semibold">{{ row.code }}</td>
               <td>
                 <div class="fw-semibold">{{ row.name }}</div>
@@ -187,19 +180,16 @@ const brixVariant = (value: number | null): 'success' | 'warning' | 'muted' => {
         </table>
       </div>
 
-      <PagerBar
-        :page="page.page"
-        :total-pages="page.totalPages"
-        :total-elements="page.totalElements"
-        :size="page.size"
-        unit="giống"
-        @update:page="goToPage"
-      />
+      <div v-if="hasMore" class="p-3 border-top text-center">
+        <BButton variant="outline-secondary" :disabled="loading" @click="loadMore">
+          {{ loading ? 'Đang tải...' : 'Tải thêm' }}
+        </BButton>
+      </div>
     </section>
 
     <BModal v-model="showModal" :title="editing ? 'Sửa giống dưa' : 'Thêm giống dưa'">
       <BAlert v-if="saveError" variant="danger" dismissible>
-        {{ saveError.message }}
+        {{ saveError }}
       </BAlert>
       <form class="d-flex flex-column gap-3" novalidate @submit.prevent="submit">
         <div>

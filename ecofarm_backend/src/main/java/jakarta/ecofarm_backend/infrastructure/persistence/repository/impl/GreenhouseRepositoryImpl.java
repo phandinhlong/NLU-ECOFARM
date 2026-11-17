@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.repository.impl;
 
+import jakarta.ecofarm_backend.common.dto.request.GreenhouseCriteria;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Greenhouse;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.GreenhouseRepository;
 import jakarta.ejb.Stateless;
@@ -7,7 +8,9 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Stateless
 public class GreenhouseRepositoryImpl implements GreenhouseRepository {
@@ -15,79 +18,72 @@ public class GreenhouseRepositoryImpl implements GreenhouseRepository {
     @PersistenceContext
     private EntityManager em;
 
-    private void appendFilters(StringBuilder jpql, String status, String q) {
-        if (status != null && !status.isBlank()) {
-            jpql.append(" AND g.status = :status");
-        }
-        if (q != null && !q.isBlank()) {
-            jpql.append(" AND (LOWER(g.code) LIKE :q OR LOWER(g.name) LIKE :q)");
-        }
+    private void appendFilters(StringBuilder jpql, GreenhouseCriteria criteria) {
+        criteria.getStatusFilter().ifPresent(value -> jpql.append(" AND g.status = :status"));
+        criteria.getKeywordFilter().ifPresent(value -> jpql.append(" AND (LOWER(g.code) LIKE :q OR LOWER(g.name) LIKE :q)"));
     }
 
-    private void bindFilters(TypedQuery<?> query, String status, String q) {
-        if (status != null && !status.isBlank()) {
-            query.setParameter("status", status);
-        }
-        if (q != null && !q.isBlank()) {
-            query.setParameter("q", "%" + q.trim().toLowerCase() + "%");
-        }
+    private void bindFilters(TypedQuery<?> query, GreenhouseCriteria criteria) {
+        criteria.getStatusFilter().ifPresent(value -> query.setParameter("status", value));
+        criteria.getKeywordFilter().ifPresent(value -> query.setParameter("q", "%" + value.trim().toLowerCase() + "%"));
     }
 
-    private static int safePage(int page) {
-        return Math.max(page, 0);
-    }
-
-    private static int safeSize(int size) {
-        return size <= 0 ? 20 : Math.min(size, 100);
-    }
-
-    private static int safeOffset(int page, int size) {
-        long offset = (long) safePage(page) * safeSize(size);
-        return offset > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) offset;
-    }
-
-    public List<Greenhouse> findPage(int page, int size, String status, String q) {
+    @Override
+    public List<Greenhouse> findPage(GreenhouseCriteria criteria) {
         StringBuilder jpql = new StringBuilder("""
-                SELECT g, (SELECT COUNT(b) FROM Batch b WHERE b.greenhouse.id = g.id)
-                FROM Greenhouse g
+                SELECT g FROM Greenhouse g
                 WHERE g.isActive = true
                 """);
-        appendFilters(jpql, status, q);
-        jpql.append(" ORDER BY g.id DESC");
+        appendFilters(jpql, criteria);
+        jpql.append(" AND (:lastIndex IS NULL OR g.id < :lastIndex) ORDER BY g.id DESC");
 
-        TypedQuery<Object[]> query = em.createQuery(jpql.toString(), Object[].class);
-        bindFilters(query, status, q);
-        query.setFirstResult(safeOffset(page, size));
-        query.setMaxResults(safeSize(size));
-
-        return query.getResultList().stream().map(row -> {
-            Greenhouse g = (Greenhouse) row[0];
-            g.setBatchCount((Long) row[1]);
-            return g;
-        }).toList();
+        TypedQuery<Greenhouse> query = em.createQuery(jpql.toString(), Greenhouse.class);
+        bindFilters(query, criteria);
+        query.setParameter("lastIndex", criteria.getLastIndexFilter().orElse(null));
+        query.setMaxResults(GreenhouseCriteria.LENGTH + 1);
+        return query.getResultList();
     }
 
-    public long countActive(String status, String q) {
+    @Override
+    public long countActive(GreenhouseCriteria criteria) {
         StringBuilder jpql = new StringBuilder("SELECT COUNT(g) FROM Greenhouse g WHERE g.isActive = true");
-        appendFilters(jpql, status, q);
+        appendFilters(jpql, criteria);
 
         TypedQuery<Long> query = em.createQuery(jpql.toString(), Long.class);
-        bindFilters(query, status, q);
+        bindFilters(query, criteria);
         return query.getSingleResult();
     }
 
-    public Greenhouse findById(Long id) {
-        Greenhouse g = em.find(Greenhouse.class, id);
-        if (g != null) {
-            g.setBatchCount(countBatches(id));
+    @Override
+    public Map<Long, Long> countBatchesByGreenhouseIds(List<Long> greenhouseIds) {
+        Map<Long, Long> result = new HashMap<>();
+        if (greenhouseIds == null || greenhouseIds.isEmpty()) {
+            return result;
         }
-        return g;
+        List<Object[]> rows = em.createQuery("""
+                SELECT b.greenhouse.id, COUNT(b) FROM Batch b
+                WHERE b.greenhouse.id IN :greenhouseIds
+                GROUP BY b.greenhouse.id
+                """, Object[].class)
+                .setParameter("greenhouseIds", greenhouseIds)
+                .getResultList();
+        for (Object[] row : rows) {
+            result.put((Long) row[0], (Long) row[1]);
+        }
+        return result;
     }
 
+    @Override
+    public Greenhouse findById(Long id) {
+        return em.find(Greenhouse.class, id);
+    }
+
+    @Override
     public boolean existsByCode(String code) {
         return existsByCodeAndIdNot(code, null);
     }
 
+    @Override
     public boolean existsByCodeAndIdNot(String code, Long id) {
         StringBuilder jpql = new StringBuilder("SELECT COUNT(g) FROM Greenhouse g WHERE g.isActive = true AND g.code = :code");
         if (id != null) {
@@ -101,6 +97,7 @@ public class GreenhouseRepositoryImpl implements GreenhouseRepository {
         return query.getSingleResult() > 0;
     }
 
+    @Override
     public long countBatches(Long greenhouseId) {
         TypedQuery<Long> query = em.createQuery(
                 "SELECT COUNT(b) FROM Batch b WHERE b.greenhouse.id = :greenhouseId",
@@ -109,11 +106,12 @@ public class GreenhouseRepositoryImpl implements GreenhouseRepository {
         return query.getSingleResult();
     }
 
-    public void persist(Greenhouse greenhouse) {
-        em.persist(greenhouse);
-    }
-
-    public Greenhouse merge(Greenhouse greenhouse) {
+    @Override
+    public Greenhouse save(Greenhouse greenhouse) {
+        if (greenhouse.getId() == null) {
+            em.persist(greenhouse);
+            return greenhouse;
+        }
         return em.merge(greenhouse);
     }
 }

@@ -1,16 +1,17 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.repository;
 
+import jakarta.ecofarm_backend.common.dto.request.CertificateCriteria;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Certificate;
 
 import java.util.List;
 
 public interface CertificateRepository {
 
-    List<Certificate> findPage(int page, int size, Long greenhouseId, Integer expiringInDays);
+    List<Certificate> findPage(CertificateCriteria criteria);
 
-    long countActive(Long greenhouseId, Integer expiringInDays);
+    long countActive(CertificateCriteria criteria);
 
     boolean existsByCertNo(String certNo);
 
-    void persist(Certificate certificate);
+    Certificate save(Certificate certificate);
 }

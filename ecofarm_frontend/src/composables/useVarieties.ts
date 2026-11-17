@@ -1,24 +1,33 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
-import type { Ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import { catalogService } from '@/api/services/catalog.service'
-import type { CatalogQuery, VarietyInput } from '@/api/types/catalog'
+import type { VarietyInput, VarietyQuery } from '@/api/types/catalog'
+import { useCursorList } from '@/composables/useCursorList'
 
-export const useVarietiesQuery = (params: Ref<CatalogQuery>) =>
-  useQuery({
-    queryKey: ['varieties', params],
-    queryFn: () => catalogService.listVarieties(params.value).then((r) => r.data.data),
-  })
+export const useVarietyList = (params: Ref<VarietyQuery>) =>
+  useCursorList((lastIndex) => catalogService.listVarieties({ ...params.value, lastIndex }))
 
 export const useSaveVarietyMutation = () => {
-  const queryClient = useQueryClient()
+  const isSaving = ref(false)
+  const saveError = ref<string | null>(null)
 
-  return useMutation({
-    mutationFn: ({ id, data }: { id?: number; data: VarietyInput }) =>
-      id == null
-        ? catalogService.createVariety(data).then((r) => r.data.data)
-        : catalogService.updateVariety(id, data).then((r) => r.data.data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['varieties'] })
-    },
-  })
+  const save = async ({ id, data }: { id?: number; data: VarietyInput }) => {
+    isSaving.value = true
+    saveError.value = null
+    try {
+      return id == null
+        ? await catalogService.createVariety(data)
+        : await catalogService.updateVariety(id, data)
+    } catch (err) {
+      saveError.value = err instanceof Error ? err.message : 'Đã xảy ra lỗi'
+      throw err
+    } finally {
+      isSaving.value = false
+    }
+  }
+
+  const resetSaveError = () => {
+    saveError.value = null
+  }
+
+  return { save, isSaving, saveError, resetSaveError }
 }

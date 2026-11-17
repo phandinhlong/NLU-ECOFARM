@@ -1,5 +1,28 @@
 export type GreenhouseStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE'
 
+export interface CursorPageResponse<T> {
+  content: T[]
+  lastIndex: number | null
+  hasMore: boolean
+}
+
+export interface GreenhouseQuery {
+  status?: string
+  q?: string
+  lastIndex?: number
+}
+
+export interface VarietyQuery {
+  q?: string
+  lastIndex?: number
+}
+
+export interface CertificateQuery {
+  greenhouseId?: number
+  expiringInDays?: number
+  lastIndex?: number
+}
+
 export interface Greenhouse {
   id: number
   code: string
@@ -42,14 +65,6 @@ export interface VarietyInput {
   version?: number
 }
 
-export interface PageResponse<T> {
-  content: T[]
-  page: number
-  size: number
-  totalElements: number
-  totalPages: number
-}
-
 export type CertType = 'VIETGAP' | 'GLOBALGAP' | 'ORGANIC_INTERNAL'
 
 export interface Certificate {
@@ -76,24 +91,10 @@ export interface CertificateInput {
   fileKey?: string | null
 }
 
-export interface CertificateQuery {
-  page?: number
-  size?: number
-  greenhouseId?: number
-  expiringInDays?: number
-}
-
 export const CERT_TYPE_LABELS: Record<string, string> = {
   VIETGAP: 'VietGAP',
   GLOBALGAP: 'GlobalGAP',
   ORGANIC_INTERNAL: 'Organic (nội bộ)',
-}
-
-export interface CatalogQuery {
-  page?: number
-  size?: number
-  status?: string
-  q?: string
 }
 
 export const GREENHOUSE_STATUS_LABELS: Record<GreenhouseStatus, string> = {
