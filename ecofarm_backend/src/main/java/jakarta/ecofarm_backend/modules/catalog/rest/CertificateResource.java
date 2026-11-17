@@ -25,7 +25,7 @@ import java.util.List;
 
 @Path("/v1/certificates")
 @Stateless
-@RequireRoles({"ADMIN", "ENGINEER"})
+@RequireRoles({"ADMIN"})
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class CertificateResource {

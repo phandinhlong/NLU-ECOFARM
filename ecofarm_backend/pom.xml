@@ -47,6 +47,14 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- RESTEasy core: HttpServletResponseProducer dùng ResteasyContext (WildFly cung cấp lúc runtime) -->
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-core</artifactId>
+            <version>6.2.15.Final</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Jackson + OpenAPI: lấy từ module WildFly (xem WEB-INF/jboss-deployment-structure.xml) -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
