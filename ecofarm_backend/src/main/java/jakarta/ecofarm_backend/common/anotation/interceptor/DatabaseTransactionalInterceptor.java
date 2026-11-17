@@ -11,6 +11,7 @@ import jakarta.transaction.UserTransaction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+@Deprecated
 @DatabaseTransactional
 @Interceptor
 @Priority(Interceptor.Priority.APPLICATION)
