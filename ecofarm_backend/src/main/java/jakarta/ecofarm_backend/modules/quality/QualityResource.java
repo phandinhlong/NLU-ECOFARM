@@ -24,7 +24,7 @@ import jakarta.ws.rs.core.SecurityContext;
  * {@link QualityFacade}: lấy actor từ security context và map kết quả của facade thành response.
  * Toàn bộ logic nghiệp vụ, khóa dòng, transaction và lưu trữ đều nằm trong facade.
  */
-@Path("/v1/batches/{batchId}")
+@Path("/v1/batches")
 @Produces(MediaType.APPLICATION_JSON)
 @RequireRoles({"ADMIN", "ENGINEER", "WORKER"})
 public class QualityResource {
@@ -36,7 +36,7 @@ public class QualityResource {
     private SecurityContext securityContext;
 
     @POST
-    @Path("/harvest")
+    @Path("/{batchId}/harvest")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response harvest(@PathParam("batchId") Long batchId, HarvestRequest request) {
         boolean engineerOrAdmin = securityContext.isUserInRole("ADMIN") || securityContext.isUserInRole("ENGINEER");
@@ -46,7 +46,7 @@ public class QualityResource {
     }
 
     @POST
-    @Path("/qc")
+    @Path("/{batchId}/qc")
     @Consumes(MediaType.APPLICATION_JSON)
     @RequireRoles({"ADMIN", "ENGINEER"})
     public Response recordQc(@PathParam("batchId") Long batchId, QcRequest request) {
@@ -56,7 +56,7 @@ public class QualityResource {
     }
 
     @GET
-    @Path("/qc")
+    @Path("/{batchId}/qc")
     public Response listQc(@PathParam("batchId") Long batchId) {
         return Response.ok(qualityFacade.listQc(batchId)).build();
     }
