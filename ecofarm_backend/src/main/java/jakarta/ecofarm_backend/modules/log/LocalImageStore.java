@@ -60,6 +60,19 @@ public final class LocalImageStore {
         }
     }
 
+    /**
+     * Xoa tep theo key neu ton tai. Dung de don tep mo coi khi transaction DB that bai sau khi da ghi file.
+     * Tra ve true neu da xoa mot tep.
+     */
+    public boolean delete(String key) throws IOException {
+        try {
+            if (key == null || !UUID.fromString(key).toString().equals(key)) return false;
+        } catch (IllegalArgumentException | NullPointerException e) {
+            return false;
+        }
+        return Files.deleteIfExists(root.resolve(key));
+    }
+
     private static boolean matches(byte[] data, String mimeType) {
         if ("image/jpeg".equals(mimeType)) return data.length >= 3 && (data[0] & 255) == 255 && (data[1] & 255) == 216 && (data[2] & 255) == 255;
         if ("image/png".equals(mimeType)) return data.length >= 8 && (data[0] & 255) == 137 && data[1] == 80 && data[2] == 78 && data[3] == 71 && data[4] == 13 && data[5] == 10 && data[6] == 26 && data[7] == 10;
