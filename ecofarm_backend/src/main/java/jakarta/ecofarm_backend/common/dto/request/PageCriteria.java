@@ -3,6 +3,7 @@ package jakarta.ecofarm_backend.common.dto.request;
 import java.util.Optional;
 
 import jakarta.ecofarm_backend.common.enums.BatchStatus;
+import jakarta.validation.constraints.Positive;
 import jakarta.ws.rs.QueryParam;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,25 +17,27 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PageCriteria extends BaseCriteria {
-    @QueryParam("page")
-    private Integer page;
-
-    @QueryParam("size")
-    private Integer size;
-
     @QueryParam("status")
     private BatchStatus status;
 
     @QueryParam("greenhouseId")
+    @Positive
     private Long greenhouseId;
 
     @QueryParam("batchCode")
     private String batchCodeKeyword;
 
+    @Positive
     private Long mineUserId;
 
     @QueryParam("mine")
     private Boolean mine;
+
+    @QueryParam("lastIndex")
+    @Positive
+    private Long lastIndex;
+
+    public static final int LENGTH = 20;
 
     public Optional<BatchStatus> getStatusFilter() {
         return Optional.ofNullable(status);
@@ -52,16 +55,7 @@ public class PageCriteria extends BaseCriteria {
         return Optional.ofNullable(mineUserId);
     }
 
-    public int getSafePage() {
-        return page == null ? 0 : Math.max(page, 0);
-    }
-
-    public int getSafeSize() {
-        return size == null || size <= 0 ? 20 : Math.min(size, 100);
-    }
-
-    public int getSafeOffset() {
-        long offset = (long) getSafePage() * getSafeSize();
-        return offset > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) offset;
+    public Optional<Long> getLastIndexFilter() {
+        return Optional.ofNullable(lastIndex).filter(v -> v > 0);
     }
 }

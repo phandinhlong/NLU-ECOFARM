@@ -1,6 +1,5 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.repository;
 
-import jakarta.ecofarm_backend.common.enums.RoleEnum;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 
 import java.util.List;
@@ -17,5 +16,5 @@ public interface UserRepository {
 
     Optional<User> findByEmail(String email);
 
-    List<User> findActiveUsersByRole(RoleEnum role);
+    List<User> findActiveWorkerPage(Long lastIndex, int limit);
 }
