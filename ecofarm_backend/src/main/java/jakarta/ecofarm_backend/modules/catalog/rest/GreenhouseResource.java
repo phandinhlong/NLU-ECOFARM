@@ -19,7 +19,7 @@ import java.util.List;
 
 @Path("/v1/greenhouses")
 @Stateless
-@RequireRoles({"ADMIN", "ENGINEER", "QUALITY_CONTROL"})
+@RequireRoles({"ADMIN", "ENGINEER"})
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class GreenhouseResource {
