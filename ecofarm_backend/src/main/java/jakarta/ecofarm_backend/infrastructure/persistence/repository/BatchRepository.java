@@ -1,37 +1,44 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.repository;
 
+import jakarta.ecofarm_backend.common.dto.request.PageCriteria;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
-import jakarta.ejb.Stateless;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.BatchAssignment;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 
-@Stateless
-public class BatchRepository {
+import java.util.List;
+import java.util.Map;
 
-    @PersistenceContext
-    private EntityManager em;
+public interface BatchRepository {
 
-    public Batch findById(Long id) {
-        try {
-            return em.createQuery("SELECT b FROM Batch b LEFT JOIN FETCH b.greenhouse LEFT JOIN FETCH b.variety WHERE b.id = :id", Batch.class)
-                    .setParameter("id", id)
-                    .getSingleResult();
-        } catch (Exception e) {
-            return em.find(Batch.class, id);
-        }
-    }
+    List<Batch> findPage(PageCriteria criteria);
 
-    public Batch findByBatchCode(String batchCode) {
-        try {
-            return em.createQuery("SELECT b FROM Batch b LEFT JOIN FETCH b.greenhouse LEFT JOIN FETCH b.variety WHERE b.batchCode = :code", Batch.class)
-                    .setParameter("code", batchCode)
-                    .getSingleResult();
-        } catch (Exception e) {
-            return null;
-        }
-    }
+    Batch findById(Long id);
 
-    public Batch merge(Batch batch) {
-        return em.merge(batch);
-    }
+    Batch findByBatchCode(String batchCode);
+
+    Batch merge(Batch batch);
+
+    void persist(Batch batch);
+
+    Boolean existsByBatchCode(String batchCode);
+
+    Long countEvents(Long batchId);
+
+    Long findPollinationDate(Long batchId);
+
+    Map<Long, Long> findPollinationDates(List<Long> batchIds);
+
+    List<BatchAssignment> findAssignments(Long batchId);
+
+    Map<Long, Long> countAssignmentsByBatchIds(List<Long> batchIds);
+
+    Boolean isAssigned(Long batchId, Long userId);
+
+    List<User> findAssignedWorkerPage(Long batchId, Long lastIndex, int limit);
+
+    List<Long> findAssignedUserIds(Long batchId);
+
+    void removeAssignments(Long batchId, List<Long> userIds);
+
+    void persistAssignment(BatchAssignment assignment);
 }

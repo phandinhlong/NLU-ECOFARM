@@ -28,7 +28,12 @@ public enum ErrorCode {
     EXTRA_QR_REASON_REQUIRED(2006, "Reason is required when generating extra QR codes"),
     INVALID_SERIAL_RANGE(2007, "Invalid serial range"),
     PACKAGE_NOT_FOUND(2008, "Package not found for batch"),
-    OPTIMISTIC_LOCK_CONFLICT(2009, "Batch version conflict");
+    OPTIMISTIC_LOCK_CONFLICT(2009, "Batch version conflict"),
+    BATCH_LOCKED(2010, "Batch data is locked; workers cannot be assigned"),
+    BATCH_NOT_ASSIGNED(2011, "You are not assigned to this batch"),
+    VARIETY_NOT_FOUND(2012, "Variety not found"),
+    INVALID_WORKER(2013, "Invalid worker"),
+    INVALID_STATUS_FILTER(2014, "Invalid batch status");
 
     private final Integer code;
     private final String message;

@@ -13,7 +13,7 @@ public class PermissionDeniedExceptionMapper  implements ExceptionMapper<Permiss
     public Response toResponse(PermissionDeniedException e) {
         ExceptionResponse exceptionResponse = ExceptionResponse.builder().code(e.getCode()).message(e.getMessage()).isSuccess(false).build();
 
-        return Response.status(Response.Status.BAD_REQUEST)
+        return Response.status(Response.Status.FORBIDDEN)
                 .type(MediaType.APPLICATION_JSON)
                 .entity(exceptionResponse)
                 .build();

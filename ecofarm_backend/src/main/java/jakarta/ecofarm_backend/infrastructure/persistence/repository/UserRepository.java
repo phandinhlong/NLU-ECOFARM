@@ -2,6 +2,7 @@ package jakarta.ecofarm_backend.infrastructure.persistence.repository;
 
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository {
@@ -14,4 +15,6 @@ public interface UserRepository {
     User save(User user);
 
     Optional<User> findByEmail(String email);
+
+    List<User> findActiveWorkerPage(Long lastIndex, int limit);
 }

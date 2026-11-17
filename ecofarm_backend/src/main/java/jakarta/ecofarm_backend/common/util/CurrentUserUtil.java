@@ -14,4 +14,7 @@ public class CurrentUserUtil {
     public UserSecurityDetailsPrincipal get() {
         return (UserSecurityDetailsPrincipal) securityContext.getUserPrincipal();
     }
+    public Boolean isEmptyUserSecurityDetailsPrincipal(){
+        return securityContext.getUserPrincipal() == null;
+    }
 }
