@@ -3,8 +3,8 @@ package jakarta.ecofarm_backend.modules.catalog.facade;
 import jakarta.ecofarm_backend.common.dto.request.GreenhouseCriteria;
 import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
 import jakarta.ecofarm_backend.common.dto.response.CursorPageResponse;
-import jakarta.ecofarm_backend.modules.catalog.dto.GreenhouseRequest;
-import jakarta.ecofarm_backend.modules.catalog.dto.GreenhouseResponse;
+import jakarta.ecofarm_backend.common.dto.request.GreenhouseRequest;
+import jakarta.ecofarm_backend.common.dto.response.GreenhouseResponse;
 
 public interface GreenhouseFacade {
 

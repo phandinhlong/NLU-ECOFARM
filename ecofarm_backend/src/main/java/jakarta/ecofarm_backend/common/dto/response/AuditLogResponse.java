@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.modules.audit.dto;
+package jakarta.ecofarm_backend.common.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

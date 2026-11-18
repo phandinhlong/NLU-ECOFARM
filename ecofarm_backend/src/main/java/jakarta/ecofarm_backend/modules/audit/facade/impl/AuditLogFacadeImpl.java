@@ -6,7 +6,7 @@ import jakarta.ecofarm_backend.common.dto.response.CursorPageResponse;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.AuditLog;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.infrastructure.service.AuditLogService;
-import jakarta.ecofarm_backend.modules.audit.dto.AuditLogResponse;
+import jakarta.ecofarm_backend.common.dto.response.AuditLogResponse;
 import jakarta.ecofarm_backend.modules.audit.facade.AuditLogFacade;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;

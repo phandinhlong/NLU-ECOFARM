@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.modules.catalog.dto;
+package jakarta.ecofarm_backend.common.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,14 +9,13 @@ import lombok.NoArgsConstructor;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
-public class GreenhouseResponse {
+public class VarietyResponse {
     private Long id;
     private String code;
     private String name;
-    private Double gpsLat;
-    private Double gpsLng;
-    private Double areaM2;
-    private String status;
+    private Integer daysPollinationToHarvest;
+    private Double minBrix;
+    private Integer minIsolationDays;
     private Long batchCount;
     private Boolean active;
     private Long version;
