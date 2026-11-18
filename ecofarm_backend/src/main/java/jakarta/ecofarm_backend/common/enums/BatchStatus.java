@@ -46,7 +46,9 @@ public enum BatchStatus {
         map.put(ACTIVE, transitions(
                 BatchEvent.SHIP, SHIPPED,
                 BatchEvent.RECALL, RECALLED));
-        map.put(SHIPPED, transitions(BatchEvent.RECALL, RECALLED));
+        map.put(SHIPPED, transitions(
+                BatchEvent.RECALL, RECALLED,
+                BatchEvent.REJECT_DELIVERY, ACTIVE));
         map.put(REJECTED, transitions());
         map.put(RECALLED, transitions());
         TRANSITIONS = Collections.unmodifiableMap(map);

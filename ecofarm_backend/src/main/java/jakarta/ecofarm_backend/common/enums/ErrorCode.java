@@ -35,6 +35,11 @@ public enum ErrorCode {
     BATCH_NOT_ASSIGNED(2011, "You are not assigned to this batch"),
     VARIETY_NOT_FOUND(2012, "Variety not found"),
     INVALID_WORKER(2013, "Invalid worker"),
+    SHIPMENT_NOT_FOUND(2014, "Shipment not found"),
+    BATCH_NOT_SHIPPABLE(2015, "Batch is not eligible for shipping"),
+    SHIPMENT_ALREADY_PROCESSED(2016, "Shipment already processed"),
+    SHIPMENT_IN_PROGRESS_EXISTS(2017, "Batch already has a shipment in progress"),
+    RECEIVE_REASON_REQUIRED(2018, "Condition note is required when rejecting a shipment"),
     ANCHOR_NOT_FOUND(3001, "Anchor not found"),
     ANCHOR_NOT_RETRYABLE(3002, "Anchor is not in FAILED state; cannot retry");
 

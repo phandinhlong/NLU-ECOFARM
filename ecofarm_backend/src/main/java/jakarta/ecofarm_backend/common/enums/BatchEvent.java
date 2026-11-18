@@ -10,5 +10,6 @@ public enum BatchEvent {
     ANCHOR_FAILED,
     RETRY_ANCHORING,
     SHIP,
+    REJECT_DELIVERY,
     RECALL
 }
