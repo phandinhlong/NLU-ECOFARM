@@ -12,6 +12,9 @@ import jakarta.ecofarm_backend.common.enums.AnchorStatus;
 import jakarta.ecofarm_backend.common.enums.BatchEvent;
 import jakarta.ecofarm_backend.common.enums.BatchStatus;
 import jakarta.ecofarm_backend.common.enums.ErrorCode;
+import jakarta.ecofarm_backend.common.enums.EventChainStatus;
+import jakarta.ecofarm_backend.common.enums.EventReviewStatus;
+import jakarta.ecofarm_backend.common.enums.EventType;
 import jakarta.ecofarm_backend.common.exception.ConflictException;
 import jakarta.ecofarm_backend.common.exception.EntityNotFoundException;
 import jakarta.ecofarm_backend.config.BlockchainConfig;
@@ -394,8 +397,8 @@ public class PackagingFacadeImpl implements PackagingFacade {
         }
 
         boolean hasHarvestEvent = events.stream().anyMatch(e ->
-                ("THU_HOACH".equalsIgnoreCase(e.getEventType()) || "HARVESTING".equalsIgnoreCase(e.getEventType()))
-                        && !"REJECTED".equalsIgnoreCase(e.getStatus()));
+                e.getEventType() == EventType.THU_HOACH
+                        && e.getReviewStatus() != EventReviewStatus.REJECTED);
         if (batch.getHarvestDate() == null && !hasHarvestEvent) {
             missing.add("Batch has no harvest record (missing harvest_date or harvest event)");
         }
@@ -404,10 +407,14 @@ public class PackagingFacadeImpl implements PackagingFacade {
             missing.add("Batch has no cultivation events");
         } else {
             for (CultivationEvent event : events) {
-                String status = event.getStatus();
-                if (!"APPROVED".equalsIgnoreCase(status) && !"SUPERSEDED".equalsIgnoreCase(status)) {
+                boolean reviewOk = event.getReviewStatus() == EventReviewStatus.APPROVED;
+                boolean chainOk = event.getStatus() == EventChainStatus.CONFIRMED
+                        || event.getStatus() == EventChainStatus.SUPERSEDED;
+                if (!reviewOk || !chainOk) {
                     missing.add("Event seq=" + event.getSeq() + " (" + event.getEventType()
-                            + ") has status '" + status + "', must be CONFIRMED & APPROVED or SUPERSEDED");
+                            + ") has review_status '" + event.getReviewStatus()
+                            + "' and status '" + event.getStatus()
+                            + "', must be APPROVED & CONFIRMED or SUPERSEDED");
                 }
             }
         }

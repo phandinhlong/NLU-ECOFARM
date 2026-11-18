@@ -252,8 +252,8 @@ public class VerificationServiceImpl implements VerificationService {
                 Long eventTime = Optional.ofNullable(ev.getRecordedAt()).orElse(ev.getCreatedAt());
                 timeline.add(EventData.builder()
                         .seq(ev.getSeq())
-                        .eventType(ev.getEventType())
-                        .status(ev.getStatus())
+                        .eventType(ev.getEventType() == null ? null : ev.getEventType().name())
+                        .status(ev.getStatus() == null ? null : ev.getStatus().name())
                         .recordedAt(eventTime)
                         .eventHash(ev.getEventHash())
                         .actorRef(Optional.ofNullable(ev.getRecordedBy())

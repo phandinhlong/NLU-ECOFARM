@@ -114,7 +114,9 @@ public class VerTraceRepository {
         }
         for (CultivationEvent e : events) {
             Long recordedById = e.getRecordedBy() != null ? e.getRecordedBy().getId() : null;
-            timeline.add(new EventData(e.getSeq(), e.getEventType(), e.getStatus(),
+            timeline.add(new EventData(e.getSeq(),
+                    e.getEventType() == null ? null : e.getEventType().name(),
+                    e.getStatus() == null ? null : e.getStatus().name(),
                     e.getRecordedAt(), e.getEventHash(), recordedById));
         }
         return timeline;
