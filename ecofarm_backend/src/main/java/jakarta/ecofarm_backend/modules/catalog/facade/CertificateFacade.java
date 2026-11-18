@@ -13,4 +13,6 @@ public interface CertificateFacade {
     BaseResponse<Long> countCertificates(CertificateCriteria criteria);
 
     BaseResponse<CertificateResponse> createCertificate(CertificateRequest request);
+
+    BaseResponse<CertificateResponse> updateCertificate(Long id, CertificateRequest request);
 }

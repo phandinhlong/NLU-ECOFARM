@@ -3,9 +3,10 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import SoftBadge from '@/components/common/SoftBadge.vue'
 import { catalogService } from '@/api/services/catalog.service'
-import { useCertificateList, useCreateCertificateMutation } from '@/composables/useCertificates'
+import { useCertificateList, useSaveCertificateMutation } from '@/composables/useCertificates'
 import {
   CERT_TYPE_LABELS,
+  type Certificate,
   type CertificateInput,
   type CertificateQuery,
   type Greenhouse,
@@ -14,7 +15,7 @@ import {
 const params = ref<CertificateQuery>({})
 
 const { items, hasMore, loading, error, load, loadMore } = useCertificateList(params)
-const { create, isSaving, saveError, resetSaveError } = useCreateCertificateMutation()
+const { save, isSaving, saveError, resetSaveError } = useSaveCertificateMutation()
 
 const greenhouses = ref<Greenhouse[]>([])
 
@@ -28,6 +29,7 @@ onMounted(async () => {
 })
 
 const showModal = ref(false)
+const editing = ref<Certificate | null>(null)
 const greenhouseFilter = ref('')
 const expiringFilter = ref('')
 const form = reactive({
@@ -37,9 +39,14 @@ const form = reactive({
   validFrom: '',
   validTo: '',
   fileKey: '',
+  active: true,
 })
 
 const certTypes = Object.entries(CERT_TYPE_LABELS)
+const missingGreenhouseId = computed(() => {
+  const id = editing.value?.greenhouseId
+  return id != null && !greenhouses.value.some((item) => item.id === id) ? id : null
+})
 
 const daysLeft = (validTo: string | null): number | null => {
   if (!validTo) return null
@@ -64,12 +71,27 @@ const greenhouseLabel = (id: number | null): string => {
 }
 
 const openCreate = () => {
+  editing.value = null
   form.greenhouseId = ''
   form.certType = 'VIETGAP'
   form.certNo = ''
   form.validFrom = ''
   form.validTo = ''
   form.fileKey = ''
+  form.active = true
+  resetSaveError()
+  showModal.value = true
+}
+
+const openEdit = (row: Certificate) => {
+  editing.value = row
+  form.greenhouseId = row.greenhouseId?.toString() ?? ''
+  form.certType = row.certType
+  form.certNo = row.certNo
+  form.validFrom = row.validFrom ?? ''
+  form.validTo = row.validTo ?? ''
+  form.fileKey = row.fileKey ?? ''
+  form.active = row.active
   resetSaveError()
   showModal.value = true
 }
@@ -83,8 +105,12 @@ const submit = async () => {
     validTo: form.validTo,
     fileKey: form.fileKey.trim() || undefined,
   }
+  if (editing.value) {
+    payload.active = form.active
+    payload.version = editing.value.version
+  }
   try {
-    await create(payload)
+    await save({ id: editing.value?.id, data: payload })
     showModal.value = false
     await load()
   } catch {
@@ -183,11 +209,12 @@ const resetFilter = () => {
               <th scope="col">Hết hạn</th>
               <th scope="col">Trạng thái</th>
               <th scope="col">Tệp PDF</th>
+              <th scope="col" class="text-end">Thao tác</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="items.length === 0">
-              <td colspan="7" class="text-center text-body-secondary py-4">
+              <td colspan="8" class="text-center text-body-secondary py-4">
                 Chưa có chứng nhận nào
               </td>
             </tr>
@@ -219,6 +246,9 @@ const resetFilter = () => {
                   {{ row.fileKey ?? '—' }}
                 </span>
               </td>
+              <td class="text-end">
+                <BButton size="sm" variant="outline-primary" @click="openEdit(row)">Sửa</BButton>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -231,8 +261,8 @@ const resetFilter = () => {
       </div>
     </section>
 
-    <BModal v-model="showModal" title="Thêm chứng nhận">
-      <BAlert v-if="saveError" variant="danger" dismissible>
+    <BModal v-model="showModal" :title="editing ? 'Sửa chứng nhận' : 'Thêm chứng nhận'">
+      <BAlert v-if="saveError" :model-value="true" variant="danger" dismissible>
         {{ saveError }}
       </BAlert>
       <form class="d-flex flex-column gap-3" novalidate @submit.prevent="submit">
@@ -240,6 +270,9 @@ const resetFilter = () => {
           <label class="form-label small fw-semibold mb-1" for="cert-greenhouse">Nhà màng</label>
           <BFormSelect id="cert-greenhouse" v-model="form.greenhouseId" required>
             <option value="" disabled>Chọn nhà màng</option>
+            <option v-if="missingGreenhouseId != null" :value="String(missingGreenhouseId)">
+              #{{ missingGreenhouseId }} — Nhà màng hiện tại (không có trong danh sách đang sử dụng)
+            </option>
             <option v-for="item in greenhouses" :key="item.id" :value="String(item.id)">
               {{ item.code }} — {{ item.name }}
             </option>
@@ -277,6 +310,19 @@ const resetFilter = () => {
           />
           <p class="small text-body-secondary mt-2 mb-0">
             Tải tệp lên MinIO trước, sau đó nhập khóa tệp (fileKey) vào đây.
+          </p>
+        </div>
+        <div v-if="editing">
+          <label class="form-label small fw-semibold mb-1" for="cert-active">
+            Trạng thái dữ liệu (is_active)
+          </label>
+          <BFormSelect id="cert-active" v-model="form.active" aria-describedby="cert-active-warning">
+            <option :value="true">Đang sử dụng (true)</option>
+            <option :value="false">Xóa mềm (false)</option>
+          </BFormSelect>
+          <p id="cert-active-warning" class="small text-warning mt-2 mb-0" role="note">
+            Cảnh báo: Chọn Xóa mềm (false) sẽ ẩn chứng nhận khỏi danh sách đang sử dụng,
+            nhưng vẫn giữ dữ liệu lịch sử đã liên kết.
           </p>
         </div>
       </form>

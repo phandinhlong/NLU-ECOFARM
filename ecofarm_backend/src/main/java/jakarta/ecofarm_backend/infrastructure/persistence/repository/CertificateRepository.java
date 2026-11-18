@@ -13,5 +13,9 @@ public interface CertificateRepository {
 
     boolean existsByCertNo(String certNo);
 
+    boolean existsByCertNoAndIdNot(String certNo, Long id);
+
+    Certificate findById(Long id);
+
     Certificate save(Certificate certificate);
 }

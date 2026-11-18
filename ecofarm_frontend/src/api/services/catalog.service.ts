@@ -73,6 +73,9 @@ export const catalogService = {
   createCertificate: (data: CertificateInput) =>
     unwrap(axios.post<ApiResponse<Certificate>>(`${API_V1}/certificates`, data)),
 
+  updateCertificate: (id: number, data: CertificateInput) =>
+    unwrap(axios.put<ApiResponse<Certificate>>(`${API_V1}/certificates/${id}`, data)),
+
   fetchAllGreenhouses: () => fetchAll((lastIndex) => catalogService.listGreenhouses({ lastIndex })),
 
   fetchAllVarieties: () => fetchAll((lastIndex) => catalogService.listVarieties({ lastIndex })),

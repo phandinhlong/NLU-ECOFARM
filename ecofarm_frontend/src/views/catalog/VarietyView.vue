@@ -24,6 +24,7 @@ const form = reactive({
   daysPollinationToHarvest: '',
   minBrix: '',
   minIsolationDays: '',
+  active: true,
 })
 
 const isCodeLocked = computed(() => editing.value != null && editing.value.batchCount > 0)
@@ -34,6 +35,7 @@ const resetForm = () => {
   form.daysPollinationToHarvest = ''
   form.minBrix = ''
   form.minIsolationDays = ''
+  form.active = true
 }
 
 const openCreate = () => {
@@ -50,6 +52,7 @@ const openEdit = (row: Variety) => {
   form.daysPollinationToHarvest = row.daysPollinationToHarvest?.toString() ?? ''
   form.minBrix = row.minBrix?.toString() ?? ''
   form.minIsolationDays = row.minIsolationDays?.toString() ?? ''
+  form.active = row.active
   resetSaveError()
   showModal.value = true
 }
@@ -65,6 +68,7 @@ const submit = async () => {
     minIsolationDays: toNumberOrNull(form.minIsolationDays),
   }
   if (editing.value) {
+    payload.active = form.active
     payload.version = editing.value.version
   }
   try {
@@ -218,7 +222,7 @@ const brixVariant = (value: number | null): 'success' | 'warning' | 'muted' => {
     </section>
 
     <BModal v-model="showModal" :title="editing ? 'Sửa giống dưa' : 'Thêm giống dưa'">
-      <BAlert v-if="saveError" variant="danger" dismissible>
+      <BAlert v-if="saveError" :model-value="true" variant="danger" dismissible>
         {{ saveError }}
       </BAlert>
       <form class="d-flex flex-column gap-3" novalidate @submit.prevent="submit">
@@ -252,6 +256,19 @@ const brixVariant = (value: number | null): 'success' | 'warning' | 'muted' => {
             Ngưỡng Brix tối thiểu (°Bx)
           </label>
           <BFormInput id="v-brix" v-model="form.minBrix" type="number" step="0.1" min="0" max="30" />
+        </div>
+        <div v-if="editing">
+          <label class="form-label small fw-semibold mb-1" for="v-active">
+            Trạng thái dữ liệu (is_active)
+          </label>
+          <BFormSelect id="v-active" v-model="form.active" aria-describedby="v-active-warning">
+            <option :value="true">Đang sử dụng (true)</option>
+            <option :value="false">Xóa mềm (false)</option>
+          </BFormSelect>
+          <p id="v-active-warning" class="small text-warning mt-2 mb-0" role="note">
+            Cảnh báo: Chọn Xóa mềm (false) sẽ ẩn giống dưa khỏi danh sách đang sử dụng,
+            nhưng vẫn giữ dữ liệu lịch sử đã liên kết.
+          </p>
         </div>
       </form>
       <template #footer>

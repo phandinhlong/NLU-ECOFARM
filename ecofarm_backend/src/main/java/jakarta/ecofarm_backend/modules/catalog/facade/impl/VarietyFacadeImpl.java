@@ -69,6 +69,9 @@ public class VarietyFacadeImpl implements VarietyFacade {
                 .minBrix(request.getMinBrix() == null ? null : request.getMinBrix().doubleValue())
                 .minIsolationDays(request.getMinIsolationDays())
                 .build();
+        if (request.getActive() != null) {
+            variety.setActive(request.getActive());
+        }
 
         varietyService.save(variety);
 
@@ -123,6 +126,9 @@ public class VarietyFacadeImpl implements VarietyFacade {
         variety.setDaysPollinationToHarvest(request.getDaysPollinationToHarvest());
         variety.setMinBrix(request.getMinBrix() == null ? null : request.getMinBrix().doubleValue());
         variety.setMinIsolationDays(request.getMinIsolationDays());
+        if (request.getActive() != null) {
+            variety.setActive(request.getActive());
+        }
     }
 
     private VarietyResponse toResponse(Variety variety, Long batchCount) {

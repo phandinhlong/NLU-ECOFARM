@@ -83,7 +83,7 @@ public class VarietyRepositoryImpl implements VarietyRepository {
 
     @Override
     public boolean existsByCodeAndIdNot(String code, Long id) {
-        StringBuilder jpql = new StringBuilder("SELECT COUNT(v) FROM Variety v WHERE v.isActive = true AND v.code = :code");
+        StringBuilder jpql = new StringBuilder("SELECT COUNT(v) FROM Variety v WHERE v.code = :code");
         if (id != null) {
             jpql.append(" AND v.id <> :id");
         }

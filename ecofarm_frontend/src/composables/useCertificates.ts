@@ -6,15 +6,17 @@ import { useCursorList } from '@/composables/useCursorList'
 export const useCertificateList = (params: Ref<CertificateQuery>) =>
   useCursorList((lastIndex) => catalogService.listCertificates({ ...params.value, lastIndex }))
 
-export const useCreateCertificateMutation = () => {
+export const useSaveCertificateMutation = () => {
   const isSaving = ref(false)
   const saveError = ref<string | null>(null)
 
-  const create = async (data: CertificateInput) => {
+  const save = async ({ id, data }: { id?: number; data: CertificateInput }) => {
     isSaving.value = true
     saveError.value = null
     try {
-      return await catalogService.createCertificate(data)
+      return id == null
+        ? await catalogService.createCertificate(data)
+        : await catalogService.updateCertificate(id, data)
     } catch (err) {
       saveError.value = err instanceof Error ? err.message : 'Đã xảy ra lỗi'
       throw err
@@ -27,5 +29,5 @@ export const useCreateCertificateMutation = () => {
     saveError.value = null
   }
 
-  return { create, isSaving, saveError, resetSaveError }
+  return { save, isSaving, saveError, resetSaveError }
 }

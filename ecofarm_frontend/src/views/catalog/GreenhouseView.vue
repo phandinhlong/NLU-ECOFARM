@@ -32,6 +32,7 @@ const form = reactive({
   gpsLng: '',
   areaM2: '',
   status: 'ACTIVE' as GreenhouseStatus,
+  active: true,
 })
 
 const statuses = Object.entries(GREENHOUSE_STATUS_LABELS) as [GreenhouseStatus, string][]
@@ -50,6 +51,7 @@ const resetForm = () => {
   form.gpsLng = ''
   form.areaM2 = ''
   form.status = 'ACTIVE'
+  form.active = true
 }
 
 const openCreate = () => {
@@ -67,6 +69,7 @@ const openEdit = (row: Greenhouse) => {
   form.gpsLng = row.gpsLng?.toString() ?? ''
   form.areaM2 = row.areaM2?.toString() ?? ''
   form.status = row.status
+  form.active = row.active
   resetSaveError()
   showModal.value = true
 }
@@ -81,6 +84,7 @@ const submit = async () => {
     status: form.status,
   }
   if (editing.value) {
+    payload.active = form.active
     payload.version = editing.value.version
   }
   try {
@@ -249,7 +253,7 @@ const formatArea = (value: number | null) =>
     </section>
 
     <BModal v-model="showModal" :title="editing ? 'Sửa nhà màng' : 'Thêm nhà màng'">
-      <BAlert v-if="saveError" variant="danger" dismissible>
+      <BAlert v-if="saveError" :model-value="true" variant="danger" dismissible>
         {{ saveError }}
       </BAlert>
       <form class="d-flex flex-column gap-3" novalidate @submit.prevent="submit">
@@ -285,6 +289,19 @@ const formatArea = (value: number | null) =>
               {{ label }}
             </option>
           </BFormSelect>
+        </div>
+        <div v-if="editing">
+          <label class="form-label small fw-semibold mb-1" for="gh-active">
+            Trạng thái dữ liệu (is_active)
+          </label>
+          <BFormSelect id="gh-active" v-model="form.active" aria-describedby="gh-active-warning">
+            <option :value="true">Đang sử dụng (true)</option>
+            <option :value="false">Xóa mềm (false)</option>
+          </BFormSelect>
+          <p id="gh-active-warning" class="small text-warning mt-2 mb-0" role="note">
+            Cảnh báo: Chọn Xóa mềm (false) sẽ ẩn nhà màng khỏi danh sách đang sử dụng,
+            nhưng vẫn giữ dữ liệu lịch sử đã liên kết.
+          </p>
         </div>
       </form>
       <template #footer>

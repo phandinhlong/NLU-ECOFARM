@@ -8,8 +8,8 @@ import jakarta.ecofarm_backend.common.exception.ConflictException;
 import jakarta.ecofarm_backend.common.exception.EntityNotFoundException;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Certificate;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Greenhouse;
-import jakarta.ecofarm_backend.infrastructure.persistence.repository.CertificateRepository;
-import jakarta.ecofarm_backend.infrastructure.persistence.repository.GreenhouseRepository;
+import jakarta.ecofarm_backend.infrastructure.service.CertificateService;
+import jakarta.ecofarm_backend.infrastructure.service.GreenhouseService;
 import jakarta.ecofarm_backend.modules.catalog.dto.CertificateRequest;
 import jakarta.ecofarm_backend.modules.catalog.dto.CertificateResponse;
 import jakarta.ecofarm_backend.modules.catalog.facade.CertificateFacade;
@@ -25,14 +25,14 @@ import java.util.List;
 public class CertificateFacadeImpl implements CertificateFacade {
 
     @Inject
-    private CertificateRepository certificateRepository;
+    private CertificateService certificateService;
 
     @Inject
-    private GreenhouseRepository greenhouseRepository;
+    private GreenhouseService greenhouseService;
 
     @Override
     public BaseResponse<CursorPageResponse<CertificateResponse>> findCertificates(CertificateCriteria criteria) {
-        List<Certificate> certificates = certificateRepository.findPage(criteria);
+        List<Certificate> certificates = certificateService.findPage(criteria);
         boolean hasMore = certificates.size() > CertificateCriteria.LENGTH;
         List<Certificate> page = hasMore ? certificates.subList(0, CertificateCriteria.LENGTH) : certificates;
 
@@ -44,13 +44,43 @@ public class CertificateFacadeImpl implements CertificateFacade {
 
     @Override
     public BaseResponse<Long> countCertificates(CertificateCriteria criteria) {
-        return BaseResponse.build(certificateRepository.countActive(criteria));
+        return BaseResponse.build(certificateService.countActive(criteria));
     }
 
     @Override
     @Transactional
     public BaseResponse<CertificateResponse> createCertificate(CertificateRequest request) {
-        Greenhouse greenhouse = greenhouseRepository.findById(request.getGreenhouseId());
+        if (certificateService.existsByCertNo(request.getCertNo().trim())) {
+            throw new ConflictException(ErrorCode.CERT_NO_EXISTS);
+        }
+
+        Certificate certificate = new Certificate();
+        applyRequest(certificate, request);
+        certificateService.save(certificate);
+        return BaseResponse.build(toResponse(certificate));
+    }
+
+    @Override
+    @Transactional
+    public BaseResponse<CertificateResponse> updateCertificate(Long id, CertificateRequest request) {
+        Certificate certificate = certificateService.findById(id);
+        if (certificate == null) {
+            throw new EntityNotFoundException(ErrorCode.CERTIFICATE_NOT_FOUND);
+        }
+        if (request.getVersion() != null && !request.getVersion().equals(certificate.getVersion())) {
+            throw new ConflictException(ErrorCode.VERSION_CONFLICT);
+        }
+        if (certificateService.existsByCertNoAndIdNot(request.getCertNo().trim(), id)) {
+            throw new ConflictException(ErrorCode.CERT_NO_EXISTS);
+        }
+
+        applyRequest(certificate, request);
+        Certificate updated = certificateService.save(certificate);
+        return BaseResponse.build(toResponse(updated));
+    }
+
+    private void applyRequest(Certificate certificate, CertificateRequest request) {
+        Greenhouse greenhouse = greenhouseService.findById(request.getGreenhouseId());
         if (greenhouse == null) {
             throw new EntityNotFoundException(ErrorCode.GREENHOUSE_NOT_FOUND);
         }
@@ -67,11 +97,6 @@ public class CertificateFacadeImpl implements CertificateFacade {
             throw new ConflictException(ErrorCode.INVALID_DATE);
         }
 
-        if (certificateRepository.existsByCertNo(request.getCertNo())) {
-            throw new ConflictException(ErrorCode.CERT_NO_EXISTS);
-        }
-
-        Certificate certificate = new Certificate();
         certificate.setGreenhouse(greenhouse);
         certificate.setCertType(request.getCertType());
         certificate.setCertNo(request.getCertNo().trim());
@@ -79,9 +104,9 @@ public class CertificateFacadeImpl implements CertificateFacade {
         certificate.setValidTo(to);
         certificate.setFileKey(request.getFileKey() == null || request.getFileKey().isBlank()
                 ? null : request.getFileKey().trim());
-
-        certificateRepository.save(certificate);
-        return BaseResponse.build(toResponse(certificate));
+        if (request.getActive() != null) {
+            certificate.setActive(request.getActive());
+        }
     }
 
     private CertificateResponse toResponse(Certificate certificate) {

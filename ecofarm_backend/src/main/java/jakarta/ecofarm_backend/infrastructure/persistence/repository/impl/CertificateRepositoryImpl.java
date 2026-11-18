@@ -60,11 +60,26 @@ public class CertificateRepositoryImpl implements CertificateRepository {
 
     @Override
     public boolean existsByCertNo(String certNo) {
-        TypedQuery<Long> query = em.createQuery(
-                "SELECT COUNT(c) FROM Certificate c WHERE c.isActive = true AND c.certNo = :certNo",
-                Long.class);
+        return existsByCertNoAndIdNot(certNo, null);
+    }
+
+    @Override
+    public boolean existsByCertNoAndIdNot(String certNo, Long id) {
+        StringBuilder jpql = new StringBuilder("SELECT COUNT(c) FROM Certificate c WHERE c.certNo = :certNo");
+        if (id != null) {
+            jpql.append(" AND c.id <> :id");
+        }
+        TypedQuery<Long> query = em.createQuery(jpql.toString(), Long.class);
         query.setParameter("certNo", certNo);
+        if (id != null) {
+            query.setParameter("id", id);
+        }
         return query.getSingleResult() > 0;
+    }
+
+    @Override
+    public Certificate findById(Long id) {
+        return em.find(Certificate.class, id);
     }
 
     @Override

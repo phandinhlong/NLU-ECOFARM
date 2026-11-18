@@ -7,7 +7,7 @@ import jakarta.ecofarm_backend.common.enums.ErrorCode;
 import jakarta.ecofarm_backend.common.exception.ConflictException;
 import jakarta.ecofarm_backend.common.exception.EntityNotFoundException;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Greenhouse;
-import jakarta.ecofarm_backend.infrastructure.persistence.repository.GreenhouseRepository;
+import jakarta.ecofarm_backend.infrastructure.service.GreenhouseService;
 import jakarta.ecofarm_backend.modules.catalog.dto.GreenhouseRequest;
 import jakarta.ecofarm_backend.modules.catalog.dto.GreenhouseResponse;
 import jakarta.ecofarm_backend.modules.catalog.facade.GreenhouseFacade;
@@ -22,16 +22,16 @@ import java.util.Map;
 public class GreenhouseFacadeImpl implements GreenhouseFacade {
 
     @Inject
-    private GreenhouseRepository greenhouseRepository;
+    private GreenhouseService greenhouseService;
 
     @Override
     public BaseResponse<CursorPageResponse<GreenhouseResponse>> findGreenhouses(GreenhouseCriteria criteria) {
-        List<Greenhouse> greenhouses = greenhouseRepository.findPage(criteria);
+        List<Greenhouse> greenhouses = greenhouseService.findPage(criteria);
         boolean hasMore = greenhouses.size() > GreenhouseCriteria.LENGTH;
         List<Greenhouse> page = hasMore ? greenhouses.subList(0, GreenhouseCriteria.LENGTH) : greenhouses;
 
         List<Long> ids = page.stream().map(Greenhouse::getId).toList();
-        Map<Long, Long> batchCounts = greenhouseRepository.countBatchesByGreenhouseIds(ids);
+        Map<Long, Long> batchCounts = greenhouseService.countBatchesByGreenhouseIds(ids);
 
         List<GreenhouseResponse> content = page.stream()
                 .map(g -> toResponse(g, batchCounts.getOrDefault(g.getId(), 0L)))
@@ -43,28 +43,28 @@ public class GreenhouseFacadeImpl implements GreenhouseFacade {
 
     @Override
     public BaseResponse<Long> countGreenhouses(GreenhouseCriteria criteria) {
-        return BaseResponse.build(greenhouseRepository.countActive(criteria));
+        return BaseResponse.build(greenhouseService.countActive(criteria));
     }
 
     @Override
     public BaseResponse<GreenhouseResponse> findGreenhouse(Long id) {
-        Greenhouse greenhouse = greenhouseRepository.findById(id);
+        Greenhouse greenhouse = greenhouseService.findById(id);
         if (greenhouse == null) {
             throw new EntityNotFoundException(ErrorCode.GREENHOUSE_NOT_FOUND);
         }
-        return BaseResponse.build(toResponse(greenhouse, greenhouseRepository.countBatches(id)));
+        return BaseResponse.build(toResponse(greenhouse, greenhouseService.countBatches(id)));
     }
 
     @Override
     @Transactional
     public BaseResponse<GreenhouseResponse> createGreenhouse(GreenhouseRequest request) {
-        if (greenhouseRepository.existsByCode(request.getCode())) {
+        if (greenhouseService.existsByCode(request.getCode())) {
             throw new ConflictException(ErrorCode.CODE_EXISTS);
         }
 
         Greenhouse greenhouse = new Greenhouse();
         applyRequest(greenhouse, request);
-        greenhouseRepository.save(greenhouse);
+        greenhouseService.save(greenhouse);
 
         return BaseResponse.build(toResponse(greenhouse, 0L));
     }
@@ -72,7 +72,7 @@ public class GreenhouseFacadeImpl implements GreenhouseFacade {
     @Override
     @Transactional
     public BaseResponse<GreenhouseResponse> updateGreenhouse(Long id, GreenhouseRequest request) {
-        Greenhouse greenhouse = greenhouseRepository.findById(id);
+        Greenhouse greenhouse = greenhouseService.findById(id);
         if (greenhouse == null) {
             throw new EntityNotFoundException(ErrorCode.GREENHOUSE_NOT_FOUND);
         }
@@ -82,33 +82,33 @@ public class GreenhouseFacadeImpl implements GreenhouseFacade {
         }
 
         boolean codeChanged = !greenhouse.getCode().equals(request.getCode());
-        if (codeChanged && greenhouseRepository.countBatches(id) > 0) {
+        if (codeChanged && greenhouseService.countBatches(id) > 0) {
             throw new ConflictException(ErrorCode.CATALOG_CODE_LOCKED);
         }
-        if (codeChanged && greenhouseRepository.existsByCodeAndIdNot(request.getCode(), id)) {
+        if (codeChanged && greenhouseService.existsByCodeAndIdNot(request.getCode(), id)) {
             throw new ConflictException(ErrorCode.CODE_EXISTS);
         }
 
         applyRequest(greenhouse, request);
-        Greenhouse updated = greenhouseRepository.save(greenhouse);
-        return BaseResponse.build(toResponse(updated, greenhouseRepository.countBatches(id)));
+        Greenhouse updated = greenhouseService.save(greenhouse);
+        return BaseResponse.build(toResponse(updated, greenhouseService.countBatches(id)));
     }
 
     @Override
     @Transactional
     public BaseResponse<Boolean> deleteGreenhouse(Long id) {
-        Greenhouse greenhouse = greenhouseRepository.findById(id);
+        Greenhouse greenhouse = greenhouseService.findById(id);
         if (greenhouse == null) {
             throw new EntityNotFoundException(ErrorCode.GREENHOUSE_NOT_FOUND);
         }
 
-        if (greenhouseRepository.countBatches(id) > 0
-                || greenhouseRepository.countCertificates(id) > 0) {
+        if (greenhouseService.countBatches(id) > 0
+                || greenhouseService.countCertificates(id) > 0) {
             throw new ConflictException(ErrorCode.CATALOG_DELETE_LOCKED);
         }
 
         greenhouse.setActive(false);
-        greenhouseRepository.save(greenhouse);
+        greenhouseService.save(greenhouse);
         return BaseResponse.build(true);
     }
 
@@ -119,6 +119,9 @@ public class GreenhouseFacadeImpl implements GreenhouseFacade {
         greenhouse.setGpsLng(request.getGpsLng() == null ? null : request.getGpsLng().doubleValue());
         greenhouse.setAreaM2(request.getAreaM2() == null ? null : request.getAreaM2().doubleValue());
         greenhouse.setStatus(request.getStatus() == null ? "ACTIVE" : request.getStatus());
+        if (request.getActive() != null) {
+            greenhouse.setActive(request.getActive());
+        }
     }
 
     private GreenhouseResponse toResponse(Greenhouse greenhouse, Long batchCount) {

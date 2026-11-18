@@ -85,7 +85,7 @@ public class GreenhouseRepositoryImpl implements GreenhouseRepository {
 
     @Override
     public boolean existsByCodeAndIdNot(String code, Long id) {
-        StringBuilder jpql = new StringBuilder("SELECT COUNT(g) FROM Greenhouse g WHERE g.isActive = true AND g.code = :code");
+        StringBuilder jpql = new StringBuilder("SELECT COUNT(g) FROM Greenhouse g WHERE g.code = :code");
         if (id != null) {
             jpql.append(" AND g.id <> :id");
         }

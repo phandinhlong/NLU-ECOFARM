@@ -31,6 +31,7 @@ export interface Greenhouse {
   gpsLng: number | null
   areaM2: number | null
   status: GreenhouseStatus
+  active: boolean
   version: number
   batchCount: number
 }
@@ -42,6 +43,7 @@ export interface GreenhouseInput {
   gpsLng?: number | null
   areaM2?: number | null
   status?: GreenhouseStatus
+  active?: boolean
   version?: number
 }
 
@@ -52,6 +54,7 @@ export interface Variety {
   daysPollinationToHarvest: number | null
   minBrix: number | null
   minIsolationDays: number | null
+  active: boolean
   version: number
   batchCount: number
 }
@@ -62,6 +65,7 @@ export interface VarietyInput {
   daysPollinationToHarvest?: number | null
   minBrix?: number | null
   minIsolationDays?: number | null
+  active?: boolean
   version?: number
 }
 
@@ -89,6 +93,8 @@ export interface CertificateInput {
   validFrom: string
   validTo: string
   fileKey?: string | null
+  active?: boolean
+  version?: number
 }
 
 export const CERT_TYPE_LABELS: Record<string, string> = {

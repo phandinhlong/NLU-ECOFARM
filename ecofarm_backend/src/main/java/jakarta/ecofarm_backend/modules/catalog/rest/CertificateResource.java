@@ -39,4 +39,10 @@ public class CertificateResource {
                 .entity(certificateFacade.createCertificate(request))
                 .build();
     }
+
+    @PUT
+    @Path("/{id}")
+    public BaseResponse<CertificateResponse> updateCertificate(@PathParam("id") Long id, @Valid CertificateRequest request) {
+        return certificateFacade.updateCertificate(id, request);
+    }
 }
