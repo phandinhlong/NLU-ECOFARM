@@ -37,18 +37,6 @@ public class AuditLog extends BaseEntity {
 
     @Column(name = "ip_addr")
     private String ipAddr;
-
-    @Override
-    @PreUpdate
-    protected void preUpdate() {
-        throw new IllegalStateException("Audit logs are append-only and cannot be updated");
-    }
-
-    @PreRemove
-    protected void preRemove() {
-        throw new IllegalStateException("Audit logs are append-only and cannot be removed");
-    }
-
     @Override
     public String toString() {
         return "AuditLog{id=" + getId() + ", action='" + action + "', entity='" + entity + "'}";
