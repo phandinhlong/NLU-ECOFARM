@@ -17,11 +17,11 @@ import jakarta.ecofarm_backend.common.util.CurrentUserUtil;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.AuditLog;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Shipment;
-import jakarta.ecofarm_backend.infrastructure.persistence.repository.AuditLogRepository;
-import jakarta.ecofarm_backend.infrastructure.persistence.repository.BatchRepository;
-import jakarta.ecofarm_backend.infrastructure.persistence.repository.ShipmentRepository;
-import jakarta.ecofarm_backend.infrastructure.persistence.repository.UserRepository;
 import jakarta.ecofarm_backend.infrastructure.security.UserSecurityDetailsPrincipal;
+import jakarta.ecofarm_backend.infrastructure.service.AuditLogService;
+import jakarta.ecofarm_backend.infrastructure.service.BatchService;
+import jakarta.ecofarm_backend.infrastructure.service.ShipmentService;
+import jakarta.ecofarm_backend.infrastructure.service.UserService;
 import jakarta.ecofarm_backend.modules.shipment.facade.ShipmentFacade;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -41,16 +41,16 @@ public class ShipmentFacadeImpl implements ShipmentFacade {
     private static final String STATUS_REJECTED = "REJECTED";
 
     @Inject
-    private ShipmentRepository shipmentRepository;
+    private ShipmentService shipmentService;
 
     @Inject
-    private BatchRepository batchRepository;
+    private BatchService batchService;
 
     @Inject
-    private UserRepository userRepository;
+    private UserService userService;
 
     @Inject
-    private AuditLogRepository auditLogRepository;
+    private AuditLogService auditLogService;
 
     @Inject
     private CurrentUserUtil currentUser;
@@ -64,7 +64,7 @@ public class ShipmentFacadeImpl implements ShipmentFacade {
         Long actorId = resolveActorId();
         String ipAddr = resolveClientIp();
 
-        Batch batch = batchRepository.findById(batchId);
+        Batch batch = batchService.findById(batchId);
         if (batch == null) {
             throw new EntityNotFoundException(ErrorCode.BATCH_NOT_FOUND);
         }
@@ -76,7 +76,7 @@ public class ShipmentFacadeImpl implements ShipmentFacade {
         if (!status.canFire(BatchEvent.SHIP)) {
             throw new ConflictException(ErrorCode.BATCH_NOT_SHIPPABLE, List.of("Chỉ lô ở trạng thái ACTIVE mới được xuất kho"));
         }
-        if (Boolean.TRUE.equals(shipmentRepository.existsShipmentInProgressForBatch(batchId))) {
+        if (Boolean.TRUE.equals(shipmentService.existsShipmentInProgressForBatch(batchId))) {
             throw new ConflictException(ErrorCode.SHIPMENT_IN_PROGRESS_EXISTS, List.of("Lô đã có phiếu xuất kho đang giao, không thể tạo thêm"));
         }
 
@@ -88,12 +88,12 @@ public class ShipmentFacadeImpl implements ShipmentFacade {
                 .quantity(request.getQuantity())
                 .status(STATUS_SHIPPED)
                 .build();
-        shipmentRepository.persist(shipment);
+        shipmentService.persist(shipment);
 
         batch.setStatus(status.fire(BatchEvent.SHIP).name());
-        batchRepository.merge(batch);
+        batchService.merge(batch);
 
-        auditLogRepository.persist(buildAuditLog(AuditLogParam.builder()
+        auditLogService.persist(buildAuditLog(AuditLogParam.builder()
                 .actorId(actorId)
                 .action("SHIPMENT_CREATED")
                 .entity("shipments")
@@ -115,7 +115,7 @@ public class ShipmentFacadeImpl implements ShipmentFacade {
         Long actorId = resolveActorId();
         String ipAddr = resolveClientIp();
 
-        Shipment shipment = shipmentRepository.findById(shipmentId);
+        Shipment shipment = shipmentService.findById(shipmentId);
         if (shipment == null) {
             throw new EntityNotFoundException(ErrorCode.SHIPMENT_NOT_FOUND);
         }
@@ -148,12 +148,12 @@ public class ShipmentFacadeImpl implements ShipmentFacade {
                 batch.setStatus(current.canFire(BatchEvent.REJECT_DELIVERY)
                         ? current.fire(BatchEvent.REJECT_DELIVERY).name()
                         : BatchStatus.ACTIVE.name());
-                batchRepository.merge(batch);
+                batchService.merge(batch);
             }
         }
-        shipmentRepository.merge(shipment);
+        shipmentService.merge(shipment);
 
-        auditLogRepository.persist(buildAuditLog(AuditLogParam.builder()
+        auditLogService.persist(buildAuditLog(AuditLogParam.builder()
                 .actorId(actorId)
                 .action(action)
                 .entity("shipments")
@@ -170,11 +170,11 @@ public class ShipmentFacadeImpl implements ShipmentFacade {
 
     @Override
     public BaseResponse<List<ShipmentResponse>> findShipmentsByBatch(Long batchId) {
-        Batch batch = batchRepository.findById(batchId);
+        Batch batch = batchService.findById(batchId);
         if (batch == null) {
             throw new EntityNotFoundException(ErrorCode.BATCH_NOT_FOUND);
         }
-        List<ShipmentResponse> content = shipmentRepository.findByBatchId(batchId).stream()
+        List<ShipmentResponse> content = shipmentService.findByBatchId(batchId).stream()
                 .map(this::toResponse)
                 .toList();
         return BaseResponse.build(content);
@@ -187,8 +187,8 @@ public class ShipmentFacadeImpl implements ShipmentFacade {
             normalized = normalized.toUpperCase();
         }
         List<ShipmentResponse> content = (normalized == null
-                ? shipmentRepository.findAll()
-                : shipmentRepository.findByStatus(normalized)).stream()
+                ? shipmentService.findAll()
+                : shipmentService.findByStatus(normalized)).stream()
                 .map(this::toResponse)
                 .toList();
         return BaseResponse.build(content);
@@ -262,7 +262,7 @@ public class ShipmentFacadeImpl implements ShipmentFacade {
             return null;
         }
         return AuditLog.builder()
-                .actor(param.getActorId() != null ? userRepository.findById(param.getActorId()).orElse(null) : null)
+                .actor(param.getActorId() != null ? userService.findById(param.getActorId()).orElse(null) : null)
                 .action(param.getAction())
                 .entity(param.getEntity())
                 .entityId(param.getEntityId())
