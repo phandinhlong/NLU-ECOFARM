@@ -11,6 +11,9 @@ import jakarta.ecofarm_backend.modules.audit.facade.AuditLogFacade;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @ApplicationScoped
@@ -46,7 +49,12 @@ public class AuditLogFacadeImpl implements AuditLogFacade {
                 .entityId(log.getEntityId())
                 .detail(log.getDetail())
                 .ipAddr(log.getIpAddr())
-                .createdAt(log.getCreatedAt())
+                .createdAt(toLocalDateTime(log.getCreatedAt()))
                 .build();
+    }
+
+    private static LocalDateTime toLocalDateTime(Long epochMilli) {
+        if (epochMilli == null) return null;
+        return LocalDateTime.ofInstant(Instant.ofEpochMilli(epochMilli), ZoneId.systemDefault());
     }
 }

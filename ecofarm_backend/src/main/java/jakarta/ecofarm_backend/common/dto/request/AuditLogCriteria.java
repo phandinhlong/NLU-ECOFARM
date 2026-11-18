@@ -1,6 +1,9 @@
 package jakarta.ecofarm_backend.common.dto.request;
 
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import jakarta.ws.rs.QueryParam;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -15,24 +18,31 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 public class AuditLogCriteria extends BaseCriteria {
 
+    @Positive
     @QueryParam("lastIndex")
     private Long lastIndex;
 
+    @Positive
     @QueryParam("actorId")
     private Long actorId;
 
+    @Size(max = 100)
     @QueryParam("action")
     private String action;
 
+    @Size(max = 100)
     @QueryParam("entity")
     private String entity;
 
+    @Positive
     @QueryParam("entityId")
     private Long entityId;
 
+    @Min(0)
     @QueryParam("from")
     private Long from;
 
+    @Min(0)
     @QueryParam("to")
     private Long to;
 
@@ -44,21 +54,9 @@ public class AuditLogCriteria extends BaseCriteria {
         return normalize(entity);
     }
 
-    @AssertTrue(message = "Audit filters require positive IDs, action/entity of at most 100 characters, "
-            + "and nonnegative epoch milliseconds with from <= to")
-    public boolean isValid() {
-        return isPositiveOrNull(lastIndex)
-                && isPositiveOrNull(actorId)
-                && isPositiveOrNull(entityId)
-                && (getAction() == null || getAction().length() <= 100)
-                && (getEntity() == null || getEntity().length() <= 100)
-                && (from == null || from >= 0)
-                && (to == null || to >= 0)
-                && (from == null || to == null || from <= to);
-    }
-
-    private static boolean isPositiveOrNull(Long value) {
-        return value == null || value > 0;
+    @AssertTrue(message = "from must be <= to")
+    public boolean isFromBeforeTo() {
+        return from == null || to == null || from <= to;
     }
 
     private static String normalize(String value) {

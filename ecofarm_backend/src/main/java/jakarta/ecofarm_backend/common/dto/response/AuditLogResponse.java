@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Builder
 @Getter
 @AllArgsConstructor
@@ -19,5 +21,5 @@ public class AuditLogResponse {
     private Long entityId;
     private String detail;
     private String ipAddr;
-    private Long createdAt;
+    private LocalDateTime createdAt;
 }
