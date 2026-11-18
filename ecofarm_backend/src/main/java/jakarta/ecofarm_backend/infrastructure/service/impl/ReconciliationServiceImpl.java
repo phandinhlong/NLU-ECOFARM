@@ -35,19 +35,16 @@ public class ReconciliationServiceImpl implements ReconciliationService {
                     && snapshot.getId().equals(a.getSnapshot().getId()))
                 .findFirst();
 
-            ReconciliationItem item = new ReconciliationItem();
-            item.setBatchId(snapshot.getBatch() != null ? snapshot.getBatch().getId() : null);
-            item.setBatchCode(snapshot.getBatch() != null ? snapshot.getBatch().getBatchCode() : "BATCH-?");
-            item.setDbRoot(snapshot.getMerkleRoot());
+            String privateRoot = anchorOpt.map(Anchor::getTxHash).orElse(null);
+            String result = anchorOpt.isPresent() ? "OK" : "MISMATCH_DB_PRIVATE";
 
-            if (anchorOpt.isPresent()) {
-                Anchor anchor = anchorOpt.get();
-                item.setPrivateRoot(anchor.getTxHash());
-                item.setResult("OK");
-            } else {
-                item.setPrivateRoot(null);
-                item.setResult("MISMATCH_DB_PRIVATE");
-            }
+            ReconciliationItem item = ReconciliationItem.builder()
+                    .batchId(snapshot.getBatch() != null ? snapshot.getBatch().getId() : null)
+                    .batchCode(snapshot.getBatch() != null ? snapshot.getBatch().getBatchCode() : "BATCH-?")
+                    .dbRoot(snapshot.getMerkleRoot())
+                    .privateRoot(privateRoot)
+                    .result(result)
+                    .build();
 
             items.add(item);
         }

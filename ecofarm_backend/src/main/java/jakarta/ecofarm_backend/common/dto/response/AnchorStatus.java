@@ -1,10 +1,16 @@
 package jakarta.ecofarm_backend.common.dto.response;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Setter
 @Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class AnchorStatus {
     Long batchId;
     String batchStatus;
@@ -15,23 +21,14 @@ public class AnchorStatus {
     String lastError;
     Long nextAttemptAt;
 
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class SnapshotInfo {
         Long id;
         String merkleRoot;
         Integer leafCount;
-
-        public SnapshotInfo() {}
-        public SnapshotInfo(Long id, String merkleRoot, Integer leafCount) {
-            this.id = id;
-            this.merkleRoot = merkleRoot;
-            this.leafCount = leafCount;
-        }
-        public Long getId() { return id; }
-        public void setId(Long id) { this.id = id; }
-        public String getMerkleRoot() { return merkleRoot; }
-        public void setMerkleRoot(String merkleRoot) { this.merkleRoot = merkleRoot; }
-        public Integer getLeafCount() { return leafCount; }
-        public void setLeafCount(Integer leafCount) { this.leafCount = leafCount; }
     }
-
 }

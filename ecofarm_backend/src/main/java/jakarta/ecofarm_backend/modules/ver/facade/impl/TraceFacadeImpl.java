@@ -13,6 +13,7 @@ import jakarta.ecofarm_backend.common.dto.response.PublicChainStatus;
 import jakarta.ecofarm_backend.common.dto.response.PublicTrace;
 import jakarta.ecofarm_backend.common.dto.response.VarietyInfo;
 import jakarta.ecofarm_backend.common.dto.response.VerifyResult;
+import jakarta.ecofarm_backend.common.enums.AnchorStatus;
 import jakarta.ecofarm_backend.config.BlockchainConfig;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.CultivationEvent;
@@ -313,9 +314,9 @@ public class TraceFacadeImpl implements TraceFacade {
             if (explorerUrl == null && anchor.getTxHash() != null && isPublicChain(anchor.getChainId())) {
                 explorerUrl = "https://amoy.polygonscan.com/tx/" + anchor.getTxHash();
             }
-            if ("CONFIRMED".equalsIgnoreCase(anchor.getStatus())) {
+            if (AnchorStatus.CONFIRMED.name().equalsIgnoreCase(anchor.getStatus())) {
                 status = "VERIFIED";
-            } else if ("PENDING".equalsIgnoreCase(anchor.getStatus())) {
+            } else if (AnchorStatus.PENDING.name().equalsIgnoreCase(anchor.getStatus())) {
                 status = "PENDING";
             }
         }

@@ -2,11 +2,15 @@ package jakarta.ecofarm_backend.modules.packaging.facade.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ecofarm_backend.common.dto.request.ActivateBatchRequest;
+import jakarta.ecofarm_backend.common.dto.request.AuditLogParam;
 import jakarta.ecofarm_backend.common.dto.request.ExtraQrRequest;
 import jakarta.ecofarm_backend.common.dto.response.ActivateResponse;
 import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
 import jakarta.ecofarm_backend.common.dto.response.ExtraQrResponse;
 import jakarta.ecofarm_backend.common.dto.response.PackageResponse;
+import jakarta.ecofarm_backend.common.enums.AnchorStatus;
+import jakarta.ecofarm_backend.common.enums.BatchEvent;
+import jakarta.ecofarm_backend.common.enums.BatchStatus;
 import jakarta.ecofarm_backend.common.enums.ErrorCode;
 import jakarta.ecofarm_backend.common.exception.ConflictException;
 import jakarta.ecofarm_backend.common.exception.EntityNotFoundException;
@@ -126,22 +130,28 @@ public class PackagingFacadeImpl implements PackagingFacade {
 
         // 2. Dựng Merkle tree & lưu MerkleSnapshot
         MerkleTreeService.MerkleResult merkle = merkleTreeService.buildTree(batch.getSaltEnc(), events);
-        MerkleSnapshot snapshot = new MerkleSnapshot();
-        snapshot.setBatch(batch);
-        snapshot.setMerkleRoot(merkle.merkleRoot());
-        snapshot.setLeafCount(merkle.leafHashes().size());
+        MerkleSnapshot snapshot = MerkleSnapshot.builder()
+                .batch(batch)
+                .merkleRoot(merkle.merkleRoot())
+                .leafCount(merkle.leafHashes().size())
+                .build();
         snapshotRepository.persist(snapshot);
         snapshotRepository.updateLeavesJson(snapshot.getId(), merkle.leavesJson());
 
-        // 3. Chuyển lô sang ANCHORING
-        batch.setStatus("ANCHORING");
+        // 3. Chuyển lô sang ANCHORING qua State Machine
+        BatchStatus currentStatus = batch.getStatus() != null ? BatchStatus.valueOf(batch.getStatus()) : BatchStatus.QC_PASSED;
+        batch.setStatus(currentStatus.canFire(BatchEvent.START_ANCHORING)
+                ? currentStatus.fire(BatchEvent.START_ANCHORING).name()
+                : BatchStatus.ANCHORING.name());
         batch.setActivatedAt(now);
         batchRepository.merge(batch);
 
         // 4. Tạo Anchor PENDING
-        Anchor anchor = new Anchor();
-        anchor.setSnapshot(snapshot);
-        anchor.setChainId(blockchainConfig.getPublicChainId());
+        Anchor anchor = Anchor.builder()
+                .snapshot(snapshot)
+                .chainId(blockchainConfig.getPublicChainId())
+                .status(AnchorStatus.PENDING.name())
+                .build();
         anchorRepository.persist(anchor);
 
         // 5. Tạo OutboxEvent finalizeBatch trong cùng transaction
@@ -159,12 +169,12 @@ public class PackagingFacadeImpl implements PackagingFacade {
         outboxEventService.persist(outbox);
 
         // 6. Ghi AuditLog
-        auditLogRepository.persist(buildAuditLog(
-                actorId,
-                "BATCH_ACTIVATE",
-                "batches",
-                batchId,
-                toJson(Map.of(
+        auditLogRepository.persist(buildAuditLog(AuditLogParam.builder()
+                .actorId(actorId)
+                .action("BATCH_ACTIVATE")
+                .entity("batches")
+                .entityId(batchId)
+                .detail(toJson(Map.of(
                         "packageId", pkg.getId(),
                         "packageCode", pkg.getPackageCode(),
                         "unitCount", pkg.getUnitCount(),
@@ -172,9 +182,9 @@ public class PackagingFacadeImpl implements PackagingFacade {
                         "merkleRoot", merkle.merkleRoot(),
                         "leafCount", merkle.leafHashes().size(),
                         "outboxId", outbox.getId()
-                )),
-                ipAddr
-        ));
+                )))
+                .ipAddr(ipAddr)
+                .build()));
 
         PackageResponse pkgResp = PackageResponse.builder()
                 .id(pkg.getId())
@@ -241,19 +251,19 @@ public class PackagingFacadeImpl implements PackagingFacade {
             List<QrCode> generated = generateSerialBatch(pkg, 1, unitCount, "PRINTED", now);
             codesToPrint = filterByRange(generated, fromSerial, toSerial);
 
-            auditLogRepository.persist(buildAuditLog(
-                    actorId,
-                    "QR_GENERATED",
-                    "packages",
-                    pkg.getId(),
-                    toJson(Map.of(
+            auditLogRepository.persist(buildAuditLog(AuditLogParam.builder()
+                    .actorId(actorId)
+                    .action("QR_GENERATED")
+                    .entity("packages")
+                    .entityId(pkg.getId())
+                    .detail(toJson(Map.of(
                             "batchId", batchId,
                             "unitCount", unitCount,
                             "printedCount", codesToPrint.size(),
                             "format", normalizeFormat(format)
-                    )),
-                    ipAddr
-            ));
+                    )))
+                    .ipAddr(ipAddr)
+                    .build()));
         } else {
             if (!reprint) {
                 throw new ConflictException(ErrorCode.QR_ALREADY_GENERATED,
@@ -274,20 +284,20 @@ public class PackagingFacadeImpl implements PackagingFacade {
                 qrCodeRepository.merge(qr);
             }
 
-            auditLogRepository.persist(buildAuditLog(
-                    actorId,
-                    "QR_REPRINT",
-                    "packages",
-                    pkg.getId(),
-                    toJson(Map.of(
+            auditLogRepository.persist(buildAuditLog(AuditLogParam.builder()
+                    .actorId(actorId)
+                    .action("QR_REPRINT")
+                    .entity("packages")
+                    .entityId(pkg.getId())
+                    .detail(toJson(Map.of(
                             "batchId", batchId,
                             "reprintedCount", codesToPrint.size(),
                             "fromSerial", fromSerial != null ? fromSerial : 1,
                             "toSerial", toSerial != null ? toSerial : existingCount,
                             "format", normalizeFormat(format)
-                    )),
-                    ipAddr
-            ));
+                    )))
+                    .ipAddr(ipAddr)
+                    .build()));
         }
 
         String normalizedFormat = normalizeFormat(format);
@@ -344,12 +354,12 @@ public class PackagingFacadeImpl implements PackagingFacade {
         pkg.setUnitCount(newTotalUnitCount);
         packageRepository.merge(pkg);
 
-        auditLogRepository.persist(buildAuditLog(
-                actorId,
-                "QR_EXTRA_GENERATED",
-                "packages",
-                pkg.getId(),
-                toJson(Map.of(
+        auditLogRepository.persist(buildAuditLog(AuditLogParam.builder()
+                .actorId(actorId)
+                .action("QR_EXTRA_GENERATED")
+                .entity("packages")
+                .entityId(pkg.getId())
+                .detail(toJson(Map.of(
                         "batchId", batchId,
                         "previousUnitCount", previousUnitCount,
                         "addedCount", request.getExtraCount(),
@@ -357,9 +367,9 @@ public class PackagingFacadeImpl implements PackagingFacade {
                         "fromSerial", fromSerial,
                         "toSerial", toSerial,
                         "reason", request.getReason().trim()
-                )),
-                ipAddr
-        ));
+                )))
+                .ipAddr(ipAddr)
+                .build()));
 
         ExtraQrResponse resp = ExtraQrResponse.builder()
                 .batchId(batchId)
@@ -427,14 +437,15 @@ public class PackagingFacadeImpl implements PackagingFacade {
         return created;
     }
 
-    private AuditLog buildAuditLog(Long actorId, String action, String entity, Long entityId, String detail, String ipAddr) {
+    private AuditLog buildAuditLog(AuditLogParam param) {
+        if (param == null) return null;
         return AuditLog.builder()
-                .actor(userRepository.findById(actorId).orElse(null))
-                .action(action)
-                .entity(entity)
-                .entityId(entityId)
-                .detail(detail)
-                .ipAddr(ipAddr)
+                .actor(param.getActorId() != null ? userRepository.findById(param.getActorId()).orElse(null) : null)
+                .action(param.getAction())
+                .entity(param.getEntity())
+                .entityId(param.getEntityId())
+                .detail(param.getDetail())
+                .ipAddr(param.getIpAddr())
                 .build();
     }
 

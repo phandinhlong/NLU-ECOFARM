@@ -1,10 +1,16 @@
 package jakarta.ecofarm_backend.common.dto.response;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Setter
 @Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class BlockchainStatus {
     boolean anchored;
     String chainName;
@@ -18,8 +24,6 @@ public class BlockchainStatus {
     String contractAddress;
     Long blockNumber;
 
-    public BlockchainStatus() {}
-
     public BlockchainStatus(boolean anchored, String chain, String mr, String tx, Long att, String exp) {
         this.anchored = anchored;
         this.chainName = chain;
@@ -28,5 +32,4 @@ public class BlockchainStatus {
         this.anchoredAt = att;
         this.explorerUrl = exp;
     }
-
 }
