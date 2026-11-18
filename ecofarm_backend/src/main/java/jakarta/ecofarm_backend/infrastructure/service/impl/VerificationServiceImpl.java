@@ -13,7 +13,7 @@ import jakarta.ecofarm_backend.common.dto.response.VarietyInfo;
 import jakarta.ecofarm_backend.common.dto.response.VerifyResult;
 import jakarta.ecofarm_backend.common.enums.AnchorStatus;
 import jakarta.ecofarm_backend.common.enums.ErrorCode;
-import jakarta.ecofarm_backend.common.exception.EntityNotFoundException;
+import jakarta.ecofarm_backend.common.enums.VerificationStatus;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.CultivationEvent;
@@ -292,6 +292,7 @@ public class VerificationServiceImpl implements VerificationService {
             boolean anchored = lastAnchor
                     .map(a -> AnchorStatus.CONFIRMED.name().equalsIgnoreCase(a.getStatus()))
                     .orElse(false);
+            VerificationStatus vStatus = anchored ? VerificationStatus.VERIFIED : VerificationStatus.UNVERIFIED;
             return BlockchainStatus.builder()
                     .anchored(anchored)
                     .chainName("Polygon Amoy")
@@ -299,10 +300,12 @@ public class VerificationServiceImpl implements VerificationService {
                     .txHash(lastAnchor.map(Anchor::getTxHash).orElse(null))
                     .anchoredAt(lastAnchor.map(Anchor::getAnchoredAt).orElse(null))
                     .explorerUrl(lastAnchor.map(Anchor::getExplorerUrl).orElse(null))
+                    .status(vStatus.name())
                     .build();
         }).orElseGet(() -> BlockchainStatus.builder()
                 .anchored(false)
                 .chainName("Polygon Amoy")
+                .status(VerificationStatus.UNVERIFIED.name())
                 .build());
 
         return PublicTrace.builder()

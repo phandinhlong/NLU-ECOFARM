@@ -10,6 +10,7 @@ import jakarta.ecofarm_backend.infrastructure.persistence.entity.Recall;
 import jakarta.ecofarm_backend.modules.blockchain.facade.BlockchainFacade;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import org.eclipse.microprofile.openapi.annotations.Operation;
@@ -49,28 +50,28 @@ public class BlockchainResource {
     @GET
     @Path("/batches/{batchId}/anchor-status")
     @Operation(summary = "Trạng thái neo của lô hàng", description = "Kiểm tra tiến độ neo on-chain, số lượt thử và txHash")
-    public AnchorStatus getAnchorStatus(@PathParam("batchId") Long batchId) {
+    public AnchorStatus getAnchorStatus(@PathParam("batchId") @Positive Long batchId) {
         return this.blockchainFacade.getAnchorStatus(batchId);
     }
 
     @POST
     @Path("/admin/anchors/{anchorId}/retry")
     @Operation(summary = "Thử lại neo", description = "Đưa anchor FAILED về PENDING để thử lại")
-    public Anchor retryAnchor(@PathParam("anchorId") Long anchorId) {
+    public Anchor retryAnchor(@PathParam("anchorId") @Positive Long anchorId) {
         return this.blockchainFacade.retryAnchor(anchorId);
     }
 
     @POST
     @Path("/batches/{batchId}/recall")
     @Operation(summary = "Thu hồi lô hàng", description = "Ghi nhận sự kiện thu hồi lô hàng khẩn cấp")
-    public Recall recallBatch(@PathParam("batchId") Long batchId, @Valid RecallRequest req) {
+    public Recall recallBatch(@PathParam("batchId") @Positive Long batchId, @Valid RecallRequest req) {
         return this.blockchainFacade.recallBatch(batchId, req);
     }
 
     @GET
     @Path("/batches/{batchId}/proof-bundle")
     @Operation(summary = "Lấy gói chứng minh Merkle", description = "Cung cấp leaf, salt và Merkle proof cho lô hàng")
-    public ProofBundle getProofBundle(@PathParam("batchId") Long batchId) {
+    public ProofBundle getProofBundle(@PathParam("batchId") @Positive Long batchId) {
         return this.blockchainFacade.getProofBundle(batchId);
     }
 
