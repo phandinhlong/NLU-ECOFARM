@@ -3,9 +3,11 @@ package jakarta.ecofarm_backend.modules.shipment.facade.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ecofarm_backend.common.dto.request.AuditLogParam;
+import jakarta.ecofarm_backend.common.dto.request.PageCriteria;
 import jakarta.ecofarm_backend.common.dto.request.ShipmentCreateRequest;
 import jakarta.ecofarm_backend.common.dto.request.ShipmentReceiveRequest;
 import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
+import jakarta.ecofarm_backend.common.dto.response.ShipmentEligibleBatchResponse;
 import jakarta.ecofarm_backend.common.dto.response.ShipmentResponse;
 import jakarta.ecofarm_backend.common.enums.BatchEvent;
 import jakarta.ecofarm_backend.common.enums.BatchStatus;
@@ -166,6 +168,22 @@ public class ShipmentFacadeImpl implements ShipmentFacade {
                 .build()));
 
         return BaseResponse.build(toResponse(shipment));
+    }
+
+    @Override
+    public BaseResponse<List<ShipmentEligibleBatchResponse>> findEligibleBatches() {
+        List<Batch> batches = batchService.findPage(PageCriteria.builder().status(BatchStatus.ACTIVE).build());
+        List<ShipmentEligibleBatchResponse> content = batches.stream()
+                .map(b -> ShipmentEligibleBatchResponse.builder()
+                        .id(b.getId())
+                        .batchCode(b.getBatchCode())
+                        .greenhouseCode(b.getGreenhouse() != null ? b.getGreenhouse().getCode() : null)
+                        .greenhouseName(b.getGreenhouse() != null ? b.getGreenhouse().getName() : null)
+                        .varietyName(b.getVariety() != null ? b.getVariety().getName() : null)
+                        .status(b.getStatus())
+                        .build())
+                .toList();
+        return BaseResponse.build(content);
     }
 
     @Override

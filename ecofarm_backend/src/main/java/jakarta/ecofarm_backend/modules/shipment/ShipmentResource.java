@@ -4,6 +4,7 @@ import jakarta.ecofarm_backend.common.anotation.RequireRoles;
 import jakarta.ecofarm_backend.common.dto.request.ShipmentCreateRequest;
 import jakarta.ecofarm_backend.common.dto.request.ShipmentReceiveRequest;
 import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
+import jakarta.ecofarm_backend.common.dto.response.ShipmentEligibleBatchResponse;
 import jakarta.ecofarm_backend.common.dto.response.ShipmentResponse;
 import jakarta.ecofarm_backend.modules.shipment.facade.ShipmentFacade;
 import jakarta.inject.Inject;
@@ -53,6 +54,14 @@ public class ShipmentResource {
     @Operation(summary = "Danh sách phiếu xuất kho theo lô")
     public BaseResponse<List<ShipmentResponse>> findShipmentsByBatch(@PathParam("batchId") Long batchId) {
         return shipmentFacade.findShipmentsByBatch(batchId);
+    }
+
+    @GET
+    @Path("/shipments/eligible-batches")
+    @RequireRoles({"PACKER", "ADMIN"})
+    @Operation(summary = "Danh sách lô ACTIVE đủ điều kiện xuất kho")
+    public BaseResponse<List<ShipmentEligibleBatchResponse>> findEligibleBatches() {
+        return shipmentFacade.findEligibleBatches();
     }
 
     @GET
