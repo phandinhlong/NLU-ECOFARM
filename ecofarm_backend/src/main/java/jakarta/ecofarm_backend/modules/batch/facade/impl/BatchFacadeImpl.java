@@ -16,10 +16,10 @@ import jakarta.ecofarm_backend.infrastructure.persistence.entity.BatchAssignment
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Greenhouse;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Variety;
-import jakarta.ecofarm_backend.infrastructure.persistence.repository.AuditLogRepository;
+import jakarta.ecofarm_backend.infrastructure.service.AuditLogService;
 import jakarta.ecofarm_backend.infrastructure.service.BatchService;
-import jakarta.ecofarm_backend.infrastructure.persistence.repository.GreenhouseRepository;
-import jakarta.ecofarm_backend.infrastructure.persistence.repository.VarietyRepository;
+import jakarta.ecofarm_backend.infrastructure.service.GreenhouseService;
+import jakarta.ecofarm_backend.infrastructure.service.VarietyService;
 import jakarta.ecofarm_backend.infrastructure.service.UserService;
 import jakarta.ecofarm_backend.infrastructure.security.UserSecurityDetailsPrincipal;
 import jakarta.ecofarm_backend.common.enums.BatchStatus;
@@ -58,16 +58,16 @@ public class BatchFacadeImpl implements BatchFacade {
     private BatchService batchService;
 
     @Inject
-    private GreenhouseRepository greenhouseRepository;
+    private GreenhouseService greenhouseService;
 
     @Inject
-    private VarietyRepository varietyRepository;
+    private VarietyService varietyService;
 
     @Inject
     private UserService userService;
 
     @Inject
-    private AuditLogRepository auditLogRepository;
+    private AuditLogService auditLogService;
 
     @Inject
     private CurrentUserUtil currentUser;
@@ -118,12 +118,12 @@ public class BatchFacadeImpl implements BatchFacade {
         String ipAddr = resolveClientIp();
         User actor = requireEngineerOrAdmin(actorId);
 
-        Greenhouse greenhouse = greenhouseRepository.findById(request.getGreenhouseId());
+        Greenhouse greenhouse = greenhouseService.findById(request.getGreenhouseId());
         if (greenhouse == null) {
             throw new EntityNotFoundException(ErrorCode.GREENHOUSE_NOT_FOUND);
         }
 
-        Variety variety = varietyRepository.findById(request.getVarietyId());
+        Variety variety = varietyService.findById(request.getVarietyId());
         if (variety == null) {
             throw new EntityNotFoundException(ErrorCode.VARIETY_NOT_FOUND);
         }
@@ -146,7 +146,7 @@ public class BatchFacadeImpl implements BatchFacade {
                 .build();
         batchService.persist(batch);
 
-        auditLogRepository.persist(buildAuditLog(actorId, "BATCH_CREATE", "batches", batch.getId(),
+        auditLogService.persist(buildAuditLog(actorId, "BATCH_CREATE", "batches", batch.getId(),
                 toJson(Map.of("batchCode", batch.getBatchCode(), "status", batch.getStatus())), ipAddr));
 
         return BaseResponse.build(toDetail(batch));
@@ -219,7 +219,7 @@ public class BatchFacadeImpl implements BatchFacade {
             added.add(worker.getId());
         }
 
-        auditLogRepository.persist(buildAuditLog(actorId, "BATCH_ADD_WORKERS", "batches", batchId,
+        auditLogService.persist(buildAuditLog(actorId, "BATCH_ADD_WORKERS", "batches", batchId,
                 toJson(Map.of("userIds", added)), ipAddr));
 
         return BaseResponse.build(Boolean.TRUE);
@@ -243,7 +243,7 @@ public class BatchFacadeImpl implements BatchFacade {
         List<Long> userIds = request.getUserIds() == null ? List.of() : request.getUserIds().stream().distinct().toList();
         batchService.removeAssignments(batchId, userIds);
 
-        auditLogRepository.persist(buildAuditLog(actorId, "BATCH_REMOVE_WORKERS", "batches", batchId,
+        auditLogService.persist(buildAuditLog(actorId, "BATCH_REMOVE_WORKERS", "batches", batchId,
                 toJson(Map.of("userIds", userIds)), ipAddr));
 
         return BaseResponse.build(Boolean.TRUE);

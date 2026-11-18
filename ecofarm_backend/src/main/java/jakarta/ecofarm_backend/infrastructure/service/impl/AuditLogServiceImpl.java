@@ -1,10 +1,13 @@
 package jakarta.ecofarm_backend.infrastructure.service.impl;
 
+import jakarta.ecofarm_backend.common.dto.request.AuditLogCriteria;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.AuditLog;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.AuditLogRepository;
 import jakarta.ecofarm_backend.infrastructure.service.AuditLogService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+
+import java.util.List;
 
 @ApplicationScoped
 public class AuditLogServiceImpl implements AuditLogService {
@@ -20,5 +23,15 @@ public class AuditLogServiceImpl implements AuditLogService {
     @Override
     public AuditLog findById(Long id) {
         return this.auditLogRepository.findById(id);
+    }
+
+    @Override
+    public List<AuditLog> findPage(AuditLogCriteria criteria) {
+        return this.auditLogRepository.findPage(criteria);
+    }
+
+    @Override
+    public Long count(AuditLogCriteria criteria) {
+        return this.auditLogRepository.count(criteria);
     }
 }
