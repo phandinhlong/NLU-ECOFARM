@@ -36,6 +36,6 @@ public class GreenhouseRequest {
     private String status;
 
     private Boolean active;
-
+    @Positive
     private Long version;
 }

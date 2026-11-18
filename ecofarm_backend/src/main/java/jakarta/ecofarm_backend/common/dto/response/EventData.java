@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.common.dto.response;
 
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,6 +17,7 @@ public class EventData {
     private Integer seq;
     private String eventType;
     private String status;
+    @Positive
     private Long recordedAt;
     private String eventHash;
     private String actorRef;

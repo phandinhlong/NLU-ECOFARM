@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.common.dto.response;
 
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,10 +17,13 @@ public class VerifyResult {
     String computedRoot;
     String onChainRoot;
     String txHash;
+    @Positive
     Long blockNumber;
+    @Positive
     Long anchoredAt;
     String explorerUrl;
     boolean recalled;
+    @Positive
     long checkedAt;
     String message;
 

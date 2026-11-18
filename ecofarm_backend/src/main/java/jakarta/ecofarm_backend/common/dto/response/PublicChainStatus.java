@@ -28,6 +28,7 @@ public class PublicChainStatus {
     int confirmations;
     String status;
     String explorerUrl;
+    @Positive
     Long anchoredAt;
     @Positive
     int requiredConfirmations;
