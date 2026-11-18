@@ -18,7 +18,6 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 public class EventAttachment extends BaseEntity {
 
-    // JPA relation thay cho DB foreign key (cultivation_events.id)
     @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "event_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     @JsonIgnore

@@ -6,6 +6,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
 import java.util.List;
+import java.util.Optional;
 
 @Stateless
 public class CultivationEventRepository {
@@ -19,5 +20,20 @@ public class CultivationEventRepository {
                         CultivationEvent.class)
                 .setParameter("batchId", batchId)
                 .getResultList();
+    }
+
+    /**
+     * Finds active CultivationEvent by ID with batch eagerly fetched.
+     *
+     * @param id event ID
+     * @return Optional containing entity if found and active, otherwise Optional.empty()
+     */
+    public Optional<CultivationEvent> findById(Long id) {
+        List<CultivationEvent> results = em.createQuery(
+                        "select e from CultivationEvent e left join fetch e.batch where e.id = :id and (e.isActive is null or e.isActive = true)",
+                        CultivationEvent.class)
+                .setParameter("id", id)
+                .getResultList();
+        return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
     }
 }
