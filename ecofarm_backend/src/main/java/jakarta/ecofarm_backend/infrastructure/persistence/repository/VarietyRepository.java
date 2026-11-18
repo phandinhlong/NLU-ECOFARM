@@ -10,7 +10,7 @@ public interface VarietyRepository {
 
     List<Variety> findPage(VarietyCriteria criteria);
 
-    long countActive(VarietyCriteria criteria);
+    Long countActive(VarietyCriteria criteria);
 
     Map<Long, Long> countBatchesByVarietyIds(List<Long> varietyIds);
 
@@ -20,7 +20,7 @@ public interface VarietyRepository {
 
     boolean existsByCodeAndIdNot(String code, Long id);
 
-    long countBatches(Long varietyId);
+    Long countBatches(Long varietyId);
 
     Variety save(Variety variety);
 }

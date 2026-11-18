@@ -74,7 +74,7 @@ const submit = async () => {
 }
 
 const applyFilter = () => {
-  params.value = { q: searchText.value.trim() || undefined }
+  params.value = { keyword: searchText.value.trim() || undefined }
   load()
 }
 

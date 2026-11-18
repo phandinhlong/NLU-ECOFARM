@@ -10,7 +10,7 @@ public interface GreenhouseRepository {
 
     List<Greenhouse> findPage(GreenhouseCriteria criteria);
 
-    long countActive(GreenhouseCriteria criteria);
+    Long countActive(GreenhouseCriteria criteria);
 
     Map<Long, Long> countBatchesByGreenhouseIds(List<Long> greenhouseIds);
 
@@ -20,7 +20,7 @@ public interface GreenhouseRepository {
 
     boolean existsByCodeAndIdNot(String code, Long id);
 
-    long countBatches(Long greenhouseId);
+    Long countBatches(Long greenhouseId);
 
     Greenhouse save(Greenhouse greenhouse);
 }

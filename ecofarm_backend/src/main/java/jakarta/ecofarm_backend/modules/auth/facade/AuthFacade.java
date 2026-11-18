@@ -6,7 +6,6 @@ import jakarta.ecofarm_backend.common.dto.request.LoginRequest;
 import jakarta.ecofarm_backend.common.dto.request.SignupRequest;
 import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
 import jakarta.ecofarm_backend.common.dto.response.ProfileResponse;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.core.Response;
 
@@ -14,11 +13,11 @@ import java.net.URI;
 import java.util.Map;
 
 public interface AuthFacade {
-    BaseResponse<Boolean> login(LoginRequest request, HttpServletResponse servletResponse);
+    BaseResponse<Boolean> login(LoginRequest request);
 
     BaseResponse<ProfileResponse> findProfile();
 
-    BaseResponse<Boolean> refreshToken(HttpServletResponse servletResponse);
+    BaseResponse<Boolean> refreshToken();
 
     BaseResponse<Boolean> signup(SignupRequest request);
 
@@ -30,5 +29,5 @@ public interface AuthFacade {
 
     BaseResponse<Boolean> changePassword(ChangePasswordRequest request);
 
-    BaseResponse<Boolean> logout(HttpServletResponse servletResponse);
+    BaseResponse<Boolean> logout();
 }

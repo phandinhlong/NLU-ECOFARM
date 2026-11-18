@@ -20,22 +20,22 @@ public class GreenhouseCriteria extends BaseCriteria {
     @QueryParam("status")
     private String status;
 
-    @QueryParam("q")
-    private String q;
+    @QueryParam("keyword")
+    private String keyword;
 
     @QueryParam("lastIndex")
     @Positive
-    private Long lastIndex;
+    private Long lastId;
 
     public Optional<String> getStatusFilter() {
         return Optional.ofNullable(status).filter(value -> !value.isBlank());
     }
 
     public Optional<String> getKeywordFilter() {
-        return Optional.ofNullable(q).filter(value -> !value.isBlank());
+        return Optional.ofNullable(keyword).filter(value -> !value.isBlank());
     }
 
-    public Optional<Long> getLastIndexFilter() {
-        return Optional.ofNullable(lastIndex).filter(value -> value > 0);
+    public Optional<Long> getLastIdFilter() {
+        return Optional.ofNullable(lastId).filter(value -> value > 0);
     }
 }

@@ -28,7 +28,7 @@ public class GreenhouseResource {
     }
 
     @GET
-    @Path("/count")
+    @Path("/statistics")
     public BaseResponse<Long> countGreenhouses(@BeanParam GreenhouseCriteria criteria) {
         return greenhouseFacade.countGreenhouses(criteria);
     }

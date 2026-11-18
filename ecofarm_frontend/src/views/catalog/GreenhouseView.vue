@@ -91,7 +91,7 @@ const submit = async () => {
 
 const applyFilter = () => {
   params.value = {
-    q: searchText.value.trim() || undefined,
+    keyword: searchText.value.trim() || undefined,
     status: statusFilter.value || undefined,
   }
   load()

@@ -8,12 +8,12 @@ export interface CursorPageResponse<T> {
 
 export interface GreenhouseQuery {
   status?: string
-  q?: string
+  keyword?: string
   lastIndex?: number
 }
 
 export interface VarietyQuery {
-  q?: string
+  keyword?: string
   lastIndex?: number
 }
 

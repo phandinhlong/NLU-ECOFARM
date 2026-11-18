@@ -28,7 +28,7 @@ public class CertificateResource {
     }
 
     @GET
-    @Path("/count")
+    @Path("/statistics")
     public BaseResponse<Long> countCertificates(@BeanParam CertificateCriteria criteria) {
         return certificateFacade.countCertificates(criteria);
     }

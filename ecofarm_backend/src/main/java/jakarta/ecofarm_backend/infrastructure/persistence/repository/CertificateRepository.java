@@ -9,7 +9,7 @@ public interface CertificateRepository {
 
     List<Certificate> findPage(CertificateCriteria criteria);
 
-    long countActive(CertificateCriteria criteria);
+    Long countActive(CertificateCriteria criteria);
 
     boolean existsByCertNo(String certNo);
 

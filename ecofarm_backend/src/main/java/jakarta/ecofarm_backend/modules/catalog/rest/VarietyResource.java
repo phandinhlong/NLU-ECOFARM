@@ -28,7 +28,7 @@ public class VarietyResource {
     }
 
     @GET
-    @Path("/count")
+    @Path("/statistics")
     public BaseResponse<Long> countVarieties(@BeanParam VarietyCriteria criteria) {
         return varietyFacade.countVarieties(criteria);
     }

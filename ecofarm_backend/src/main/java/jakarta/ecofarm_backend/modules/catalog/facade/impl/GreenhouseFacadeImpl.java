@@ -37,8 +37,8 @@ public class GreenhouseFacadeImpl implements GreenhouseFacade {
                 .map(g -> toResponse(g, batchCounts.getOrDefault(g.getId(), 0L)))
                 .toList();
 
-        Long lastIndex = page.isEmpty() ? null : page.get(page.size() - 1).getId();
-        return BaseResponse.build(new CursorPageResponse<>(content, lastIndex, hasMore));
+        Long lastId = page.isEmpty() ? null : page.get(page.size() - 1).getId();
+        return BaseResponse.build(new CursorPageResponse<>(content, lastId, hasMore));
     }
 
     @Override

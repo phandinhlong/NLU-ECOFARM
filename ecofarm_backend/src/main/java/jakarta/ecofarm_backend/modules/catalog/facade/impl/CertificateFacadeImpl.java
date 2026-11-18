@@ -38,8 +38,8 @@ public class CertificateFacadeImpl implements CertificateFacade {
 
         List<CertificateResponse> content = page.stream().map(this::toResponse).toList();
 
-        Long lastIndex = page.isEmpty() ? null : page.get(page.size() - 1).getId();
-        return BaseResponse.build(new CursorPageResponse<>(content, lastIndex, hasMore));
+        Long lastId = page.isEmpty() ? null : page.get(page.size() - 1).getId();
+        return BaseResponse.build(new CursorPageResponse<>(content, lastId, hasMore));
     }
 
     @Override

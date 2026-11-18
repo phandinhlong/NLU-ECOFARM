@@ -36,7 +36,7 @@ export const catalogService = {
     unwrap(axios.get<ApiResponse<CursorPageResponse<Greenhouse>>>(`${API_V1}/greenhouses`, { params })),
 
   countGreenhouses: (params: GreenhouseQuery = {}) =>
-    unwrap(axios.get<ApiResponse<number>>(`${API_V1}/greenhouses/count`, { params })),
+    unwrap(axios.get<ApiResponse<number>>(`${API_V1}/greenhouses/statistics`, { params })),
 
   createGreenhouse: (data: GreenhouseInput) =>
     unwrap(axios.post<ApiResponse<Greenhouse>>(`${API_V1}/greenhouses`, data)),
@@ -48,7 +48,7 @@ export const catalogService = {
     unwrap(axios.get<ApiResponse<CursorPageResponse<Variety>>>(`${API_V1}/varieties`, { params })),
 
   countVarieties: (params: VarietyQuery = {}) =>
-    unwrap(axios.get<ApiResponse<number>>(`${API_V1}/varieties/count`, { params })),
+    unwrap(axios.get<ApiResponse<number>>(`${API_V1}/varieties/statistics`, { params })),
 
   createVariety: (data: VarietyInput) =>
     unwrap(axios.post<ApiResponse<Variety>>(`${API_V1}/varieties`, data)),
@@ -62,7 +62,7 @@ export const catalogService = {
     ),
 
   countCertificates: (params: CertificateQuery = {}) =>
-    unwrap(axios.get<ApiResponse<number>>(`${API_V1}/certificates/count`, { params })),
+    unwrap(axios.get<ApiResponse<number>>(`${API_V1}/certificates/statistics`, { params })),
 
   createCertificate: (data: CertificateInput) =>
     unwrap(axios.post<ApiResponse<Certificate>>(`${API_V1}/certificates`, data)),

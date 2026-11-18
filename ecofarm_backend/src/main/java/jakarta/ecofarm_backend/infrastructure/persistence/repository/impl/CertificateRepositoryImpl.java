@@ -39,17 +39,17 @@ public class CertificateRepositoryImpl implements CertificateRepository {
                 WHERE c.isActive = true
                 """);
         appendFilters(jpql, criteria);
-        jpql.append(" AND (:lastIndex IS NULL OR c.id < :lastIndex) ORDER BY c.id DESC");
+        jpql.append(" AND (:lastId IS NULL OR c.id < :lastId) ORDER BY c.id DESC");
 
         TypedQuery<Certificate> query = em.createQuery(jpql.toString(), Certificate.class);
         bindFilters(query, criteria);
-        query.setParameter("lastIndex", criteria.getLastIndexFilter().orElse(null));
+        query.setParameter("lastId", criteria.getLastIdFilter().orElse(null));
         query.setMaxResults(CertificateCriteria.LENGTH + 1);
         return query.getResultList();
     }
 
     @Override
-    public long countActive(CertificateCriteria criteria) {
+    public Long countActive(CertificateCriteria criteria) {
         StringBuilder jpql = new StringBuilder("SELECT COUNT(c) FROM Certificate c WHERE c.isActive = true");
         appendFilters(jpql, criteria);
 

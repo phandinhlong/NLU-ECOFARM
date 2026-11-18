@@ -1,8 +1,6 @@
 package jakarta.ecofarm_backend.modules.auth;
 
 import jakarta.annotation.PostConstruct;
-import jakarta.annotation.security.RolesAllowed;
-import jakarta.ecofarm_backend.common.anotation.RequireRoles;
 import jakarta.ecofarm_backend.common.constant.SecurityConstant;
 import jakarta.ecofarm_backend.common.dto.request.ChangePasswordRequest;
 import jakarta.ecofarm_backend.common.dto.request.ForgotPasswordRequest;
@@ -14,10 +12,8 @@ import jakarta.ecofarm_backend.common.util.CookieBuilderUtil;
 import jakarta.ecofarm_backend.infrastructure.service.JwtService;
 import jakarta.ecofarm_backend.modules.auth.facade.AuthFacade;
 import jakarta.inject.Inject;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
-import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -49,14 +45,14 @@ public class AuthResource {
             summary = "User login",
             description = "Authenticates the user's credentials and sets the access token and refresh token in HttpOnly cookies."
     )
-    public BaseResponse<Boolean> login(@Valid LoginRequest request, @Context HttpServletResponse servletResponse) {
-        return this.authFacade.login(request, servletResponse);
+    public BaseResponse<Boolean> login(@Valid LoginRequest request) {
+        return this.authFacade.login(request);
     }
 
     @POST
     @Path("/refresh-token")
-    public BaseResponse<Boolean> refreshToken(@Context HttpServletResponse servletResponse) {
-        return this.authFacade.refreshToken(servletResponse);
+    public BaseResponse<Boolean> refreshToken(){
+        return this.authFacade.refreshToken();
     }
 
     @POST
@@ -93,7 +89,7 @@ public class AuthResource {
 
     @POST
     @Path("/logout")
-    public BaseResponse<Boolean> logout(@Context HttpServletResponse servletResponse){
-        return this.authFacade.logout(servletResponse);
+    public BaseResponse<Boolean> logout(){
+        return this.authFacade.logout();
     }
 }

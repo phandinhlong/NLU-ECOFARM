@@ -19,11 +19,11 @@ public class VarietyRepositoryImpl implements VarietyRepository {
     private EntityManager em;
 
     private void appendFilters(StringBuilder jpql, VarietyCriteria criteria) {
-        criteria.getKeywordFilter().ifPresent(value -> jpql.append(" AND (LOWER(v.code) LIKE :q OR LOWER(v.name) LIKE :q)"));
+        criteria.getKeywordFilter().ifPresent(value -> jpql.append(" AND (LOWER(v.code) LIKE :keyword OR LOWER(v.name) LIKE :keyword)"));
     }
 
     private void bindFilters(TypedQuery<?> query, VarietyCriteria criteria) {
-        criteria.getKeywordFilter().ifPresent(value -> query.setParameter("q", "%" + value.trim().toLowerCase() + "%"));
+        criteria.getKeywordFilter().ifPresent(value -> query.setParameter("keyword", "%" + value.trim().toLowerCase() + "%"));
     }
 
     @Override
@@ -33,17 +33,17 @@ public class VarietyRepositoryImpl implements VarietyRepository {
                 WHERE v.isActive = true
                 """);
         appendFilters(jpql, criteria);
-        jpql.append(" AND (:lastIndex IS NULL OR v.id < :lastIndex) ORDER BY v.id DESC");
+        jpql.append(" AND (:lastId IS NULL OR v.id < :lastId) ORDER BY v.id DESC");
 
         TypedQuery<Variety> query = em.createQuery(jpql.toString(), Variety.class);
         bindFilters(query, criteria);
-        query.setParameter("lastIndex", criteria.getLastIndexFilter().orElse(null));
+        query.setParameter("lastId", criteria.getLastIdFilter().orElse(null));
         query.setMaxResults(VarietyCriteria.LENGTH + 1);
         return query.getResultList();
     }
 
     @Override
-    public long countActive(VarietyCriteria criteria) {
+    public Long countActive(VarietyCriteria criteria) {
         StringBuilder jpql = new StringBuilder("SELECT COUNT(v) FROM Variety v WHERE v.isActive = true");
         appendFilters(jpql, criteria);
 
@@ -96,7 +96,7 @@ public class VarietyRepositoryImpl implements VarietyRepository {
     }
 
     @Override
-    public long countBatches(Long varietyId) {
+    public Long countBatches(Long varietyId) {
         TypedQuery<Long> query = em.createQuery(
                 "SELECT COUNT(b) FROM Batch b WHERE b.variety.id = :varietyId",
                 Long.class);

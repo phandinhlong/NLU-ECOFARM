@@ -20,12 +20,12 @@ public class GreenhouseRepositoryImpl implements GreenhouseRepository {
 
     private void appendFilters(StringBuilder jpql, GreenhouseCriteria criteria) {
         criteria.getStatusFilter().ifPresent(value -> jpql.append(" AND g.status = :status"));
-        criteria.getKeywordFilter().ifPresent(value -> jpql.append(" AND (LOWER(g.code) LIKE :q OR LOWER(g.name) LIKE :q)"));
+        criteria.getKeywordFilter().ifPresent(value -> jpql.append(" AND (LOWER(g.code) LIKE :keyword OR LOWER(g.name) LIKE :keyword)"));
     }
 
     private void bindFilters(TypedQuery<?> query, GreenhouseCriteria criteria) {
         criteria.getStatusFilter().ifPresent(value -> query.setParameter("status", value));
-        criteria.getKeywordFilter().ifPresent(value -> query.setParameter("q", "%" + value.trim().toLowerCase() + "%"));
+        criteria.getKeywordFilter().ifPresent(value -> query.setParameter("keyword", "%" + value.trim().toLowerCase() + "%"));
     }
 
     @Override
@@ -35,17 +35,17 @@ public class GreenhouseRepositoryImpl implements GreenhouseRepository {
                 WHERE g.isActive = true
                 """);
         appendFilters(jpql, criteria);
-        jpql.append(" AND (:lastIndex IS NULL OR g.id < :lastIndex) ORDER BY g.id DESC");
+        jpql.append(" AND (:lastId IS NULL OR g.id < :lastId) ORDER BY g.id DESC");
 
         TypedQuery<Greenhouse> query = em.createQuery(jpql.toString(), Greenhouse.class);
         bindFilters(query, criteria);
-        query.setParameter("lastIndex", criteria.getLastIndexFilter().orElse(null));
+        query.setParameter("lastId", criteria.getLastIdFilter().orElse(null));
         query.setMaxResults(GreenhouseCriteria.LENGTH + 1);
         return query.getResultList();
     }
 
     @Override
-    public long countActive(GreenhouseCriteria criteria) {
+    public Long countActive(GreenhouseCriteria criteria) {
         StringBuilder jpql = new StringBuilder("SELECT COUNT(g) FROM Greenhouse g WHERE g.isActive = true");
         appendFilters(jpql, criteria);
 
@@ -98,7 +98,7 @@ public class GreenhouseRepositoryImpl implements GreenhouseRepository {
     }
 
     @Override
-    public long countBatches(Long greenhouseId) {
+    public Long countBatches(Long greenhouseId) {
         TypedQuery<Long> query = em.createQuery(
                 "SELECT COUNT(b) FROM Batch b WHERE b.greenhouse.id = :greenhouseId",
                 Long.class);

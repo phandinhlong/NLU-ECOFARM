@@ -27,7 +27,7 @@ public class CertificateCriteria extends BaseCriteria {
 
     @QueryParam("lastIndex")
     @Positive
-    private Long lastIndex;
+    private Long lastId;
 
     public Optional<Long> getGreenhouseFilter() {
         return Optional.ofNullable(greenhouseId);
@@ -39,7 +39,7 @@ public class CertificateCriteria extends BaseCriteria {
         return Optional.ofNullable(expiringInDays).filter(value -> value > 0);
     }
 
-    public Optional<Long> getLastIndexFilter() {
-        return Optional.ofNullable(lastIndex).filter(value -> value > 0);
+    public Optional<Long> getLastIdFilter() {
+        return Optional.ofNullable(lastId).filter(value -> value > 0);
     }
 }
