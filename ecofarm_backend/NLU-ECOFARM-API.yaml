@@ -431,7 +431,7 @@ paths:
             schema: { $ref: '#/components/schemas/EventCreate' }
             example:
               clientEventId: 7f3a2c1e-5b7d-4e8a-9c21-7d4e5f6a8b90
-              eventType: THU_PHAN
+              eventType: POLLINATION
               occurredAt: 1789029000000
               data: { pollinatedCount: 480, note: Hoàn thành thụ phấn, giữ 1 quả tối ưu trên cây }
               attachments:
@@ -576,7 +576,7 @@ paths:
     post:
       tags: [Quality]
       summary: Ghi nhận thu hoạch
-      description: Ghi sự kiện `THU_HOACH`, đặt `batches.harvest_date`, chuyển lô sang `HARVESTED`.
+      description: Ghi sự kiện `HARVEST`, đặt `batches.harvest_date`, chuyển lô sang `HARVESTED`.
       x-roles: [ENGINEER, WORKER]
       x-fr: [FR-QC-004]
       parameters: [ { $ref: '#/components/parameters/BatchId' } ]
@@ -1082,7 +1082,7 @@ components:
     EventType:
       type: string
       description: Cột `cultivation_events.event_type`. `EVENT_APPROVED` do hệ thống sinh, client không gửi.
-      enum: [XUONG_GIONG, THU_PHAN, BON_PHAN_TUOI, NGUNG_PHAN_CACH_LY, DO_BRIX, THU_HOACH, GHI_CHU, EVENT_APPROVED]
+      enum: [SOWING, POLLINATION, FERTILIZE_IRRIGATE, POLLINATION_ISOLATION, BRIX_MEASUREMENT, HARVEST, NOTE, EVENT_APPROVED]
     EventStatus:
       type: string
       description: Cột `cultivation_events.status`
@@ -1105,13 +1105,13 @@ components:
     EventData:
       description: |
         Nội dung `payload.data`, tùy `eventType`:
-        - XUONG_GIONG: `quantity` (số cây), `seedLot`, `note`
-        - THU_PHAN: `pollinatedCount`, `note`
-        - BON_PHAN_TUOI: `kind` (BON_PHAN, TUOI, PHUN_VI_LUONG), `product`, `amount`, `unit`, `note`
-        - NGUNG_PHAN_CACH_LY: `isolationDays`, `note`
-        - DO_BRIX: `brix` (0 đến 30, 1 chữ số thập phân), `sampleCount`
-        - THU_HOACH: `estimatedQuantity`, `area`
-        - GHI_CHU: `note`
+        - SOWING: `quantity` (số cây), `seedLot`, `note`
+        - POLLINATION: `pollinatedCount`, `note`
+        - FERTILIZE_IRRIGATE: `kind` (BON_PHAN, TUOI, PHUN_VI_LUONG), `product`, `amount`, `unit`, `note`
+        - POLLINATION_ISOLATION: `isolationDays`, `note`
+        - BRIX_MEASUREMENT: `brix` (0 đến 30, 1 chữ số thập phân), `sampleCount`
+        - HARVEST: `estimatedQuantity`, `area`
+        - NOTE: `note`
       type: object
       additionalProperties: true
       properties:

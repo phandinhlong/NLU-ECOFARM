@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset ecofarm:006-event-log-schema splitStatements:false
+--changeset thaniel:006-event-log-schema splitStatements:false
 --validCheckSum: ANY
 --comment: batch assignment + event log foundation (reviews, chain status, amend, batch_tasks)
 ALTER TABLE cultivation_events ADD COLUMN IF NOT EXISTS occurred_at BIGINT;
@@ -29,6 +29,11 @@ ALTER TABLE batch_assignments ADD COLUMN IF NOT EXISTS assigned_by BIGINT;
 ALTER TABLE outbox_events ADD COLUMN IF NOT EXISTS event_id BIGINT;
 ALTER TABLE outbox_events ADD COLUMN IF NOT EXISTS target_chain VARCHAR(16) DEFAULT 'BOTH';
 
+ALTER TABLE event_attachments ADD COLUMN IF NOT EXISTS captured_at BIGINT;
+ALTER TABLE event_attachments ADD COLUMN IF NOT EXISTS gps_lat NUMERIC(10,7);
+ALTER TABLE event_attachments ADD COLUMN IF NOT EXISTS gps_lng NUMERIC(10,7);
+ALTER TABLE event_attachments ADD COLUMN IF NOT EXISTS gps_accuracy_m DOUBLE PRECISION;
+
 CREATE TABLE IF NOT EXISTS batch_tasks (
     id BIGSERIAL PRIMARY KEY,
     batch_id BIGINT,
@@ -40,15 +45,19 @@ CREATE TABLE IF NOT EXISTS batch_tasks (
     completed_at BIGINT,
     status VARCHAR(16) NOT NULL DEFAULT 'ASSIGNED',
     event_id BIGINT,
+    completion_event_id BIGINT,
     version BIGINT NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT,
     updated_at BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000)::BIGINT
 );
 
+ALTER TABLE batch_tasks ADD COLUMN IF NOT EXISTS completion_event_id BIGINT;
+
 CREATE INDEX IF NOT EXISTS idx_batch_tasks_batch_id ON batch_tasks (batch_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_batch_tasks_worker_status ON batch_tasks (worker_id, status);
 
+--rollback ALTER TABLE batch_tasks DROP COLUMN IF EXISTS completion_event_id;
 --rollback DROP INDEX IF EXISTS idx_batch_tasks_worker_status;
 --rollback DROP INDEX IF EXISTS idx_batch_tasks_batch_id;
 --rollback DROP TABLE IF EXISTS batch_tasks;
@@ -63,3 +72,7 @@ CREATE INDEX IF NOT EXISTS idx_batch_tasks_worker_status ON batch_tasks (worker_
 --rollback ALTER TABLE cultivation_events DROP COLUMN IF EXISTS reviewed_by;
 --rollback ALTER TABLE cultivation_events DROP COLUMN IF EXISTS review_status;
 --rollback ALTER TABLE cultivation_events DROP COLUMN IF EXISTS occurred_at;
+--rollback ALTER TABLE event_attachments DROP COLUMN IF EXISTS gps_accuracy_m;
+--rollback ALTER TABLE event_attachments DROP COLUMN IF EXISTS gps_lng;
+--rollback ALTER TABLE event_attachments DROP COLUMN IF EXISTS gps_lat;
+--rollback ALTER TABLE event_attachments DROP COLUMN IF EXISTS captured_at;
