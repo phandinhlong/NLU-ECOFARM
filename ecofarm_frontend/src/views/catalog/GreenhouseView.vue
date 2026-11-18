@@ -1,28 +1,28 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import PageHeader from '@/components/common/PageHeader.vue'
-import PagerBar from '@/components/common/PagerBar.vue'
 import SoftBadge from '@/components/common/SoftBadge.vue'
-import { useGreenhousesQuery, useSaveGreenhouseMutation } from '@/composables/useGreenhouses'
+import { useDeleteGreenhouseMutation, useGreenhouseList, useSaveGreenhouseMutation } from '@/composables/useGreenhouses'
 import {
   GREENHOUSE_STATUS_LABELS,
   type Greenhouse,
   type GreenhouseInput,
+  type GreenhouseQuery,
   type GreenhouseStatus,
-  type PageResponse,
 } from '@/api/types/catalog'
 
-const params = ref<{ page: number; size: number; q?: string; status?: string }>({
-  page: 0,
-  size: 10,
-})
+const params = ref<GreenhouseQuery>({})
 
-const { data, isLoading, isError, error } = useGreenhousesQuery(params)
-const { mutate: save, isPending: isSaving, error: saveError, reset: resetSaveError } =
-  useSaveGreenhouseMutation()
+const { items, hasMore, loading, error, load, loadMore } = useGreenhouseList(params)
+const { save, isSaving, saveError, resetSaveError } = useSaveGreenhouseMutation()
+const { remove, isDeleting, deleteError, resetDeleteError } = useDeleteGreenhouseMutation()
+
+onMounted(load)
 
 const showModal = ref(false)
 const editing = ref<Greenhouse | null>(null)
+const showDeleteModal = ref(false)
+const deleteTarget = ref<Greenhouse | null>(null)
 const searchText = ref('')
 const statusFilter = ref('')
 const form = reactive({
@@ -32,6 +32,7 @@ const form = reactive({
   gpsLng: '',
   areaM2: '',
   status: 'ACTIVE' as GreenhouseStatus,
+  active: true,
 })
 
 const statuses = Object.entries(GREENHOUSE_STATUS_LABELS) as [GreenhouseStatus, string][]
@@ -41,10 +42,6 @@ const badgeVariant: Record<GreenhouseStatus, 'success' | 'muted' | 'warning'> = 
   MAINTENANCE: 'warning',
 }
 
-const page = computed<PageResponse<Greenhouse>>(
-  () =>
-    data.value ?? { content: [], page: 0, size: 10, totalElements: 0, totalPages: 0 },
-)
 const isCodeLocked = computed(() => editing.value != null && editing.value.batchCount > 0)
 
 const resetForm = () => {
@@ -54,6 +51,7 @@ const resetForm = () => {
   form.gpsLng = ''
   form.areaM2 = ''
   form.status = 'ACTIVE'
+  form.active = true
 }
 
 const openCreate = () => {
@@ -71,11 +69,12 @@ const openEdit = (row: Greenhouse) => {
   form.gpsLng = row.gpsLng?.toString() ?? ''
   form.areaM2 = row.areaM2?.toString() ?? ''
   form.status = row.status
+  form.active = row.active
   resetSaveError()
   showModal.value = true
 }
 
-const submit = () => {
+const submit = async () => {
   const payload: GreenhouseInput = {
     code: form.code.trim(),
     name: form.name.trim(),
@@ -85,35 +84,49 @@ const submit = () => {
     status: form.status,
   }
   if (editing.value) {
+    payload.active = form.active
     payload.version = editing.value.version
   }
-  save(
-    { id: editing.value?.id, data: payload },
-    {
-      onSuccess: () => {
-        showModal.value = false
-      },
-    },
-  )
+  try {
+    await save({ id: editing.value?.id, data: payload })
+    showModal.value = false
+    await load()
+  } catch {
+    // Lỗi đã được gán vào saveError để hiển thị trong modal
+  }
 }
 
 const applyFilter = () => {
   params.value = {
-    ...params.value,
-    q: searchText.value.trim() || undefined,
+    keyword: searchText.value.trim() || undefined,
     status: statusFilter.value || undefined,
-    page: 0,
+  }
+  load()
+}
+
+const openDelete = (row: Greenhouse) => {
+  deleteTarget.value = row
+  resetDeleteError()
+  showDeleteModal.value = true
+}
+
+const confirmRemove = async () => {
+  if (!deleteTarget.value) return
+  try {
+    await remove(deleteTarget.value.id)
+    showDeleteModal.value = false
+    deleteTarget.value = null
+    await load()
+  } catch {
+    // Lỗi đã được gán vào deleteError để hiển thị trong modal
   }
 }
 
 const resetFilter = () => {
   searchText.value = ''
   statusFilter.value = ''
-  params.value = { page: 0, size: params.value.size }
-}
-
-const goToPage = (next: number) => {
-  params.value = { ...params.value, page: next }
+  params.value = {}
+  load()
 }
 
 const formatGps = (lat: number | null, lng: number | null) =>
@@ -170,14 +183,14 @@ const formatArea = (value: number | null) =>
             Mã nhà màng không thể đổi khi đã có lô tham chiếu.
           </p>
         </div>
-        <SoftBadge variant="info" :label="`${page.totalElements} nhà màng`" />
+        <SoftBadge variant="info" :label="`${items.length}${hasMore ? '+' : ''} nhà màng`" />
       </div>
 
-      <BAlert v-if="isError" variant="danger" class="mx-3 mt-3 mb-0">
-        Không tải được danh sách nhà màng: {{ error?.message }}
+      <BAlert v-if="error" variant="danger" class="mx-3 mt-3 mb-0">
+        Không tải được danh sách nhà màng: {{ error }}
       </BAlert>
 
-      <div v-if="isLoading" class="d-flex justify-content-center py-5">
+      <div v-if="loading && items.length === 0" class="d-flex justify-content-center py-5">
         <BSpinner />
       </div>
 
@@ -195,12 +208,12 @@ const formatArea = (value: number | null) =>
             </tr>
           </thead>
           <tbody>
-            <tr v-if="page.content.length === 0">
+            <tr v-if="items.length === 0">
               <td colspan="7" class="text-center text-body-secondary py-4">
                 Chưa có nhà màng nào
               </td>
             </tr>
-            <tr v-for="row in page.content" :key="row.id">
+            <tr v-for="row in items" :key="row.id">
               <td class="fw-semibold">{{ row.code }}</td>
               <td>
                 <div class="fw-semibold">{{ row.name }}</div>
@@ -217,25 +230,31 @@ const formatArea = (value: number | null) =>
               </td>
               <td class="text-end">
                 <BButton size="sm" variant="outline-primary" @click="openEdit(row)">Sửa</BButton>
+                <BButton
+                  size="sm"
+                  variant="outline-danger"
+                  class="ms-1"
+                  :disabled="row.batchCount > 0"
+                  @click="openDelete(row)"
+                >
+                  Xóa
+                </BButton>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <PagerBar
-        :page="page.page"
-        :total-pages="page.totalPages"
-        :total-elements="page.totalElements"
-        :size="page.size"
-        unit="nhà màng"
-        @update:page="goToPage"
-      />
+      <div v-if="hasMore" class="p-3 border-top text-center">
+        <BButton variant="outline-secondary" :disabled="loading" @click="loadMore">
+          {{ loading ? 'Đang tải...' : 'Tải thêm' }}
+        </BButton>
+      </div>
     </section>
 
     <BModal v-model="showModal" :title="editing ? 'Sửa nhà màng' : 'Thêm nhà màng'">
-      <BAlert v-if="saveError" variant="danger" dismissible>
-        {{ saveError.message }}
+      <BAlert v-if="saveError" :model-value="true" variant="danger" dismissible>
+        {{ saveError }}
       </BAlert>
       <form class="d-flex flex-column gap-3" novalidate @submit.prevent="submit">
         <div>
@@ -271,6 +290,19 @@ const formatArea = (value: number | null) =>
             </option>
           </BFormSelect>
         </div>
+        <div v-if="editing">
+          <label class="form-label small fw-semibold mb-1" for="gh-active">
+            Trạng thái dữ liệu (is_active)
+          </label>
+          <BFormSelect id="gh-active" v-model="form.active" aria-describedby="gh-active-warning">
+            <option :value="true">Đang sử dụng (true)</option>
+            <option :value="false">Xóa mềm (false)</option>
+          </BFormSelect>
+          <p id="gh-active-warning" class="small text-warning mt-2 mb-0" role="note">
+            Cảnh báo: Chọn Xóa mềm (false) sẽ ẩn nhà màng khỏi danh sách đang sử dụng,
+            nhưng vẫn giữ dữ liệu lịch sử đã liên kết.
+          </p>
+        </div>
       </form>
       <template #footer>
         <BButton variant="outline-secondary" :disabled="isSaving" @click="showModal = false">
@@ -278,6 +310,28 @@ const formatArea = (value: number | null) =>
         </BButton>
         <BButton variant="primary" :disabled="isSaving" @click="submit">
           {{ isSaving ? 'Đang lưu...' : 'Lưu' }}
+        </BButton>
+      </template>
+    </BModal>
+
+    <BModal v-model="showDeleteModal" title="Xóa nhà màng">
+      <BAlert v-if="deleteError" variant="danger" dismissible>
+        {{ deleteError }}
+      </BAlert>
+      <p class="mb-0">
+        Bạn có chắc muốn xóa nhà màng
+        <strong>{{ deleteTarget?.code }}</strong> — {{ deleteTarget?.name }}?
+      </p>
+      <template #footer>
+        <BButton
+          variant="outline-secondary"
+          :disabled="isDeleting"
+          @click="showDeleteModal = false"
+        >
+          Hủy
+        </BButton>
+        <BButton variant="danger" :disabled="isDeleting" @click="confirmRemove">
+          {{ isDeleting ? 'Đang xóa...' : 'Xóa' }}
         </BButton>
       </template>
     </BModal>

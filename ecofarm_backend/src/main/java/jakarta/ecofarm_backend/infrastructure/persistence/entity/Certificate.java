@@ -1,7 +1,6 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,7 +21,6 @@ public class Certificate extends BaseEntity {
     // JPA relation thay cho DB foreign key (green_houses.id)
     @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "greenhouse_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
-    @JsonIgnore
     private Greenhouse greenhouse;
 
     @Column(name = "cert_type", nullable = false)

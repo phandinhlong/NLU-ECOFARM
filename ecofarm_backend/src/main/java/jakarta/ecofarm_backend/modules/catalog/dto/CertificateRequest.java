@@ -32,4 +32,8 @@ public class CertificateRequest {
 
     @Size(max = 255, message = "Đường dẫn tệp PDF tối đa 255 ký tự")
     private String fileKey;
+
+    private Boolean active;
+
+    private Long version;
 }

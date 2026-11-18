@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -34,6 +35,7 @@ public class Variety extends BaseEntity {
     @Transient
     private Long batchCount;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "variety", fetch = FetchType.LAZY)
     @Builder.Default
     private List<Batch> batches = new ArrayList<>();

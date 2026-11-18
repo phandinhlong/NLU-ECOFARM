@@ -34,5 +34,7 @@ public class VarietyRequest {
     @Max(value = 365, message = "Số ngày cách ly tối thiểu tối đa 365")
     private Integer minIsolationDays;
 
+    private Boolean active;
+
     private Long version;
 }
