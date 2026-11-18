@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import SoftBadge from '@/components/common/SoftBadge.vue'
+import TaskList from '@/components/batch/TaskList.vue'
 import { useBatchQuery } from '@/composables/useBatches'
 import { useAssignedWorkersStore, useUserStore, useWorkerLookupStore } from '@/stores'
 import {
@@ -25,8 +26,9 @@ const assigned = computed(() => assignedStore.workers)
 
 const roles = computed(() => userStore.user?.role ?? [])
 const isEngineer = computed(() => roles.value.includes('ENGINEER'))
+const isFarmer = computed(() => roles.value.includes('FARMER'))
 const isAdmin = computed(() => roles.value.includes('ADMIN'))
-const canManage = computed(() => isEngineer.value || isAdmin.value)
+const canManage = computed(() => isEngineer.value)
 
 const problem = computed(() => error.value as (Error & { status?: number } & Partial<Problem>) | null)
 const errorStatus = computed(() => problem.value?.status ?? 0)
@@ -224,7 +226,13 @@ const removeWorker = async (worker: WorkerSummary) => {
             <FontAwesomeIcon icon="plus" aria-hidden="true" /> Thêm sự kiện
           </BButton>
         </div>
-        <p class="small text-body-secondary mb-0">Nhật ký canh tác sẽ hiển thị ở đây</p>
+        <TaskList
+          :batch-id="id"
+          :is-engineer="isEngineer"
+          :is-farmer="isFarmer"
+          :locked="locked"
+          :workers="assigned"
+        />
       </section>
 
       <section class="border rounded-3 bg-body p-3 p-lg-4">

@@ -33,6 +33,9 @@ declare module 'vue' {
     Sidebar: typeof import('./src/components/common/Sidebar.vue')['default']
     SoftBadge: typeof import('./src/components/common/SoftBadge.vue')['default']
     StickerPreview: typeof import('./src/components/batch/StickerPreview.vue')['default']
+    TaskCompleteModal: typeof import('./src/components/batch/TaskCompleteModal.vue')['default']
+    TaskCreateModal: typeof import('./src/components/batch/TaskCreateModal.vue')['default']
+    TaskList: typeof import('./src/components/batch/TaskList.vue')['default']
     VietGapModal: typeof import('./src/components/batch/VietGapModal.vue')['default']
   }
 }

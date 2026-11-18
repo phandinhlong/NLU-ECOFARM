@@ -7,6 +7,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 import java.util.List;
+import java.util.Optional;
 
 @ApplicationScoped
 public class CultivationEventServiceImpl implements CultivationEventService {
@@ -17,5 +18,20 @@ public class CultivationEventServiceImpl implements CultivationEventService {
     @Override
     public List<CultivationEvent> findByBatchIdOrderBySeqAsc(Long batchId) {
         return this.cultivationEventRepository.findByBatchIdOrderBySeqAsc(batchId);
+    }
+
+    @Override
+    public CultivationEvent save(CultivationEvent event) {
+        return this.cultivationEventRepository.save(event);
+    }
+
+    @Override
+    public Optional<CultivationEvent> findById(Long id) {
+        return this.cultivationEventRepository.findById(id);
+    }
+
+    @Override
+    public Optional<CultivationEvent> findByClientEventId(String clientEventId) {
+        return this.cultivationEventRepository.findByClientEventId(clientEventId);
     }
 }

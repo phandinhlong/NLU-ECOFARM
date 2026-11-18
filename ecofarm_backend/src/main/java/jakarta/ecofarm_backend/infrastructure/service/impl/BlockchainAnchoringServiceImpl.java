@@ -5,19 +5,24 @@ import jakarta.ejb.Singleton;
 import jakarta.inject.Inject;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Semaphore;
 
 import jakarta.ecofarm_backend.common.dto.request.AuditLogParam;
 import jakarta.ecofarm_backend.common.dto.response.AuditError;
 import jakarta.ecofarm_backend.common.enums.AnchorEvent;
 import jakarta.ecofarm_backend.common.enums.AnchorStatus;
+import jakarta.ecofarm_backend.common.enums.EventChainStatus;
+import jakarta.ecofarm_backend.common.enums.OutboxTarget;
 import jakarta.ecofarm_backend.config.BlockchainConfig;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.AuditLog;
+import jakarta.ecofarm_backend.infrastructure.persistence.entity.CultivationEvent;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.OutboxEvent;
 import jakarta.ecofarm_backend.infrastructure.service.AnchorService;
 import jakarta.ecofarm_backend.infrastructure.service.AuditLogService;
 import jakarta.ecofarm_backend.infrastructure.service.BlockchainAnchoringService;
+import jakarta.ecofarm_backend.infrastructure.service.CultivationEventService;
 import jakarta.ecofarm_backend.infrastructure.service.OutboxEventService;
 import jakarta.ecofarm_backend.modules.blockchain.client.BesuClient;
 import jakarta.ecofarm_backend.modules.blockchain.client.PolygonClient;
@@ -42,6 +47,9 @@ public class BlockchainAnchoringServiceImpl implements BlockchainAnchoringServic
 
     @Inject
     private PolygonClient polygonClient;
+
+    @Inject
+    private CultivationEventService cultivationEventService;
 
     private final Semaphore rateLimiter = new Semaphore(2);
 
@@ -78,38 +86,46 @@ public class BlockchainAnchoringServiceImpl implements BlockchainAnchoringServic
                 return;
             }
 
-            // Gửi lên Besu Private Chain
-            String txHash = besuClient.sendTransaction(event.getEventData());
-
-            Anchor anchor = Anchor.builder()
-                    .txHash(txHash)
-                    .status("SUBMITTED")
-                    .blockNumber(besuClient.getCurrentBlockNumber())
-                    .confirmations(0)
-                    .explorerUrl("http://localhost:8545/tx/" + txHash)
-                    .build();
-            anchorService.persist(anchor);
-
-            // Gửi lên Polygon Public Chain (thử nghiệm song song)
-            try {
-                if (config.getPublicRpcEndpoint() != null && !config.getPublicRpcEndpoint().isBlank()) {
-                    String polygonTxHash = polygonClient.sendTransaction(event.getEventData());
-                    Anchor polygonAnchor = Anchor.builder()
-                            .txHash(polygonTxHash)
-                            .status("SUBMITTED")
-                            .chainId(config.getPublicChainId())
-                            .blockNumber(polygonClient.getCurrentBlockNumber())
-                            .confirmations(0)
-                            .explorerUrl("https://amoy.polygonscan.com/tx/" + polygonTxHash)
-                            .build();
-                    anchorService.persist(polygonAnchor);
-                }
-            } catch (Exception polyEx) {
-                System.err.println("Polygon anchoring warning (non-fatal): " + polyEx.getMessage());
+            OutboxTarget target = event.getTargetChain() == null ? OutboxTarget.BOTH : event.getTargetChain();
+            String txHash = null;
+            if (target == OutboxTarget.PRIVATE || target == OutboxTarget.BOTH) {
+                txHash = besuClient.sendTransaction(event.getEventData());
+                Anchor anchor = Anchor.builder()
+                        .txHash(txHash)
+                        .status("SUBMITTED")
+                        .blockNumber(besuClient.getCurrentBlockNumber())
+                        .confirmations(0)
+                        .explorerUrl("http://localhost:8545/tx/" + txHash)
+                        .build();
+                anchorService.persist(anchor);
             }
-
+            if (target == OutboxTarget.PUBLIC || target == OutboxTarget.BOTH) {
+                try {
+                    if (config.getPublicRpcEndpoint() != null && !config.getPublicRpcEndpoint().isBlank()) {
+                        String polygonTxHash = polygonClient.sendTransaction(event.getEventData());
+                        Anchor polygonAnchor = Anchor.builder()
+                                .txHash(polygonTxHash)
+                                .status("SUBMITTED")
+                                .chainId(config.getPublicChainId())
+                                .blockNumber(polygonClient.getCurrentBlockNumber())
+                                .confirmations(0)
+                                .explorerUrl("https://amoy.polygonscan.com/tx/" + polygonTxHash)
+                                .build();
+                        anchorService.persist(polygonAnchor);
+                    }
+                } catch (Exception polyEx) {
+                    System.err.println("Polygon anchoring warning (non-fatal): " + polyEx.getMessage());
+                }
+            }
             outboxEventService.complete(event);
-
+            if (event.getEventId() != null) {
+                Optional<CultivationEvent> source = cultivationEventService.findById(event.getEventId());
+                if (source.isPresent()) {
+                    CultivationEvent ce = source.get();
+                    ce.setStatus(EventChainStatus.CONFIRMED);
+                    cultivationEventService.save(ce);
+                }
+            }
             auditLogService.persist(buildAuditLog(AuditLogParam.builder()
                 .action("OUTBOX_PROCESS_SUCCESS")
                 .entity("outboxEvents")

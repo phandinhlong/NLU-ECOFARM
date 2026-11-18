@@ -1,6 +1,7 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.repository.impl;
 
 import jakarta.ecofarm_backend.common.dto.request.PageCriteria;
+import jakarta.ecofarm_backend.common.enums.EventType;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.BatchAssignment;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
@@ -75,13 +76,12 @@ public class BatchRepositoryImpl implements BatchRepository {
     }
 
     @Override
-    public Batch merge(Batch batch) {
+    public Batch save(Batch batch) {
+        if (batch.getId() == null) {
+            em.persist(batch);
+            return batch;
+        }
         return em.merge(batch);
-    }
-
-    @Override
-    public void persist(Batch batch) {
-        em.persist(batch);
     }
 
     @Override
@@ -107,11 +107,11 @@ public class BatchRepositoryImpl implements BatchRepository {
         TypedQuery<Long> query = em.createQuery("""
                 SELECT MIN(e.recordedAt) FROM CultivationEvent e
                 WHERE e.batch.id = :batchId AND e.eventType = :eventType
-                  AND (e.status IS NULL OR e.status IN ('APPROVED', 'SUPERSEDED'))
+                  AND (e.status IS NULL OR e.status IN ('CONFIRMED', 'SUPERSEDED'))
                   AND (e.isActive IS NULL OR e.isActive = true)
                 """, Long.class);
         query.setParameter("batchId", batchId);
-        query.setParameter("eventType", "POLLINATION");
+        query.setParameter("eventType", EventType.POLLINATION);
         return query.getSingleResult();
     }
 
@@ -124,12 +124,12 @@ public class BatchRepositoryImpl implements BatchRepository {
         TypedQuery<Object[]> query = em.createQuery("""
                 SELECT e.batch.id, MIN(e.recordedAt) FROM CultivationEvent e
                 WHERE e.batch.id IN :batchIds AND e.eventType = :eventType
-                  AND (e.status IS NULL OR e.status IN ('APPROVED', 'SUPERSEDED'))
+                  AND (e.status IS NULL OR e.status IN ('CONFIRMED', 'SUPERSEDED'))
                   AND (e.isActive IS NULL OR e.isActive = true)
                 GROUP BY e.batch.id
                 """, Object[].class);
         query.setParameter("batchIds", batchIds);
-        query.setParameter("eventType", "POLLINATION");
+        query.setParameter("eventType", EventType.POLLINATION);
         for (Object[] row : query.getResultList()) {
             result.put((Long) row[0], (Long) row[1]);
         }
@@ -210,13 +210,9 @@ public class BatchRepositoryImpl implements BatchRepository {
         if (userIds == null || userIds.isEmpty()) {
             return;
         }
-        em.createQuery("""
-                UPDATE BatchAssignment a SET a.isActive = false
-                WHERE a.batch.id = :batchId AND a.user.id IN :userIds
-                """)
-                .setParameter("batchId", batchId)
-                .setParameter("userIds", userIds)
-                .executeUpdate();
+        findAssignments(batchId).stream()
+                .filter(a -> userIds.contains(a.getUser().getId()))
+                .forEach(a -> a.setActive(false));
     }
 
     @Override
