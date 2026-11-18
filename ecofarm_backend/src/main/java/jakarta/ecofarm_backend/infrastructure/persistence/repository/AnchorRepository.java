@@ -11,7 +11,9 @@ public interface AnchorRepository {
 
     List<Anchor> findByStatus(String status);
 
-    List<Anchor> findAll();
+    List<Anchor> findPage(int page, int size);
+
+    long count();
 
     List<Anchor> findBySnapshotId(Long snapshotId);
 }

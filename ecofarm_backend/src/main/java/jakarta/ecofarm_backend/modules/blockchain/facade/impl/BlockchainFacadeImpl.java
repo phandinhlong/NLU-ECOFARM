@@ -3,6 +3,7 @@ package jakarta.ecofarm_backend.modules.blockchain.facade.impl;
 import jakarta.ecofarm_backend.common.anotation.DatabaseTransactional;
 import jakarta.ecofarm_backend.common.dto.request.RecallRequest;
 import jakarta.ecofarm_backend.common.dto.response.AnchorStatus;
+import jakarta.ecofarm_backend.common.dto.response.PageResponse;
 import jakarta.ecofarm_backend.common.dto.response.ProofBundle;
 import jakarta.ecofarm_backend.common.util.CurrentUserUtil;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
@@ -32,8 +33,8 @@ public class BlockchainFacadeImpl implements BlockchainFacade {
     private UserService userService;
 
     @Override
-    public List<Anchor> getAllAnchors() {
-        return blockchainService.getAllAnchors();
+    public PageResponse<Anchor> getAllAnchors(int page, int size) {
+        return blockchainService.getAllAnchors(page, size);
     }
 
     @Override

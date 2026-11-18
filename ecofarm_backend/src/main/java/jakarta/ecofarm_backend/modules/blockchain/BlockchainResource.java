@@ -3,6 +3,7 @@ package jakarta.ecofarm_backend.modules.blockchain;
 import jakarta.ecofarm_backend.common.anotation.RequireRoles;
 import jakarta.ecofarm_backend.common.dto.request.RecallRequest;
 import jakarta.ecofarm_backend.common.dto.response.AnchorStatus;
+import jakarta.ecofarm_backend.common.dto.response.PageResponse;
 import jakarta.ecofarm_backend.common.dto.response.ProofBundle;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.OutboxEvent;
@@ -32,9 +33,12 @@ public class BlockchainResource {
 
     @GET
     @Path("/admin/anchors")
-    @Operation(summary = "Lấy danh sách tất cả các anchor", description = "Danh sách bản ghi neo sổ cái on-chain và private chain")
-    public List<Anchor> getAllAnchors() {
-        return this.blockchainFacade.getAllAnchors();
+    @Operation(summary = "Lấy danh sách anchor theo phân trang", description = "Danh sách bản ghi neo sổ cái on-chain và private chain có phân trang")
+    public PageResponse<Anchor> getAllAnchors(
+            @QueryParam("page") @DefaultValue("0") @PositiveOrZero int page,
+            @QueryParam("size") @DefaultValue("20") @Positive int size
+    ) {
+        return this.blockchainFacade.getAllAnchors(page, size);
     }
 
     @GET

@@ -36,7 +36,8 @@ public enum ErrorCode {
     VARIETY_NOT_FOUND(2012, "Variety not found"),
     INVALID_WORKER(2013, "Invalid worker"),
     ANCHOR_NOT_FOUND(3001, "Anchor not found"),
-    ANCHOR_NOT_RETRYABLE(3002, "Anchor is not in FAILED state; cannot retry");
+    ANCHOR_NOT_RETRYABLE(3002, "Anchor is not in FAILED state; cannot retry"),
+    SNAPSHOT_NOT_FOUND(3003, "Merkle snapshot not found for this batch");
 
     private final Integer code;
     private final String message;

@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,11 +30,10 @@ public class ReconciliationServiceImpl implements ReconciliationService {
         List<ReconciliationItem> items = new ArrayList<>();
 
         for (MerkleSnapshot snapshot : snapshots) {
-            List<Anchor> anchors = anchorService.findAll();
-            Optional<Anchor> anchorOpt = anchors.stream()
-                .filter(a -> snapshot.getId() != null && a.getSnapshot() != null
-                    && snapshot.getId().equals(a.getSnapshot().getId()))
-                .findFirst();
+            List<Anchor> anchors = snapshot.getId() != null
+                    ? anchorService.findBySnapshotId(snapshot.getId())
+                    : Collections.emptyList();
+            Optional<Anchor> anchorOpt = anchors.stream().findFirst();
 
             String privateRoot = anchorOpt.map(Anchor::getTxHash).orElse(null);
             String result = anchorOpt.isPresent() ? "OK" : "MISMATCH_DB_PRIVATE";

@@ -83,7 +83,7 @@ public class BlockchainAnchoringServiceImpl implements BlockchainAnchoringServic
 
             Anchor anchor = Anchor.builder()
                     .txHash(txHash)
-                    .status("SUBMITTED")
+                    .status(AnchorStatus.SUBMITTED.name())
                     .blockNumber(besuClient.getCurrentBlockNumber())
                     .confirmations(0)
                     .explorerUrl("http://localhost:8545/tx/" + txHash)
@@ -96,7 +96,7 @@ public class BlockchainAnchoringServiceImpl implements BlockchainAnchoringServic
                     String polygonTxHash = polygonClient.sendTransaction(event.getEventData());
                     Anchor polygonAnchor = Anchor.builder()
                             .txHash(polygonTxHash)
-                            .status("SUBMITTED")
+                            .status(AnchorStatus.SUBMITTED.name())
                             .chainId(config.getPublicChainId())
                             .blockNumber(polygonClient.getCurrentBlockNumber())
                             .confirmations(0)
