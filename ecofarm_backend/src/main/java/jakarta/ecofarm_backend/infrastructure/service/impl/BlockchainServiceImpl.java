@@ -8,6 +8,9 @@ import jakarta.ecofarm_backend.common.dto.response.ReconciliationItem;
 import jakarta.ecofarm_backend.common.enums.AnchorEvent;
 import jakarta.ecofarm_backend.common.enums.AnchorStatus;
 import jakarta.ecofarm_backend.common.enums.BatchStatus;
+import jakarta.ecofarm_backend.common.enums.ErrorCode;
+import jakarta.ecofarm_backend.common.exception.ConflictException;
+import jakarta.ecofarm_backend.common.exception.EntityNotFoundException;
 import jakarta.ecofarm_backend.config.BlockchainConfig;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
@@ -26,13 +29,12 @@ import jakarta.ecofarm_backend.infrastructure.service.ReconciliationService;
 import jakarta.ecofarm_backend.modules.blockchain.client.PolygonClient;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.Response;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @ApplicationScoped
 public class BlockchainServiceImpl implements BlockchainService {
@@ -73,13 +75,9 @@ public class BlockchainServiceImpl implements BlockchainService {
     public Map<String, Object> getReconciliation(int page, int size, boolean onlyMismatch) {
         List<ReconciliationItem> items = reconciliationService.reconcileAll();
         if (onlyMismatch) {
-            List<ReconciliationItem> mismatch = new ArrayList<>();
-            for (ReconciliationItem item : items) {
-                if (!"OK".equals(item.getResult())) {
-                    mismatch.add(item);
-                }
-            }
-            items = mismatch;
+            items = items.stream()
+                    .filter(item -> !"OK".equals(item.getResult()))
+                    .toList();
         }
         int total = items.size();
         int from = Math.min(page * size, total);
@@ -96,8 +94,9 @@ public class BlockchainServiceImpl implements BlockchainService {
 
     @Override
     public jakarta.ecofarm_backend.common.dto.response.AnchorStatus getAnchorStatus(Long batchId) {
-        MerkleSnapshot snapshot = snapshotService.findByBatchId(batchId);
-        if (snapshot == null) {
+        Optional<MerkleSnapshot> snapshotOpt = Optional.ofNullable(snapshotService.findByBatchId(batchId));
+
+        if (snapshotOpt.isEmpty()) {
             return jakarta.ecofarm_backend.common.dto.response.AnchorStatus.builder()
                     .batchId(batchId)
                     .batchStatus(BatchStatus.DRAFT.name())
@@ -110,14 +109,21 @@ public class BlockchainServiceImpl implements BlockchainService {
                     .build();
         }
 
-        jakarta.ecofarm_backend.common.dto.response.AnchorStatus.SnapshotInfo snapshotInfo = jakarta.ecofarm_backend.common.dto.response.AnchorStatus.SnapshotInfo.builder()
-                .id(snapshot.getId())
-                .merkleRoot(snapshot.getMerkleRoot())
-                .leafCount(snapshot.getLeafCount())
-                .build();
+        MerkleSnapshot snapshot = snapshotOpt.get();
+
+        jakarta.ecofarm_backend.common.dto.response.AnchorStatus.SnapshotInfo snapshotInfo =
+                jakarta.ecofarm_backend.common.dto.response.AnchorStatus.SnapshotInfo.builder()
+                        .id(snapshot.getId())
+                        .merkleRoot(snapshot.getMerkleRoot())
+                        .leafCount(snapshot.getLeafCount())
+                        .build();
 
         List<Anchor> anchors = anchorService.findBySnapshotId(snapshot.getId());
-        if (anchors.isEmpty()) {
+        Optional<Anchor> lastAnchorOpt = anchors.isEmpty()
+                ? Optional.empty()
+                : Optional.of(anchors.get(anchors.size() - 1));
+
+        if (lastAnchorOpt.isEmpty()) {
             return jakarta.ecofarm_backend.common.dto.response.AnchorStatus.builder()
                     .batchId(batchId)
                     .snapshot(snapshotInfo)
@@ -131,7 +137,7 @@ public class BlockchainServiceImpl implements BlockchainService {
                     .build();
         }
 
-        Anchor anchor = anchors.get(anchors.size() - 1);
+        Anchor anchor = lastAnchorOpt.get();
         AnchorStatus anchorStatus = AnchorStatus.fromString(anchor.getStatus());
         BatchStatus batchStatus = anchorStatus.toBatchStatus();
 
@@ -142,7 +148,7 @@ public class BlockchainServiceImpl implements BlockchainService {
 
         PublicChainStatus publicChain = PublicChainStatus.builder()
                 .id(anchor.getId())
-                .snapshotId(anchor.getSnapshot() != null ? anchor.getSnapshot().getId() : null)
+                .snapshotId(Optional.ofNullable(anchor.getSnapshot()).map(s -> s.getId()).orElse(null))
                 .chainId(anchor.getChainId())
                 .contractAddress(anchor.getContractAddress())
                 .txHash(anchor.getTxHash())
@@ -168,14 +174,14 @@ public class BlockchainServiceImpl implements BlockchainService {
 
     @Override
     public Anchor retryAnchor(Long anchorId) {
-        Anchor anchor = anchorService.findById(anchorId);
-        if (anchor == null) {
-            throw new WebApplicationException(Response.Status.NOT_FOUND);
-        }
+        Anchor anchor = Optional.ofNullable(anchorService.findById(anchorId))
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.ANCHOR_NOT_FOUND));
+
         AnchorStatus current = AnchorStatus.fromString(anchor.getStatus());
         if (!current.canFire(AnchorEvent.RETRY)) {
-            throw new WebApplicationException(Response.Status.CONFLICT);
+            throw new ConflictException(ErrorCode.ANCHOR_NOT_RETRYABLE);
         }
+
         anchor.setStatus(current.fire(AnchorEvent.RETRY).name());
         anchor.setAnchoredAt(System.currentTimeMillis());
         anchorService.persist(anchor);
@@ -184,8 +190,11 @@ public class BlockchainServiceImpl implements BlockchainService {
 
     @Override
     public Recall recallBatch(Long batchId, RecallRequest req, User currentUser) {
+        Batch batch = Optional.ofNullable(batchService.findById(batchId))
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.BATCH_NOT_FOUND));
+
         Recall recall = Recall.builder()
-                .batch(batchService.findById(batchId))
+                .batch(batch)
                 .reason(req.getReason())
                 .createdByUser(currentUser)
                 .build();
@@ -195,18 +204,20 @@ public class BlockchainServiceImpl implements BlockchainService {
 
     @Override
     public ProofBundle getProofBundle(Long batchId) {
-        MerkleSnapshot snapshot = snapshotService.findByBatchId(batchId);
-        Batch batch = batchService.findById(batchId);
-        String batchCode = batch != null && batch.getBatchCode() != null ? batch.getBatchCode() : "BATCH-" + batchId;
-        String merkleRoot = snapshot != null ? snapshot.getMerkleRoot() : "0xdeadbeefcafe1234";
+        Optional<MerkleSnapshot> snapshotOpt = Optional.ofNullable(snapshotService.findByBatchId(batchId));
+        Optional<Batch> batchOpt = Optional.ofNullable(batchService.findById(batchId));
 
-        Anchor lastAnchor = null;
-        if (snapshot != null) {
-            List<Anchor> anchors = anchorService.findBySnapshotId(snapshot.getId());
-            if (!anchors.isEmpty()) {
-                lastAnchor = anchors.get(anchors.size() - 1);
-            }
-        }
+        String batchCode = batchOpt
+                .map(Batch::getBatchCode)
+                .orElse("BATCH-" + batchId);
+        String merkleRoot = snapshotOpt
+                .map(MerkleSnapshot::getMerkleRoot)
+                .orElse("0xdeadbeefcafe1234");
+
+        Optional<Anchor> lastAnchorOpt = snapshotOpt
+                .map(s -> anchorService.findBySnapshotId(s.getId()))
+                .filter(list -> !list.isEmpty())
+                .map(list -> list.get(list.size() - 1));
 
         return ProofBundle.builder()
                 .batchCode(batchCode)
@@ -217,7 +228,7 @@ public class BlockchainServiceImpl implements BlockchainService {
                 .merkleRoot(merkleRoot)
                 .leaves(new ArrayList<>())
                 .events(new ArrayList<>())
-                .anchor(lastAnchor)
+                .anchor(lastAnchorOpt.orElse(null))
                 .generatedAt(System.currentTimeMillis())
                 .build();
     }
