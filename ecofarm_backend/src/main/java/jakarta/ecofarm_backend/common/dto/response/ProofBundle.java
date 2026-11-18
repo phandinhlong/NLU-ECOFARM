@@ -1,13 +1,19 @@
 package jakarta.ecofarm_backend.common.dto.response;
 
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.List;
 
 @Setter
 @Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ProofBundle {
 
     private String batchCode;
@@ -20,7 +26,4 @@ public class ProofBundle {
     private List<ProofEvent> events;
     private Anchor anchor;
     private long generatedAt;
-
-    public ProofBundle() {}
-
 }

@@ -1,6 +1,7 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Positive;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -21,6 +22,7 @@ public class MerkleSnapshot extends BaseEntity {
     private String merkleRoot;
 
     @Column(name = "leaf_count", nullable = false)
+    @Positive
     private int leafCount;
 
     // JPA relation thay cho DB foreign key (batches.id)
