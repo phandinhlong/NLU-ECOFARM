@@ -1,6 +1,8 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -24,6 +26,7 @@ public class Anchor extends BaseEntity {
     private MerkleSnapshot snapshot;
 
     @Column(name = "chain_id")
+    @Positive
     private Integer chainId;
 
     @Column(name = "contract_address")
@@ -33,9 +36,11 @@ public class Anchor extends BaseEntity {
     private String txHash;
 
     @Column(name = "block_number")
+    @Positive
     private Long blockNumber;
 
     @Column(name = "confirmations")
+    @PositiveOrZero
     private int confirmations;
 
     @Column(name = "status")

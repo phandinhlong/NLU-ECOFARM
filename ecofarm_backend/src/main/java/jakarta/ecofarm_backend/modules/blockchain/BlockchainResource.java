@@ -11,6 +11,7 @@ import jakarta.ecofarm_backend.modules.blockchain.facade.BlockchainFacade;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import org.eclipse.microprofile.openapi.annotations.Operation;
@@ -40,8 +41,8 @@ public class BlockchainResource {
     @Path("/admin/reconciliation")
     @Operation(summary = "Đối soát dữ liệu", description = "Đối soát Merkle root giữa cơ sở dữ liệu và on-chain")
     public Map<String, Object> getReconciliation(
-            @QueryParam("page") @DefaultValue("0") int page,
-            @QueryParam("size") @DefaultValue("20") int size,
+            @QueryParam("page") @DefaultValue("0") @PositiveOrZero int page,
+            @QueryParam("size") @DefaultValue("20") @Positive int size,
             @QueryParam("onlyMismatch") boolean onlyMismatch
     ) {
         return this.blockchainFacade.getReconciliation(page, size, onlyMismatch);
