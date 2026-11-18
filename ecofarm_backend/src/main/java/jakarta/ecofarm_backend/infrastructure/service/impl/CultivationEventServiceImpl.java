@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.infrastructure.service.impl;
 
+import jakarta.ecofarm_backend.common.dto.request.EventPageCriteria;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.CultivationEvent;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.CultivationEventRepository;
 import jakarta.ecofarm_backend.infrastructure.service.CultivationEventService;
@@ -18,6 +19,11 @@ public class CultivationEventServiceImpl implements CultivationEventService {
     @Override
     public List<CultivationEvent> findByBatchIdOrderBySeqAsc(Long batchId) {
         return this.cultivationEventRepository.findByBatchIdOrderBySeqAsc(batchId);
+    }
+
+    @Override
+    public List<CultivationEvent> findPage(EventPageCriteria criteria) {
+        return this.cultivationEventRepository.findPage(criteria);
     }
 
     @Override

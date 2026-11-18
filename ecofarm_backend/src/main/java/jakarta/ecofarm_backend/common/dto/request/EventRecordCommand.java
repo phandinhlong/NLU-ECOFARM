@@ -19,10 +19,12 @@ public class EventRecordCommand {
     @Positive
     private Long batchId;
     private EventType eventType;
+    @Size(max = 64, message = "clientEventId tối đa 64 ký tự")
     private String clientEventId;
     private Long occurredAt;
     @Size(max = 50, message = "Dữ liệu sự kiện tối đa 50 trường")
     private Map<String, Object> data;
     @Positive
     private Long actorId;
+    private Integer schemaVersion;
 }

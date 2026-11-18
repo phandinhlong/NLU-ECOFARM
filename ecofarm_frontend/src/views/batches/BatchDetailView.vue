@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import SoftBadge from '@/components/common/SoftBadge.vue'
 import TaskList from '@/components/batch/TaskList.vue'
+import EventTimeline from '@/components/batch/EventTimeline.vue'
 import { useBatchQuery } from '@/composables/useBatches'
 import { useAssignedWorkersStore, useUserStore, useWorkerLookupStore } from '@/stores'
 import {
@@ -15,6 +16,7 @@ import {
 } from '@/api/types/batch'
 
 const route = useRoute()
+const router = useRouter()
 const userStore = useUserStore()
 const assignedStore = useAssignedWorkersStore()
 const workerStore = useWorkerLookupStore()
@@ -217,15 +219,22 @@ const removeWorker = async (worker: WorkerSummary) => {
       <section class="border rounded-3 bg-body p-3 p-lg-4 mb-3">
         <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
           <p class="fw-semibold mb-0"><FontAwesomeIcon icon="clock-rotate-left" aria-hidden="true" /> Nhật ký canh tác</p>
-          <span v-if="locked" :title="'Lô đã khóa'">
+          <BButton
+            v-if="(isEngineer || isFarmer) && !locked"
+            size="sm"
+            variant="outline-primary"
+            @click="router.push({ name: 'batch-log', params: { id } })"
+          >
+            <FontAwesomeIcon icon="plus" aria-hidden="true" /> Ghi nhật ký
+          </BButton>
+          <span v-else-if="locked" :title="'Lô đã khóa'">
             <BButton size="sm" variant="outline-secondary" disabled>
-              <FontAwesomeIcon icon="plus" aria-hidden="true" /> Thêm sự kiện
+              <FontAwesomeIcon icon="plus" aria-hidden="true" /> Ghi nhật ký
             </BButton>
           </span>
-          <BButton v-else size="sm" variant="outline-secondary" disabled>
-            <FontAwesomeIcon icon="plus" aria-hidden="true" /> Thêm sự kiện
-          </BButton>
         </div>
+        <EventTimeline :batch-id="id" />
+        <p class="fw-semibold mt-3 mb-2">Công việc</p>
         <TaskList
           :batch-id="id"
           :is-engineer="isEngineer"

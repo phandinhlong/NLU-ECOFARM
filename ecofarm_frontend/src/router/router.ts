@@ -9,13 +9,21 @@ declare module 'vue-router' {
     guestOnly?: boolean
     roles?: string[]
     title?: string
+    adminArea?: boolean
+    farmerArea?: boolean
   }
 }
 
 /** Các role được phép vào khu vực quản trị */
 const ADMIN_ROLES = ['ADMIN']
-/** Trang mặc định cho tài khoản không có quyền quản trị */
+const FARMER_HOME = 'farmer-home'
 const NON_ADMIN_HOME = 'batch-activation'
+
+const isFarmerOnly = (user: User) =>
+  user.role.includes('FARMER') && !user.role.includes('ENGINEER') && !user.role.includes('ADMIN')
+
+const homeFor = (user: User) =>
+  isFarmerOnly(user) ? FARMER_HOME : user.role.includes('ADMIN') ? 'dashboard' : NON_ADMIN_HOME
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -78,7 +86,7 @@ const router = createRouter({
     {
       path: '/',
       component: () => import('@/layouts/DefaultLayout.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, adminArea: true },
       children: [
         {
           path: '',
@@ -141,6 +149,38 @@ const router = createRouter({
       ],
     },
     {
+      path: '/farmer',
+      component: () => import('@/layouts/FarmerLayout.vue'),
+      meta: { requiresAuth: true, farmerArea: true },
+      children: [
+        {
+          path: '',
+          name: 'farmer-home',
+          component: () => import('@/views/farmer/FarmerDashboardView.vue'),
+          meta: { title: 'Lô của tôi' },
+        },
+        {
+          path: 'batches/:id',
+          name: 'farmer-batch-detail',
+          component: () => import('@/views/farmer/FarmerBatchDetailView.vue'),
+          meta: { title: 'Chi tiết lô' },
+        },
+      ],
+    },
+    {
+      path: '/batches/:id/log',
+      component: () => import('@/layouts/LogLayout.vue'),
+      meta: { requiresAuth: true },
+      children: [
+        {
+          path: '',
+          name: 'batch-log',
+          component: () => import('@/views/batches/BatchLogView.vue'),
+          meta: { title: 'Ghi nhật ký canh tác' },
+        },
+      ],
+    },
+    {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
       component: () => import('@/views/NotFoundView.vue'),
@@ -188,12 +228,23 @@ router.beforeEach(async (to) => {
   }
 
   if (guestOnly && user) {
-    return { name: hasRequiredRole(user, ADMIN_ROLES) ? 'dashboard' : NON_ADMIN_HOME }
+    return { name: homeFor(user) }
+  }
+
+  const inAdminArea = to.matched.some((route) => route.meta.adminArea)
+  const inFarmerArea = to.matched.some((route) => route.meta.farmerArea)
+
+  if (user && isFarmerOnly(user) && inAdminArea) {
+    return { name: FARMER_HOME }
+  }
+
+  if (user && !isFarmerOnly(user) && inFarmerArea) {
+    return { name: homeFor(user) }
   }
 
   const requiredRoles = to.matched.flatMap((route) => route.meta.roles ?? [])
   if (user && !hasRequiredRole(user, requiredRoles)) {
-    return { name: NON_ADMIN_HOME }
+    return { name: homeFor(user) }
   }
 
   return true

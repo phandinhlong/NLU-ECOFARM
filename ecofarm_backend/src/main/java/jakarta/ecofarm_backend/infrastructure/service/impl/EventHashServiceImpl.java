@@ -10,6 +10,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -20,16 +22,26 @@ public class EventHashServiceImpl implements EventHashService {
             .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
             .setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
+    private static Object sortValue(Object value) {
+        if (value instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> nested = (Map<String, Object>) value;
+            return sort(nested);
+        }
+        if (value instanceof List) {
+            List<Object> list = new ArrayList<>();
+            for (Object item : (List<?>) value) {
+                list.add(sortValue(item));
+            }
+            return list;
+        }
+        return value;
+    }
+
     private static Map<String, Object> sort(Map<String, Object> source) {
         Map<String, Object> sorted = new TreeMap<>();
         for (Map.Entry<String, Object> e : source.entrySet()) {
-            Object v = e.getValue();
-            if (v instanceof Map) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> nested = (Map<String, Object>) v;
-                v = sort(nested);
-            }
-            sorted.put(e.getKey(), v);
+            sorted.put(e.getKey(), sortValue(e.getValue()));
         }
         return sorted;
     }
