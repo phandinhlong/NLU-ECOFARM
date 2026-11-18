@@ -7,7 +7,10 @@ import jakarta.inject.Inject;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 
+import jakarta.ecofarm_backend.common.dto.request.AuditLogParam;
 import jakarta.ecofarm_backend.common.dto.response.AuditError;
+import jakarta.ecofarm_backend.common.enums.AnchorEvent;
+import jakarta.ecofarm_backend.common.enums.AnchorStatus;
 import jakarta.ecofarm_backend.config.BlockchainConfig;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.AuditLog;
@@ -78,25 +81,27 @@ public class BlockchainAnchoringServiceImpl implements BlockchainAnchoringServic
             // Gửi lên Besu Private Chain
             String txHash = besuClient.sendTransaction(event.getEventData());
 
-            Anchor anchor = new Anchor();
-            anchor.setTxHash(txHash);
-            anchor.setStatus("SUBMITTED");
-            anchor.setBlockNumber(besuClient.getCurrentBlockNumber());
-            anchor.setConfirmations(0);
-            anchor.setExplorerUrl("http://localhost:8545/tx/" + txHash);
+            Anchor anchor = Anchor.builder()
+                    .txHash(txHash)
+                    .status("SUBMITTED")
+                    .blockNumber(besuClient.getCurrentBlockNumber())
+                    .confirmations(0)
+                    .explorerUrl("http://localhost:8545/tx/" + txHash)
+                    .build();
             anchorService.persist(anchor);
 
             // Gửi lên Polygon Public Chain (thử nghiệm song song)
             try {
                 if (config.getPublicRpcEndpoint() != null && !config.getPublicRpcEndpoint().isBlank()) {
                     String polygonTxHash = polygonClient.sendTransaction(event.getEventData());
-                    Anchor polygonAnchor = new Anchor();
-                    polygonAnchor.setTxHash(polygonTxHash);
-                    polygonAnchor.setStatus("SUBMITTED");
-                    polygonAnchor.setChainId(config.getPublicChainId());
-                    polygonAnchor.setBlockNumber(polygonClient.getCurrentBlockNumber());
-                    polygonAnchor.setConfirmations(0);
-                    polygonAnchor.setExplorerUrl("https://amoy.polygonscan.com/tx/" + polygonTxHash);
+                    Anchor polygonAnchor = Anchor.builder()
+                            .txHash(polygonTxHash)
+                            .status("SUBMITTED")
+                            .chainId(config.getPublicChainId())
+                            .blockNumber(polygonClient.getCurrentBlockNumber())
+                            .confirmations(0)
+                            .explorerUrl("https://amoy.polygonscan.com/tx/" + polygonTxHash)
+                            .build();
                     anchorService.persist(polygonAnchor);
                 }
             } catch (Exception polyEx) {
@@ -105,14 +110,12 @@ public class BlockchainAnchoringServiceImpl implements BlockchainAnchoringServic
 
             outboxEventService.complete(event);
 
-            auditLogService.persist(buildAuditLog(
-                null,
-                "OUTBOX_PROCESS_SUCCESS",
-                "outboxEvents",
-                event.getId(),
-                "{\"txHash\":\"" + txHash + "\",\"batchIdHash\":\"" + event.getBatchIdHash() + "\"}",
-                null
-            ));
+            auditLogService.persist(buildAuditLog(AuditLogParam.builder()
+                .action("OUTBOX_PROCESS_SUCCESS")
+                .entity("outboxEvents")
+                .entityId(event.getId())
+                .detail("{\"txHash\":\"" + txHash + "\",\"batchIdHash\":\"" + event.getBatchIdHash() + "\"}")
+                .build()));
 
         } catch (Exception e) {
             handleFailure(event, e);
@@ -137,15 +140,20 @@ public class BlockchainAnchoringServiceImpl implements BlockchainAnchoringServic
 
     private void auditLogError(OutboxEvent event, String errorMsg) {
         try {
-            auditLogService.persist(buildAuditLog(
-                null,
-                "OUTBOX_PROCESS_ERROR",
-                "outboxEvents",
-                event.getId(),
-                new AuditError(errorMsg, event.getBatchIdHash(), event.getSeq()).toString(),
-                null
-            ));
-        } catch (Exception ex) { }
+            AuditError auditError = AuditError.builder()
+                    .message(errorMsg)
+                    .batchIdHash(event.getBatchIdHash())
+                    .seq(event.getSeq())
+                    .build();
+            auditLogService.persist(buildAuditLog(AuditLogParam.builder()
+                .action("OUTBOX_PROCESS_ERROR")
+                .entity("outboxEvents")
+                .entityId(event.getId())
+                .detail(auditError.toString())
+                .build()));
+        } catch (Exception ex) {
+
+        }
     }
 
     @Override
@@ -153,7 +161,7 @@ public class BlockchainAnchoringServiceImpl implements BlockchainAnchoringServic
     public void checkConfirmations() {
         try {
             int required = config.getRequiredConfirmations();
-            for (Anchor anchor : anchorService.findByStatus("SUBMITTED")) {
+            for (Anchor anchor : anchorService.findByStatus(AnchorStatus.SUBMITTED.name())) {
                 if (anchor.getTxHash() == null) continue;
                 try {
                     int confirmations = besuClient.getConfirmations(anchor.getTxHash());
@@ -162,11 +170,17 @@ public class BlockchainAnchoringServiceImpl implements BlockchainAnchoringServic
                         anchor.setBlockNumber(besuClient.getCurrentBlockNumber());
                     }
                     if (confirmations >= required) {
-                        anchor.setStatus("CONFIRMED");
+                        AnchorStatus current = AnchorStatus.fromString(anchor.getStatus());
+                        anchor.setStatus(current.canFire(AnchorEvent.CONFIRM)
+                                ? current.fire(AnchorEvent.CONFIRM).name()
+                                : AnchorStatus.CONFIRMED.name());
                         anchor.setAnchoredAt(System.currentTimeMillis());
-                        auditLogService.persist(buildAuditLog(
-                            null, "ANCHOR_CONFIRMED", "anchors", anchor.getId(), anchor.toString(), null
-                        ));
+                        auditLogService.persist(buildAuditLog(AuditLogParam.builder()
+                            .action("ANCHOR_CONFIRMED")
+                            .entity("anchors")
+                            .entityId(anchor.getId())
+                            .detail(anchor.toString())
+                            .build()));
                     }
                     anchorService.persist(anchor);
                 } catch (Exception inner) {
@@ -178,14 +192,14 @@ public class BlockchainAnchoringServiceImpl implements BlockchainAnchoringServic
         }
     }
 
-    private AuditLog buildAuditLog(Long actorId, String action, String entity, Long entityId, String detail, String ipAddr) {
+    private AuditLog buildAuditLog(AuditLogParam param) {
+        if (param == null) return null;
         return AuditLog.builder()
-                .actor(null)
-                .action(action)
-                .entity(entity)
-                .entityId(entityId)
-                .detail(detail)
-                .ipAddr(ipAddr)
+                .action(param.getAction())
+                .entity(param.getEntity())
+                .entityId(param.getEntityId())
+                .detail(param.getDetail())
+                .ipAddr(param.getIpAddr())
                 .build();
     }
 }

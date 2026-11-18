@@ -6,6 +6,8 @@ import jakarta.ecofarm_backend.common.dto.response.ProofBundle;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.OutboxEvent;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Recall;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 
 import java.util.List;
 import java.util.Map;
@@ -16,13 +18,13 @@ public interface BlockchainFacade {
 
     Map<String, Object> getReconciliation(int page, int size, boolean onlyMismatch);
 
-    AnchorStatus getAnchorStatus(Long batchId);
+    AnchorStatus getAnchorStatus(@Positive Long batchId);
 
-    Anchor retryAnchor(Long anchorId);
+    Anchor retryAnchor(@Positive Long anchorId);
 
-    Recall recallBatch(Long batchId, RecallRequest req);
+    Recall recallBatch(@Positive Long batchId, @Valid RecallRequest req);
 
-    ProofBundle getProofBundle(Long batchId);
+    ProofBundle getProofBundle(@Positive Long batchId);
 
     OutboxEvent createTestOutbox(String data);
 

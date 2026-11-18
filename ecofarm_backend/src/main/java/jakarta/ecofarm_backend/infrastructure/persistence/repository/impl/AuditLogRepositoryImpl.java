@@ -6,11 +6,7 @@ import jakarta.ecofarm_backend.infrastructure.persistence.repository.AuditLogRep
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.TypedQuery;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
 @Stateless
 public class AuditLogRepositoryImpl implements AuditLogRepository {

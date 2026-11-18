@@ -1,6 +1,7 @@
 package jakarta.ecofarm_backend.infrastructure.service;
 
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.MerkleSnapshot;
+import jakarta.validation.constraints.Positive;
 
 import java.util.List;
 
@@ -8,11 +9,11 @@ public interface MerkleSnapshotService {
 
     void persist(MerkleSnapshot snapshot);
 
-    void updateLeavesJson(Long snapshotId, String leavesJson);
+    void updateLeavesJson(@Positive Long snapshotId, String leavesJson);
 
-    MerkleSnapshot findById(Long id);
+    MerkleSnapshot findById(@Positive Long id);
 
     List<MerkleSnapshot> findAll();
 
-    MerkleSnapshot findByBatchId(Long batchId);
+    MerkleSnapshot findByBatchId(@Positive Long batchId);
 }

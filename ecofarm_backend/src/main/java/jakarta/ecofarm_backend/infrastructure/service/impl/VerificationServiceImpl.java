@@ -11,7 +11,9 @@ import jakarta.ecofarm_backend.common.dto.response.QcMetricInfo;
 import jakarta.ecofarm_backend.common.dto.response.ScanInfo;
 import jakarta.ecofarm_backend.common.dto.response.VarietyInfo;
 import jakarta.ecofarm_backend.common.dto.response.VerifyResult;
+import jakarta.ecofarm_backend.common.enums.AnchorStatus;
 import jakarta.ecofarm_backend.common.enums.ErrorCode;
+import jakarta.ecofarm_backend.common.enums.VerificationStatus;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.CultivationEvent;
@@ -34,9 +36,9 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @ApplicationScoped
 public class VerificationServiceImpl implements VerificationService {
@@ -76,13 +78,19 @@ public class VerificationServiceImpl implements VerificationService {
 
     @Override
     public PublicTrace getPublicTrace(String code, String clientIp, String userAgent) {
-        QrCode qr = qrCodeService.findByCode(code);
+        Optional<QrCode> qrOpt = Optional.ofNullable(qrCodeService.findByCode(code));
 
-        // Fallback: nếu không có trong qr_codes, tra cứu theo batchCode
-        if (qr == null) {
+        if (qrOpt.isEmpty()) {
+            // Fallback: tra cứu theo batchCode
             Batch batchByCode = batchService.findByBatchCode(code);
             if (batchByCode != null) {
-                return buildPublicTraceFromBatch(batchByCode, code, clientIp, userAgent);
+                ScanInfo fallbackScanInfo = ScanInfo.builder()
+                        .scanCount(1)
+                        .lastScannedAt(System.currentTimeMillis())
+                        .suspicious(false)
+                        .warningMessage(null)
+                        .build();
+                return buildPublicTrace(batchByCode, code, fallbackScanInfo);
             }
             throw new WebApplicationException(Response.status(Response.Status.NOT_FOUND)
                     .type(MediaType.APPLICATION_JSON)
@@ -94,21 +102,24 @@ public class VerificationServiceImpl implements VerificationService {
                     .build());
         }
 
-        if (userAgent != null && userAgent.length() > 512) {
-            userAgent = userAgent.substring(0, 512);
-        }
+        QrCode qr = qrOpt.get();
+        String safeUserAgent = Optional.ofNullable(userAgent)
+                .filter(ua -> ua.length() > 512)
+                .map(ua -> ua.substring(0, 512))
+                .orElse(userAgent);
 
         long now = System.currentTimeMillis();
-        int newScanCount = (qr.getScanCount() != null ? qr.getScanCount() : 0) + 1;
+        int newScanCount = Optional.ofNullable(qr.getScanCount()).orElse(0) + 1;
         qr.setScanCount(newScanCount);
         qr.setLastScannedAt(now);
         qrCodeService.merge(qr);
 
-        QrScanLog scanLog = new QrScanLog();
-        scanLog.setQrCode(qr);
-        scanLog.setIpAddr(clientIp);
-        scanLog.setUserAgent(userAgent);
-        scanLog.setScannedAt(now);
+        QrScanLog scanLog = QrScanLog.builder()
+                .qrCode(qr)
+                .ipAddr(clientIp)
+                .userAgent(safeUserAgent)
+                .scannedAt(now)
+                .build();
         qrScanLogService.persist(scanLog);
 
         long windowStart = now - (long) windowMinutes * 60_000L;
@@ -128,25 +139,31 @@ public class VerificationServiceImpl implements VerificationService {
             }
         }
 
-        PackageEntity pkg = qr.getPkg();
-        Batch batch = (pkg != null && pkg.getBatch() != null) ? batchService.findById(pkg.getBatch().getId()) : null;
-
-        PublicTrace trace = new PublicTrace();
-        trace.setCode(code);
-        if (batch != null) {
-            populateBatchDetails(trace, batch);
-        } else {
-            trace.setBatch(new BatchInfo("BATCH-EXAMPLE", "GROWING", null, null, null, null));
-            trace.setBlockchain(new BlockchainStatus(false, "Private Chain", null, null, null, null));
-        }
-
-        trace.setScanInfo(ScanInfo.builder()
+        ScanInfo scanInfo = ScanInfo.builder()
                 .scanCount(newScanCount)
                 .lastScannedAt(now)
                 .suspicious(suspicious)
                 .warningMessage(warningMessage)
-                .build());
-        return trace;
+                .build();
+
+        Optional<Batch> batchOpt = Optional.ofNullable(qr.getPkg())
+                .map(PackageEntity::getBatch)
+                .map(b -> batchService.findById(b.getId()));
+
+        return batchOpt
+                .map(batch -> buildPublicTrace(batch, code, scanInfo))
+                .orElseGet(() -> PublicTrace.builder()
+                        .code(code)
+                        .batch(BatchInfo.builder()
+                                .batchCode("BATCH-EXAMPLE")
+                                .status("GROWING")
+                                .build())
+                        .blockchain(BlockchainStatus.builder()
+                                .anchored(false)
+                                .chainName("Private Chain")
+                                .build())
+                        .scanInfo(scanInfo)
+                        .build());
     }
 
     @Override
@@ -155,116 +172,152 @@ public class VerificationServiceImpl implements VerificationService {
 
         List<MerkleSnapshot> snapshots = snapshotService.findAll();
         if (snapshots.isEmpty()) {
-            return new VerifyResult("UNAVAILABLE", null, null, null, null, null, null, false, checkedAt,
-                    "Chưa có snapshot Merkle trong hệ thống");
+            return VerifyResult.builder()
+                    .result("UNAVAILABLE")
+                    .checkedAt(checkedAt)
+                    .message("Chưa có snapshot Merkle trong hệ thống")
+                    .build();
         }
+
         MerkleSnapshot snapshot = snapshots.get(snapshots.size() - 1);
         String computedRoot = snapshot.getMerkleRoot();
 
         List<Anchor> anchors = anchorService.findBySnapshotId(snapshot.getId());
-        if (anchors.isEmpty()) {
-            return new VerifyResult("UNAVAILABLE", computedRoot, null, null, null, null, null, false, checkedAt,
-                    "Chưa có anchor trên chain cho snapshot này");
-        }
-        Anchor anchor = anchors.get(anchors.size() - 1);
+        Optional<Anchor> anchorOpt = anchors.isEmpty()
+                ? Optional.empty()
+                : Optional.of(anchors.get(anchors.size() - 1));
 
-        boolean recalled = !recallService.findByBatchId(snapshot.getBatch() != null ? snapshot.getBatch().getId() : null).isEmpty();
-        String onChainRoot = "CONFIRMED".equals(anchor.getStatus()) ? computedRoot : null;
+        if (anchorOpt.isEmpty()) {
+            return VerifyResult.builder()
+                    .result("UNAVAILABLE")
+                    .computedRoot(computedRoot)
+                    .checkedAt(checkedAt)
+                    .message("Chưa có anchor trên chain cho snapshot này")
+                    .build();
+        }
+
+        Anchor anchor = anchorOpt.get();
+        boolean recalled = !recallService.findByBatchId(
+                Optional.ofNullable(snapshot.getBatch()).map(b -> b.getId()).orElse(null)
+        ).isEmpty();
+
+        String onChainRoot = AnchorStatus.CONFIRMED.name().equals(anchor.getStatus()) ? computedRoot : null;
         String result = onChainRoot != null ? "MATCH" : "UNAVAILABLE";
         String message = onChainRoot != null
                 ? "Dữ liệu xác thực, chưa bị chỉnh sửa"
                 : "Anchor chưa được xác nhận trên chain";
-        return new VerifyResult(result, computedRoot, onChainRoot, anchor.getTxHash(),
-                anchor.getBlockNumber(), anchor.getAnchoredAt(), anchor.getExplorerUrl(),
-                recalled, checkedAt, message);
+
+        return VerifyResult.builder()
+                .result(result)
+                .computedRoot(computedRoot)
+                .onChainRoot(onChainRoot)
+                .txHash(anchor.getTxHash())
+                .blockNumber(anchor.getBlockNumber())
+                .anchoredAt(anchor.getAnchoredAt())
+                .explorerUrl(anchor.getExplorerUrl())
+                .recalled(recalled)
+                .checkedAt(checkedAt)
+                .message(message)
+                .build();
     }
 
-    private PublicTrace buildPublicTraceFromBatch(Batch batch, String code, String clientIp, String userAgent) {
-        long now = System.currentTimeMillis();
-        PublicTrace trace = new PublicTrace();
-        trace.setCode(code);
-        populateBatchDetails(trace, batch);
+    private PublicTrace buildPublicTrace(Batch batch, String code, ScanInfo scanInfo) {
+        String vName = Optional.ofNullable(batch.getVariety()).map(v -> v.getName()).orElse(null);
+        String vCode = Optional.ofNullable(batch.getVariety()).map(v -> v.getCode()).orElse(null);
+        String gCode = Optional.ofNullable(batch.getGreenhouse()).map(g -> g.getCode()).orElse(null);
+        String gName = Optional.ofNullable(batch.getGreenhouse()).map(g -> g.getName()).orElse(null);
 
-        trace.setScanInfo(ScanInfo.builder()
-                .scanCount(1)
-                .lastScannedAt(now)
-                .suspicious(false)
-                .warningMessage(null)
-                .build());
-        return trace;
-    }
+        BatchInfo batchInfo = BatchInfo.builder()
+                .batchCode(batch.getBatchCode())
+                .status(batch.getStatus())
+                .varietyName(vName)
+                .greenhouseCode(gCode)
+                .greenhouseName(gName)
+                .sowDate(Optional.ofNullable(batch.getSowDate()).map(Object::toString).orElse(null))
+                .build();
 
-    private void populateBatchDetails(PublicTrace trace, Batch batch) {
-        if (batch == null) return;
+        VarietyInfo varietyInfo = Optional.ofNullable(batch.getVariety())
+                .map(v -> VarietyInfo.builder().code(vCode).name(vName).build())
+                .orElse(null);
 
-        String vName = batch.getVariety() != null ? batch.getVariety().getName() : null;
-        String vCode = batch.getVariety() != null ? batch.getVariety().getCode() : null;
-        String gCode = batch.getGreenhouse() != null ? batch.getGreenhouse().getCode() : null;
-        String gName = batch.getGreenhouse() != null ? batch.getGreenhouse().getName() : null;
-
-        trace.setBatch(new BatchInfo(
-                batch.getBatchCode(),
-                batch.getStatus(),
-                vName,
-                gCode,
-                gName,
-                batch.getSowDate() != null ? batch.getSowDate().toString() : null
-        ));
-
-        if (batch.getVariety() != null) {
-            trace.setVariety(new VarietyInfo(vCode, vName));
-        }
-
-        if (batch.getGreenhouse() != null) {
-            trace.setGreenhouse(new GreenhouseInfo(gCode, gName));
-        }
+        GreenhouseInfo greenhouseInfo = Optional.ofNullable(batch.getGreenhouse())
+                .map(g -> GreenhouseInfo.builder().code(gCode).name(gName).build())
+                .orElse(null);
 
         List<CultivationEvent> events = cultivationEventService.findByBatchIdOrderBySeqAsc(batch.getId());
+        List<EventData> timeline = null;
         if (events != null && !events.isEmpty()) {
-            List<EventData> timeline = new ArrayList<>();
+            timeline = new ArrayList<>();
             for (CultivationEvent ev : events) {
-                Long eventTime = ev.getRecordedAt() != null ? ev.getRecordedAt() : ev.getCreatedAt();
-                timeline.add(new EventData(
-                        ev.getSeq(),
-                        ev.getEventType(),
-                        ev.getStatus(),
-                        eventTime,
-                        ev.getEventHash(),
-                        ev.getRecordedBy() != null ? ev.getRecordedBy().getId() : null
-                ));
+                Long eventTime = Optional.ofNullable(ev.getRecordedAt()).orElse(ev.getCreatedAt());
+                timeline.add(EventData.builder()
+                        .seq(ev.getSeq())
+                        .eventType(ev.getEventType())
+                        .status(ev.getStatus())
+                        .recordedAt(eventTime)
+                        .eventHash(ev.getEventHash())
+                        .actorRef(Optional.ofNullable(ev.getRecordedBy())
+                                .map(u -> "usr_" + u.getId())
+                                .orElse(null))
+                        .build());
             }
-            trace.setTimeline(timeline);
         }
 
-        double minBrix = (batch.getVariety() != null && batch.getVariety().getMinBrix() != null)
-                ? batch.getVariety().getMinBrix() : 14.2;
-        trace.setMetrics(QcMetricInfo.builder()
+        double minBrix = Optional.ofNullable(batch.getVariety())
+                .map(v -> v.getMinBrix())
+                .filter(b -> b != null)
+                .orElse(14.2);
+        QcMetricInfo metrics = QcMetricInfo.builder()
                 .brix(minBrix)
                 .avgWeightKg(1.65)
                 .passed(true)
                 .inspectedAt(System.currentTimeMillis())
+                .build();
+
+        List<CertificateInfo> certificates = List.of(
+                CertificateInfo.builder()
+                        .certType("VietGAP")
+                        .certNo("VG-2026-NLU-088")
+                        .validFrom("2026-01-01")
+                        .validTo("2035-12-31")
+                        .build()
+        );
+
+        Optional<MerkleSnapshot> snapshotOpt = Optional.ofNullable(snapshotService.findByBatchId(batch.getId()));
+        BlockchainStatus blockchainStatus = snapshotOpt.map(snapshot -> {
+            List<Anchor> anchorList = anchorService.findBySnapshotId(snapshot.getId());
+            Optional<Anchor> lastAnchor = anchorList.isEmpty()
+                    ? Optional.empty()
+                    : Optional.of(anchorList.get(anchorList.size() - 1));
+            boolean anchored = lastAnchor
+                    .map(a -> AnchorStatus.CONFIRMED.name().equalsIgnoreCase(a.getStatus()))
+                    .orElse(false);
+            VerificationStatus vStatus = anchored ? VerificationStatus.VERIFIED : VerificationStatus.UNVERIFIED;
+            return BlockchainStatus.builder()
+                    .anchored(anchored)
+                    .chainName("Polygon Amoy")
+                    .merkleRoot(snapshot.getMerkleRoot())
+                    .txHash(lastAnchor.map(Anchor::getTxHash).orElse(null))
+                    .anchoredAt(lastAnchor.map(Anchor::getAnchoredAt).orElse(null))
+                    .explorerUrl(lastAnchor.map(Anchor::getExplorerUrl).orElse(null))
+                    .status(vStatus.name())
+                    .build();
+        }).orElseGet(() -> BlockchainStatus.builder()
+                .anchored(false)
+                .chainName("Polygon Amoy")
+                .status(VerificationStatus.UNVERIFIED.name())
                 .build());
 
-        trace.setCertificates(List.of(
-                new CertificateInfo("VietGAP", "VG-2026-NLU-088", LocalDate.of(2026, 1, 1), LocalDate.of(2035, 12, 31))
-        ));
-
-        MerkleSnapshot snapshot = snapshotService.findByBatchId(batch.getId());
-        if (snapshot != null) {
-            List<Anchor> anchors = anchorService.findBySnapshotId(snapshot.getId());
-            Anchor anchor = anchors.isEmpty() ? null : anchors.get(anchors.size() - 1);
-            boolean anchored = anchor != null && ("CONFIRMED".equalsIgnoreCase(anchor.getStatus())
-                    || "SUCCESS".equalsIgnoreCase(anchor.getStatus()));
-            trace.setBlockchain(new BlockchainStatus(
-                    anchored,
-                    "Polygon Amoy",
-                    snapshot.getMerkleRoot(),
-                    anchor != null ? anchor.getTxHash() : null,
-                    anchor != null ? anchor.getAnchoredAt() : null,
-                    anchor != null ? anchor.getExplorerUrl() : null
-            ));
-        } else {
-            trace.setBlockchain(new BlockchainStatus(false, "Polygon Amoy", null, null, null, null));
-        }
+        return PublicTrace.builder()
+                .code(code)
+                .batch(batchInfo)
+                .variety(varietyInfo)
+                .greenhouse(greenhouseInfo)
+                .timeline(timeline)
+                .metrics(metrics)
+                .certificates(certificates)
+                .blockchain(blockchainStatus)
+                .scanInfo(scanInfo)
+                .build();
     }
 }

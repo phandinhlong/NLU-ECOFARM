@@ -1,6 +1,7 @@
 package jakarta.ecofarm_backend.modules.batch.facade.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.ecofarm_backend.common.dto.request.AuditLogParam;
 import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
 import jakarta.ecofarm_backend.common.dto.request.PageCriteria;
 import jakarta.ecofarm_backend.common.dto.response.CursorPageResponse;
@@ -146,8 +147,14 @@ public class BatchFacadeImpl implements BatchFacade {
                 .build();
         batchService.persist(batch);
 
-        auditLogService.persist(buildAuditLog(actorId, "BATCH_CREATE", "batches", batch.getId(),
-                toJson(Map.of("batchCode", batch.getBatchCode(), "status", batch.getStatus())), ipAddr));
+        auditLogRepository.persist(buildAuditLog(AuditLogParam.builder()
+                .actorId(actorId)
+                .action("BATCH_CREATE")
+                .entity("batches")
+                .entityId(batch.getId())
+                .detail(toJson(Map.of("batchCode", batch.getBatchCode(), "status", batch.getStatus())))
+                .ipAddr(ipAddr)
+                .build()));
 
         return BaseResponse.build(toDetail(batch));
     }
@@ -219,8 +226,14 @@ public class BatchFacadeImpl implements BatchFacade {
             added.add(worker.getId());
         }
 
-        auditLogService.persist(buildAuditLog(actorId, "BATCH_ADD_WORKERS", "batches", batchId,
-                toJson(Map.of("userIds", added)), ipAddr));
+        auditLogRepository.persist(buildAuditLog(AuditLogParam.builder()
+                .actorId(actorId)
+                .action("BATCH_ADD_WORKERS")
+                .entity("batches")
+                .entityId(batchId)
+                .detail(toJson(Map.of("userIds", added)))
+                .ipAddr(ipAddr)
+                .build()));
 
         return BaseResponse.build(Boolean.TRUE);
     }
@@ -243,8 +256,14 @@ public class BatchFacadeImpl implements BatchFacade {
         List<Long> userIds = request.getUserIds() == null ? List.of() : request.getUserIds().stream().distinct().toList();
         batchService.removeAssignments(batchId, userIds);
 
-        auditLogService.persist(buildAuditLog(actorId, "BATCH_REMOVE_WORKERS", "batches", batchId,
-                toJson(Map.of("userIds", userIds)), ipAddr));
+        auditLogRepository.persist(buildAuditLog(AuditLogParam.builder()
+                .actorId(actorId)
+                .action("BATCH_REMOVE_WORKERS")
+                .entity("batches")
+                .entityId(batchId)
+                .detail(toJson(Map.of("userIds", userIds)))
+                .ipAddr(ipAddr)
+                .build()));
 
         return BaseResponse.build(Boolean.TRUE);
     }
@@ -404,14 +423,15 @@ public class BatchFacadeImpl implements BatchFacade {
                 .toString();
     }
 
-    private AuditLog buildAuditLog(Long actorId, String action, String entity, Long entityId, String detail, String ipAddr) {
+    private AuditLog buildAuditLog(AuditLogParam param) {
+        if (param == null) return null;
         return AuditLog.builder()
-                .actor(userService.findById(actorId).orElse(null))
-                .action(action)
-                .entity(entity)
-                .entityId(entityId)
-                .detail(detail)
-                .ipAddr(ipAddr)
+                .actor(param.getActorId() != null ? userService.findById(param.getActorId()).orElse(null) : null)
+                .action(param.getAction())
+                .entity(param.getEntity())
+                .entityId(param.getEntityId())
+                .detail(param.getDetail())
+                .ipAddr(param.getIpAddr())
                 .build();
     }
 
