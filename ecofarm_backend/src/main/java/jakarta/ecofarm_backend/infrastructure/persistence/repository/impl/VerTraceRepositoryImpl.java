@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.modules.ver.repository;
+package jakarta.ecofarm_backend.infrastructure.persistence.repository.impl;
 
 import jakarta.ecofarm_backend.common.dto.response.CertificateInfo;
 import jakarta.ecofarm_backend.common.dto.response.EventData;
@@ -17,6 +17,9 @@ import jakarta.ecofarm_backend.infrastructure.persistence.repository.AnchorRepos
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.CultivationEventRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.QrCodeRepository;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.RecallRepository;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.VerTraceRepository;
+import jakarta.ecofarm_backend.modules.ver.repository.SnapshotData;
+import jakarta.ecofarm_backend.modules.ver.repository.TraceData;
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -27,7 +30,7 @@ import java.util.Comparator;
 import java.util.List;
 
 @Stateless
-public class VerTraceRepository {
+public class VerTraceRepositoryImpl implements VerTraceRepository {
 
     @PersistenceContext
     private EntityManager em;
@@ -44,6 +47,7 @@ public class VerTraceRepository {
     @Inject
     private AnchorRepository anchorRepository;
 
+    @Override
     public TraceData load(String code) {
         QrCode qr = qrCodeRepository.findByCode(code);
         if (qr == null) {

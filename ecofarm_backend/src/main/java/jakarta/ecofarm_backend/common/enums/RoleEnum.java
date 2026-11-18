@@ -7,4 +7,5 @@ public enum RoleEnum {
     FARMER,
     QUALITY_CONTROL,
     PACKER,
+    PARTNER_QC,
 }

@@ -1,3 +1,5 @@
 export * from './auth.service'
 export * from './catalog.service'
 export * from './batch.service'
+export * from './shipment.service'
+export * from './trace.service'

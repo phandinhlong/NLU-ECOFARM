@@ -35,8 +35,20 @@ public class Shipment extends BaseEntity {
     @Column(name = "received_at")
     private Long receivedAt;
 
+    @Column(name = "received_by")
+    private Long receivedBy;
+
+    @Column(name = "quantity")
+    private Integer quantity;
+
     @Column(name = "status")
     private String status;
+
+    @Column(name = "condition_note", columnDefinition = "TEXT")
+    private String conditionNote;
+
+    @Column(name = "photo_urls", columnDefinition = "TEXT")
+    private String photoUrls;
 
     @Override
     public String toString() {

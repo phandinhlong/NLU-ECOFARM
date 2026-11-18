@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { batchService } from '@/api/services/batch.service'
+import { traceService } from '@/api/services/trace.service'
 import type { PublicTrace, VerifyResult, TimelineEvent } from '@/api/types/batch'
 
 const route = useRoute()
@@ -23,13 +23,11 @@ const fetchTrace = async (codeToFetch: string) => {
   errorMessage.value = ''
 
   try {
-    const res = await batchService.getPublicTrace(code)
-    traceData.value = res.data
+    traceData.value = await traceService.getPublicTrace(code)
     currentCode.value = code
 
     try {
-      const verifyRes = await batchService.verifyTrace(code)
-      verifyData.value = verifyRes.data
+      verifyData.value = await traceService.verifyTrace(code)
     } catch {
       verifyData.value = null
     }
@@ -37,6 +35,7 @@ const fetchTrace = async (codeToFetch: string) => {
     errorMessage.value =
       err?.response?.data?.detail ||
       err?.response?.data?.message ||
+      err?.message ||
       'Không tìm thấy thông tin cho mã tem dưa này hoặc hệ thống máy chủ đang bận.'
   } finally {
     isLoading.value = false

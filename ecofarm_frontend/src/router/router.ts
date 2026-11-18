@@ -14,6 +14,8 @@ declare module 'vue-router' {
 
 /** Các role được phép vào khu vực quản trị */
 const ADMIN_ROLES = ['ADMIN']
+/** Các role được phép thao tác xuất kho & giao hàng */
+const SHIPMENT_ROLES = ['PACKER', 'PARTNER_QC', 'ADMIN']
 /** Trang mặc định cho tài khoản không có quyền quản trị */
 const NON_ADMIN_HOME = 'batch-activation'
 
@@ -113,6 +115,12 @@ const router = createRouter({
           name: 'batch-detail',
           component: () => import('@/views/batches/BatchDetailView.vue'),
           meta: { title: 'Chi tiết lô' },
+        },
+        {
+          path: 'shipments',
+          name: 'shipments',
+          component: () => import('@/views/shipments/ShipmentManageView.vue'),
+          meta: { title: 'Xuất kho & Giao hàng', roles: SHIPMENT_ROLES },
         },
         {
           path: 'farms',
