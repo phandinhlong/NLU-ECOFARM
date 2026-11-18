@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.common.dto.response;
 
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,12 +17,14 @@ public class BlockchainStatus {
     String chainName;
     String merkleRoot;
     String txHash;
+    @Positive
     Long anchoredAt;
     String explorerUrl;
     String status;
     Integer leafCount;
     Integer chainId;
     String contractAddress;
+    @Positive
     Long blockNumber;
 
     public BlockchainStatus(boolean anchored, String chain, String mr, String tx, Long att, String exp) {

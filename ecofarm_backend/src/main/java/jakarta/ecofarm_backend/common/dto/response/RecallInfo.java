@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.common.dto.response;
 
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,6 +15,7 @@ import lombok.Setter;
 public class RecallInfo {
 
     private String reason;
+    @Positive
     private Long createdAt;
     private String revokeTxHash;
 }
