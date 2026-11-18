@@ -17,4 +17,6 @@ public interface GreenhouseFacade {
     BaseResponse<GreenhouseResponse> createGreenhouse(GreenhouseRequest request);
 
     BaseResponse<GreenhouseResponse> updateGreenhouse(Long id, GreenhouseRequest request);
+
+    BaseResponse<Boolean> deleteGreenhouse(Long id);
 }

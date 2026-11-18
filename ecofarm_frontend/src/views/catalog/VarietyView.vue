@@ -2,18 +2,21 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import SoftBadge from '@/components/common/SoftBadge.vue'
-import { useSaveVarietyMutation, useVarietyList } from '@/composables/useVarieties'
+import { useDeleteVarietyMutation, useSaveVarietyMutation, useVarietyList } from '@/composables/useVarieties'
 import type { Variety, VarietyInput, VarietyQuery } from '@/api/types/catalog'
 
 const params = ref<VarietyQuery>({})
 
 const { items, hasMore, loading, error, load, loadMore } = useVarietyList(params)
 const { save, isSaving, saveError, resetSaveError } = useSaveVarietyMutation()
+const { remove, isDeleting, deleteError, resetDeleteError } = useDeleteVarietyMutation()
 
 onMounted(load)
 
 const showModal = ref(false)
 const editing = ref<Variety | null>(null)
+const showDeleteModal = ref(false)
+const deleteTarget = ref<Variety | null>(null)
 const searchText = ref('')
 const form = reactive({
   code: '',
@@ -76,6 +79,24 @@ const submit = async () => {
 const applyFilter = () => {
   params.value = { keyword: searchText.value.trim() || undefined }
   load()
+}
+
+const openDelete = (row: Variety) => {
+  deleteTarget.value = row
+  resetDeleteError()
+  showDeleteModal.value = true
+}
+
+const confirmRemove = async () => {
+  if (!deleteTarget.value) return
+  try {
+    await remove(deleteTarget.value.id)
+    showDeleteModal.value = false
+    deleteTarget.value = null
+    await load()
+  } catch {
+    // Lỗi đã được gán vào deleteError để hiển thị trong modal
+  }
 }
 
 const resetFilter = () => {
@@ -174,6 +195,15 @@ const brixVariant = (value: number | null): 'success' | 'warning' | 'muted' => {
               <td class="text-end">{{ row.batchCount ?? 0 }}</td>
               <td class="text-end">
                 <BButton size="sm" variant="outline-primary" @click="openEdit(row)">Sửa</BButton>
+                <BButton
+                  size="sm"
+                  variant="outline-danger"
+                  class="ms-1"
+                  :disabled="row.batchCount > 0"
+                  @click="openDelete(row)"
+                >
+                  Xóa
+                </BButton>
               </td>
             </tr>
           </tbody>
@@ -230,6 +260,28 @@ const brixVariant = (value: number | null): 'success' | 'warning' | 'muted' => {
         </BButton>
         <BButton variant="primary" :disabled="isSaving" @click="submit">
           {{ isSaving ? 'Đang lưu...' : 'Lưu' }}
+        </BButton>
+      </template>
+    </BModal>
+
+    <BModal v-model="showDeleteModal" title="Xóa giống dưa">
+      <BAlert v-if="deleteError" variant="danger" dismissible>
+        {{ deleteError }}
+      </BAlert>
+      <p class="mb-0">
+        Bạn có chắc muốn xóa giống
+        <strong>{{ deleteTarget?.code }}</strong> — {{ deleteTarget?.name }}?
+      </p>
+      <template #footer>
+        <BButton
+          variant="outline-secondary"
+          :disabled="isDeleting"
+          @click="showDeleteModal = false"
+        >
+          Hủy
+        </BButton>
+        <BButton variant="danger" :disabled="isDeleting" @click="confirmRemove">
+          {{ isDeleting ? 'Đang xóa...' : 'Xóa' }}
         </BButton>
       </template>
     </BModal>

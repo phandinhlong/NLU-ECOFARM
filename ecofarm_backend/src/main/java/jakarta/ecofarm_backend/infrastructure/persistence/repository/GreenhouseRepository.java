@@ -22,5 +22,9 @@ public interface GreenhouseRepository {
 
     Long countBatches(Long greenhouseId);
 
+    Long countCertificates(Long greenhouseId);
+
+    void delete(Greenhouse greenhouse);
+
     Greenhouse save(Greenhouse greenhouse);
 }

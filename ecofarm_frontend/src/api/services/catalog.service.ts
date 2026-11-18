@@ -44,6 +44,9 @@ export const catalogService = {
   updateGreenhouse: (id: number, data: GreenhouseInput) =>
     unwrap(axios.put<ApiResponse<Greenhouse>>(`${API_V1}/greenhouses/${id}`, data)),
 
+  deleteGreenhouse: (id: number) =>
+    unwrap(axios.delete<ApiResponse<boolean>>(`${API_V1}/greenhouses/${id}`)),
+
   listVarieties: (params: VarietyQuery = {}) =>
     unwrap(axios.get<ApiResponse<CursorPageResponse<Variety>>>(`${API_V1}/varieties`, { params })),
 
@@ -55,6 +58,9 @@ export const catalogService = {
 
   updateVariety: (id: number, data: VarietyInput) =>
     unwrap(axios.put<ApiResponse<Variety>>(`${API_V1}/varieties/${id}`, data)),
+
+  deleteVariety: (id: number) =>
+    unwrap(axios.delete<ApiResponse<boolean>>(`${API_V1}/varieties/${id}`)),
 
   listCertificates: (params: CertificateQuery = {}) =>
     unwrap(

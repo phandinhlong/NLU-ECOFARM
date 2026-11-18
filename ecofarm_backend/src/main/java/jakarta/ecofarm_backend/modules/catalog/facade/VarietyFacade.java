@@ -17,4 +17,6 @@ public interface VarietyFacade {
     BaseResponse<VarietyResponse> createVariety(VarietyRequest request);
 
     BaseResponse<VarietyResponse> updateVariety(Long id, VarietyRequest request);
+
+    BaseResponse<Boolean> deleteVariety(Long id);
 }

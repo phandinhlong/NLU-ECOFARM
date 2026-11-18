@@ -94,6 +94,24 @@ public class GreenhouseFacadeImpl implements GreenhouseFacade {
         return BaseResponse.build(toResponse(updated, greenhouseRepository.countBatches(id)));
     }
 
+    @Override
+    @Transactional
+    public BaseResponse<Boolean> deleteGreenhouse(Long id) {
+        Greenhouse greenhouse = greenhouseRepository.findById(id);
+        if (greenhouse == null) {
+            throw new EntityNotFoundException(ErrorCode.GREENHOUSE_NOT_FOUND);
+        }
+
+        if (greenhouseRepository.countBatches(id) > 0
+                || greenhouseRepository.countCertificates(id) > 0) {
+            throw new ConflictException(ErrorCode.CATALOG_DELETE_LOCKED);
+        }
+
+        greenhouse.setActive(false);
+        greenhouseRepository.save(greenhouse);
+        return BaseResponse.build(true);
+    }
+
     private void applyRequest(Greenhouse greenhouse, GreenhouseRequest request) {
         greenhouse.setCode(request.getCode().trim());
         greenhouse.setName(request.getName().trim());

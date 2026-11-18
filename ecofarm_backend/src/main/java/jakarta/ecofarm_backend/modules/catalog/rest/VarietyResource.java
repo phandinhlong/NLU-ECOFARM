@@ -51,4 +51,10 @@ public class VarietyResource {
     public BaseResponse<VarietyResponse> updateVariety(@PathParam("id") Long id, @Valid VarietyRequest request) {
         return varietyFacade.updateVariety(id, request);
     }
+
+    @DELETE
+    @Path("/{id}")
+    public BaseResponse<Boolean> deleteVariety(@PathParam("id") Long id) {
+        return varietyFacade.deleteVariety(id);
+    }
 }

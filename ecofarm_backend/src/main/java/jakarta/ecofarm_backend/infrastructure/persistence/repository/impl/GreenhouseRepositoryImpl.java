@@ -107,6 +107,20 @@ public class GreenhouseRepositoryImpl implements GreenhouseRepository {
     }
 
     @Override
+    public Long countCertificates(Long greenhouseId) {
+        TypedQuery<Long> query = em.createQuery(
+                "SELECT COUNT(c) FROM Certificate c WHERE c.greenhouse.id = :greenhouseId",
+                Long.class);
+        query.setParameter("greenhouseId", greenhouseId);
+        return query.getSingleResult();
+    }
+
+    @Override
+    public void delete(Greenhouse greenhouse) {
+        em.remove(greenhouse);
+    }
+
+    @Override
     public Greenhouse save(Greenhouse greenhouse) {
         if (greenhouse.getId() == null) {
             em.persist(greenhouse);

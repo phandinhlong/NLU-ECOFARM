@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import SoftBadge from '@/components/common/SoftBadge.vue'
-import { useGreenhouseList, useSaveGreenhouseMutation } from '@/composables/useGreenhouses'
+import { useDeleteGreenhouseMutation, useGreenhouseList, useSaveGreenhouseMutation } from '@/composables/useGreenhouses'
 import {
   GREENHOUSE_STATUS_LABELS,
   type Greenhouse,
@@ -15,11 +15,14 @@ const params = ref<GreenhouseQuery>({})
 
 const { items, hasMore, loading, error, load, loadMore } = useGreenhouseList(params)
 const { save, isSaving, saveError, resetSaveError } = useSaveGreenhouseMutation()
+const { remove, isDeleting, deleteError, resetDeleteError } = useDeleteGreenhouseMutation()
 
 onMounted(load)
 
 const showModal = ref(false)
 const editing = ref<Greenhouse | null>(null)
+const showDeleteModal = ref(false)
+const deleteTarget = ref<Greenhouse | null>(null)
 const searchText = ref('')
 const statusFilter = ref('')
 const form = reactive({
@@ -95,6 +98,24 @@ const applyFilter = () => {
     status: statusFilter.value || undefined,
   }
   load()
+}
+
+const openDelete = (row: Greenhouse) => {
+  deleteTarget.value = row
+  resetDeleteError()
+  showDeleteModal.value = true
+}
+
+const confirmRemove = async () => {
+  if (!deleteTarget.value) return
+  try {
+    await remove(deleteTarget.value.id)
+    showDeleteModal.value = false
+    deleteTarget.value = null
+    await load()
+  } catch {
+    // Lỗi đã được gán vào deleteError để hiển thị trong modal
+  }
 }
 
 const resetFilter = () => {
@@ -205,6 +226,15 @@ const formatArea = (value: number | null) =>
               </td>
               <td class="text-end">
                 <BButton size="sm" variant="outline-primary" @click="openEdit(row)">Sửa</BButton>
+                <BButton
+                  size="sm"
+                  variant="outline-danger"
+                  class="ms-1"
+                  :disabled="row.batchCount > 0"
+                  @click="openDelete(row)"
+                >
+                  Xóa
+                </BButton>
               </td>
             </tr>
           </tbody>
@@ -263,6 +293,28 @@ const formatArea = (value: number | null) =>
         </BButton>
         <BButton variant="primary" :disabled="isSaving" @click="submit">
           {{ isSaving ? 'Đang lưu...' : 'Lưu' }}
+        </BButton>
+      </template>
+    </BModal>
+
+    <BModal v-model="showDeleteModal" title="Xóa nhà màng">
+      <BAlert v-if="deleteError" variant="danger" dismissible>
+        {{ deleteError }}
+      </BAlert>
+      <p class="mb-0">
+        Bạn có chắc muốn xóa nhà màng
+        <strong>{{ deleteTarget?.code }}</strong> — {{ deleteTarget?.name }}?
+      </p>
+      <template #footer>
+        <BButton
+          variant="outline-secondary"
+          :disabled="isDeleting"
+          @click="showDeleteModal = false"
+        >
+          Hủy
+        </BButton>
+        <BButton variant="danger" :disabled="isDeleting" @click="confirmRemove">
+          {{ isDeleting ? 'Đang xóa...' : 'Xóa' }}
         </BButton>
       </template>
     </BModal>

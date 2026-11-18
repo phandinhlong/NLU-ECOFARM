@@ -100,6 +100,23 @@ public class VarietyFacadeImpl implements VarietyFacade {
         return BaseResponse.build(toResponse(updated, varietyService.countBatches(id)));
     }
 
+    @Override
+    @Transactional
+    public BaseResponse<Boolean> deleteVariety(Long id) {
+        Variety variety = varietyService.findById(id);
+        if (variety == null) {
+            throw new EntityNotFoundException(ErrorCode.VARIETY_NOT_FOUND);
+        }
+
+        if (varietyService.countBatches(id) > 0) {
+            throw new ConflictException(ErrorCode.CATALOG_DELETE_LOCKED);
+        }
+
+        variety.setActive(false);
+        varietyService.save(variety);
+        return BaseResponse.build(true);
+    }
+
     private void applyRequest(Variety variety, VarietyRequest request) {
         variety.setCode(request.getCode().trim());
         variety.setName(request.getName().trim());

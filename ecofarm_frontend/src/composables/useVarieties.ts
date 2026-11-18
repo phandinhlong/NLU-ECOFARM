@@ -31,3 +31,27 @@ export const useSaveVarietyMutation = () => {
 
   return { save, isSaving, saveError, resetSaveError }
 }
+
+export const useDeleteVarietyMutation = () => {
+  const isDeleting = ref(false)
+  const deleteError = ref<string | null>(null)
+
+  const remove = async (id: number) => {
+    isDeleting.value = true
+    deleteError.value = null
+    try {
+      return await catalogService.deleteVariety(id)
+    } catch (err) {
+      deleteError.value = err instanceof Error ? err.message : 'Đã xảy ra lỗi'
+      throw err
+    } finally {
+      isDeleting.value = false
+    }
+  }
+
+  const resetDeleteError = () => {
+    deleteError.value = null
+  }
+
+  return { remove, isDeleting, deleteError, resetDeleteError }
+}

@@ -22,5 +22,7 @@ public interface VarietyService {
 
     Long countBatches(Long varietyId);
 
+    void delete(Variety variety);
+
     Variety save(Variety variety);
 }

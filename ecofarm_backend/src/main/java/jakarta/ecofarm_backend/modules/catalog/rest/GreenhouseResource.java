@@ -51,4 +51,10 @@ public class GreenhouseResource {
     public BaseResponse<GreenhouseResponse> updateGreenhouse(@PathParam("id") Long id, @Valid GreenhouseRequest request) {
         return greenhouseFacade.updateGreenhouse(id, request);
     }
+
+    @DELETE
+    @Path("/{id}")
+    public BaseResponse<Boolean> deleteGreenhouse(@PathParam("id") Long id) {
+        return greenhouseFacade.deleteGreenhouse(id);
+    }
 }

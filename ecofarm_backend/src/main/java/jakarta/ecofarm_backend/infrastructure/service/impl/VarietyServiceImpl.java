@@ -52,6 +52,11 @@ public class VarietyServiceImpl implements VarietyService {
     }
 
     @Override
+    public void delete(Variety variety) {
+        this.varietyRepository.delete(variety);
+    }
+
+    @Override
     public Variety save(Variety variety) {
         return this.varietyRepository.save(variety);
     }

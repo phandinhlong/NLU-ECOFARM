@@ -47,4 +47,8 @@ public class BaseEntity {
         this.updatedAt = Instant.now().toEpochMilli();
     }
 
+    public void setActive(boolean active) {
+        this.isActive = active;
+    }
+
 }

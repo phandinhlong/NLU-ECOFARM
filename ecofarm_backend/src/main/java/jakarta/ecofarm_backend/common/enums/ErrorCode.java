@@ -20,6 +20,7 @@ public enum ErrorCode {
     INVALID_DATE(1012, "Ngày hiệu lực không hợp lệ"),
     GREENHOUSE_NOT_FOUND(1013, "Nhà màng không tồn tại"),
     CERT_NO_EXISTS(1014, "Số chứng nhận đã tồn tại"),
+    CATALOG_DELETE_LOCKED(1015, "Không thể xóa vì đã có dữ liệu tham chiếu"),
     BATCH_NOT_FOUND(2001, "Batch not found"),
     ACTIVATION_PRECONDITION_FAILED(2002, "Batch is not eligible for activation"),
     BATCH_NOT_ACTIVE(2003, "Batch must be ACTIVE to print QR codes"),

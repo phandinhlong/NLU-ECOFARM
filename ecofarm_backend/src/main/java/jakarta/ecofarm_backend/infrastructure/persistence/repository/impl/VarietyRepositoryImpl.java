@@ -105,6 +105,11 @@ public class VarietyRepositoryImpl implements VarietyRepository {
     }
 
     @Override
+    public void delete(Variety variety) {
+        em.remove(variety);
+    }
+
+    @Override
     public Variety save(Variety variety) {
         if (variety.getId() == null) {
             em.persist(variety);
