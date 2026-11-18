@@ -30,6 +30,7 @@ import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Cookie;
+import jakarta.transaction.Transactional;
 import jakarta.ws.rs.core.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -102,6 +103,10 @@ public class AuthFacadeImpl implements AuthFacade {
     @Inject
     @ConfigProperty(name = "nlu.eco.farm.cookie.forgot-password", defaultValue = "900")
     private Integer forgotPasswordMaxAge;
+
+
+    private static final int DELETED_COOKIE_AGE = 0;
+    private static final String DELETED_COOKIE_CONTENT = "";
 
     private static final Logger log = LogManager.getLogger(AuthFacadeImpl.class);
 
@@ -182,7 +187,7 @@ public class AuthFacadeImpl implements AuthFacade {
     }
 
     @Override
-    @DatabaseTransactional
+    @Transactional
     public BaseResponse<Boolean> signup(SignupRequest request) {
         if (!request.getPassword().equals(request.getConfirmPassword()))
             throw new PermissionDeniedException(ErrorCode.PASSWORD_NOT_MATCH);
@@ -221,10 +226,10 @@ public class AuthFacadeImpl implements AuthFacade {
     }
 
     @Override
-    @DatabaseTransactional
+    @Transactional
     public URI activateUser(String token) {
-        if (token == null || (!this.jwtService.validateToken(token))
-                || (!this.jwtService.hasTokenType(token, JwtServiceImpl.TYPE_ACCOUNT_ACTIVATION_TOKEN)))
+        boolean isActivateUserTokenInvalid = (token == null || (!this.jwtService.validateToken(token)) || (!this.jwtService.hasTokenType(token, JwtServiceImpl.TYPE_ACCOUNT_ACTIVATION_TOKEN)));
+        if (isActivateUserTokenInvalid)
             return UriBuilder.fromUri(this.frontendActivationFailureUrl)
                     .queryParam("status", "inactive-user")
                     .build();
@@ -257,8 +262,9 @@ public class AuthFacadeImpl implements AuthFacade {
 
     @Override
     public Response verifyForgotPassword(String token) {
-        if (token == null || (!this.jwtService.validateToken(token))
-                || (!this.jwtService.hasTokenType(token, JwtServiceImpl.TYPE_FORGOT_PASSWORD_TOKEN))){
+        boolean isForgotPasswordTokenInvalid = token == null || !this.jwtService.validateToken(token) || !this.jwtService.hasTokenType(token, JwtServiceImpl.TYPE_FORGOT_PASSWORD_TOKEN);
+
+        if (isForgotPasswordTokenInvalid){
 
            URI failure = UriBuilder.fromUri(this.frontendResetPasswordFailureUrl)
                     .queryParam("status", "invalid-token")
@@ -268,7 +274,8 @@ public class AuthFacadeImpl implements AuthFacade {
 
         String email = this.jwtService.getEmailFromJwtToken(token);
 
-        if (!this.userService.hasUserByEmail(email)){
+        boolean hasUserWithEmail = this.userService.hasUserByEmail(email);
+        if (!hasUserWithEmail){
             URI failure = UriBuilder.fromUri(this.frontendResetPasswordFailureUrl)
                     .queryParam("status", "user-not-found")
                     .build();
@@ -296,7 +303,7 @@ public class AuthFacadeImpl implements AuthFacade {
     }
 
     @Override
-    @DatabaseTransactional
+    @Transactional
     public BaseResponse<Boolean> changePassword(ChangePasswordRequest request) {
 
         boolean isMathPasswords = request.getConfirmPassword().equals(request.getPassword());
@@ -313,6 +320,29 @@ public class AuthFacadeImpl implements AuthFacade {
         user.changePassword(encodedPassword);
 
         this.userService.save(user);
+
+        return BaseResponse.build(true);
+    }
+
+    @Override
+    public BaseResponse<Boolean> logout() {
+
+        String deletedAccessTokenCookie = this.cookieBuilder.buildCookie(
+                SecurityConstant.ACCESS_TOKEN_COOKIE_NAME,
+                DELETED_COOKIE_CONTENT,
+                "/",
+                DELETED_COOKIE_AGE
+        );
+
+        String deletedRefreshTokenCookie = this.cookieBuilder.buildCookie(
+                SecurityConstant.REFRESH_TOKEN_COOKIE_NAME,
+                DELETED_COOKIE_CONTENT,
+                "/",
+                DELETED_COOKIE_AGE
+        );
+
+        servletResponse.addHeader("Set-Cookie", deletedAccessTokenCookie);
+        servletResponse.addHeader("Set-Cookie", deletedRefreshTokenCookie);
 
         return BaseResponse.build(true);
     }
