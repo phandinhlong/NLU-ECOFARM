@@ -1,13 +1,13 @@
 package jakarta.ecofarm_backend.common.enums;
 
 public enum EventType {
-    XUONG_GIONG,
-    THU_PHAN,
-    BON_PHAN_TUOI,
-    NGUNG_PHAN_CACH_LY,
-    DO_BRIX,
-    THU_HOACH,
-    GHI_CHU,
+    SOWING,
+    POLLINATION,
+    FERTILIZE_IRRIGATE,
+    POLLINATION_ISOLATION,
+    BRIX_MEASUREMENT,
+    HARVEST,
+    NOTE,
     PRUNE_SHOOTS,
     IRRIGATE,
     TASK_ASSIGNED,

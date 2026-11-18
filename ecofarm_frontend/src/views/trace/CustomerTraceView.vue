@@ -127,11 +127,11 @@ const displayCertValidYear = computed(() => {
 const getStepTitle = (eventType?: string, seq?: number) => {
   const t = eventType?.toUpperCase() || ''
   if (t.includes('GIEO') || t.includes('SOW')) return `Bước ${seq || 1}: Xuống giống hạt & Ươm mầm`
-  if (t.includes('THU_PHAN') || t.includes('POLLIN')) return `Bước ${seq || 2}: Thụ phấn & Tuyển trái`
-  if (t.includes('CACH_LY') || t.includes('ISOLAT')) return `Bước ${seq || 3}: Ngừng bón phân cách ly`
+  if (t.includes('ISOLAT') || t.includes('CACH_LY')) return `Bước ${seq || 3}: Ngừng bón phân cách ly`
+  if (t.includes('POLLINATION') || t.includes('POLLIN')) return `Bước ${seq || 2}: Thụ phấn & Tuyển trái`
   if (t.includes('CHAM_SOC') || t.includes('CARE')) return `Bước ${seq || 3}: Chăm sóc dinh dưỡng chuẩn`
   if (t.includes('KIEM_DINH') || t.includes('BRIX') || t.includes('QC')) return `Bước ${seq || 4}: Đo Brix & Kiểm định chất lượng`
-  if (t.includes('THU_HOACH') || t.includes('HARVEST')) return `Bước ${seq || 5}: Thu hoạch quả`
+  if (t.includes('HARVEST')) return `Bước ${seq || 5}: Thu hoạch quả`
   if (t.includes('DONG_GOI') || t.includes('PACK')) return `Bước ${seq || 5}: Đóng gói & Dán tem QR`
   return `Bước ${seq || 1}: ${eventType || 'Ghi nhận canh tác'}`
 }

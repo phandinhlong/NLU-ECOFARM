@@ -1,6 +1,7 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -31,6 +32,18 @@ public class EventAttachment extends BaseEntity {
 
     @Column(name = "mime_type", nullable = false)
     private String mimeType;
+
+    @Column(name = "captured_at")
+    private Long capturedAt;
+
+    @Column(name = "gps_lat", precision = 10, scale = 7)
+    private BigDecimal gpsLat;
+
+    @Column(name = "gps_lng", precision = 10, scale = 7)
+    private BigDecimal gpsLng;
+
+    @Column(name = "gps_accuracy_m")
+    private Double gpsAccuracyM;
 
     @Override
     public String toString() {

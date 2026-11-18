@@ -397,7 +397,7 @@ public class PackagingFacadeImpl implements PackagingFacade {
         }
 
         boolean hasHarvestEvent = events.stream().anyMatch(e ->
-                e.getEventType() == EventType.THU_HOACH
+                e.getEventType() == EventType.HARVEST
                         && e.getReviewStatus() != EventReviewStatus.REJECTED);
         if (batch.getHarvestDate() == null && !hasHarvestEvent) {
             missing.add("Batch has no harvest record (missing harvest_date or harvest event)");
