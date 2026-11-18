@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.modules.catalog.dto;
+package jakarta.ecofarm_backend.common.dto.response;
 
 import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
@@ -10,16 +10,16 @@ import lombok.NoArgsConstructor;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
-public class VarietyResponse {
+public class CertificateResponse {
     @Positive
     private Long id;
-    private String code;
-    private String name;
-    private Integer daysPollinationToHarvest;
-    private Double minBrix;
-    private Integer minIsolationDays;
     @Positive
-    private Long batchCount;
+    private Long greenhouseId;
+    private String certType;
+    private String certNo;
+    private String validFrom;
+    private String validTo;
+    private String fileKey;
     private Boolean active;
     @Positive
     private Long version;
@@ -27,4 +27,5 @@ public class VarietyResponse {
     private Long createdAt;
     @Positive
     private Long updatedAt;
+    private String downloadUrl;
 }

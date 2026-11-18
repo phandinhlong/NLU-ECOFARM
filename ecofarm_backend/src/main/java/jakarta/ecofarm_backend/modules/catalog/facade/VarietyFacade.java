@@ -3,8 +3,8 @@ package jakarta.ecofarm_backend.modules.catalog.facade;
 import jakarta.ecofarm_backend.common.dto.request.VarietyCriteria;
 import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
 import jakarta.ecofarm_backend.common.dto.response.CursorPageResponse;
-import jakarta.ecofarm_backend.modules.catalog.dto.VarietyRequest;
-import jakarta.ecofarm_backend.modules.catalog.dto.VarietyResponse;
+import jakarta.ecofarm_backend.common.dto.request.VarietyRequest;
+import jakarta.ecofarm_backend.common.dto.response.VarietyResponse;
 
 public interface VarietyFacade {
 

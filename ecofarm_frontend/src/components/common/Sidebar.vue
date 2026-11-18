@@ -75,9 +75,13 @@ const navSections = computed(() => {
         <p class="ef-nav-title mb-0 px-2 pt-3 pb-1 text-uppercase fw-bold text-body-secondary">
           Quản trị
         </p>
-        <span class="ef-nav-item d-flex align-items-center px-2 py-2 text-body-tertiary">
-          Nhật ký kiểm toán
-        </span>
+        <RouterLink
+          to="/audits"
+          class="ef-nav-item d-flex align-items-center px-2 py-2 rounded-2 text-decoration-none"
+          active-class="active"
+        >
+          Quản lý audit
+        </RouterLink>
       </template>
     </nav>
   </aside>

@@ -3,8 +3,8 @@ package jakarta.ecofarm_backend.modules.catalog.facade;
 import jakarta.ecofarm_backend.common.dto.request.CertificateCriteria;
 import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
 import jakarta.ecofarm_backend.common.dto.response.CursorPageResponse;
-import jakarta.ecofarm_backend.modules.catalog.dto.CertificateRequest;
-import jakarta.ecofarm_backend.modules.catalog.dto.CertificateResponse;
+import jakarta.ecofarm_backend.common.dto.request.CertificateRequest;
+import jakarta.ecofarm_backend.common.dto.response.CertificateResponse;
 
 public interface CertificateFacade {
 

@@ -115,6 +115,12 @@ const router = createRouter({
           meta: { title: 'Chi tiết lô' },
         },
         {
+          path: 'audits',
+          name: 'audits',
+          component: () => import('@/views/AuditView.vue'),
+          meta: { title: 'Quản lý audit', roles: ADMIN_ROLES },
+        },
+        {
           path: 'farms',
           name: 'farms',
           component: () => import('@/views/PlaceholderView.vue'),

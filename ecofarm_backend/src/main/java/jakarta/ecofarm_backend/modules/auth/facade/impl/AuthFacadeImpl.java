@@ -13,6 +13,7 @@ import jakarta.ecofarm_backend.common.enums.RoleEnum;
 import jakarta.ecofarm_backend.common.exception.EntityNotFoundException;
 import jakarta.ecofarm_backend.common.exception.JwtInvalidException;
 import jakarta.ecofarm_backend.common.exception.PermissionDeniedException;
+import jakarta.ecofarm_backend.common.util.AuditRequestContext;
 import jakarta.ecofarm_backend.common.util.CookieBuilderUtil;
 import jakarta.ecofarm_backend.common.util.CurrentUserUtil;
 import jakarta.ecofarm_backend.common.util.PasswordEncoderUtil;
@@ -66,6 +67,9 @@ public class AuthFacadeImpl implements AuthFacade {
 
     @Inject
     private CurrentUserUtil currentUser;
+
+    @Inject
+    private AuditRequestContext auditContext;
 
     @Inject
     @ConfigProperty(name = "nlu.eco.farm.backend.activate.user.api.url", defaultValue = "http://localhost:8080")
@@ -134,6 +138,8 @@ public class AuthFacadeImpl implements AuthFacade {
 
         servletResponse.addHeader("Set-Cookie", accessTokenCookie);
         servletResponse.addHeader("Set-Cookie", refreshTokenCookie);
+        auditContext.setActorId(user.getId());
+        auditContext.setEntityId(user.getId());
 
         return BaseResponse.build(true);
     }
@@ -210,6 +216,7 @@ public class AuthFacadeImpl implements AuthFacade {
         user.addRole(role);
 
         this.userService.save(user);
+        auditContext.setEntityId(user.getId());
 
         String activateUserUrl = this.buildActivateUrl(user.getEmail());
 
@@ -242,6 +249,8 @@ public class AuthFacadeImpl implements AuthFacade {
         user.activeUser();
 
         this.userService.save(user);
+        auditContext.setActorId(user.getId());
+        auditContext.setEntityId(user.getId());
 
         return UriBuilder.fromUri(this.frontendActivationSuccessfullyUrl)
                 .queryParam("status", "active-user")

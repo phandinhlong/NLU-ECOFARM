@@ -1,4 +1,4 @@
-package jakarta.ecofarm_backend.modules.catalog.dto;
+package jakarta.ecofarm_backend.common.dto.request;
 
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;

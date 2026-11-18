@@ -37,7 +37,6 @@ public class AuditLog extends BaseEntity {
 
     @Column(name = "ip_addr")
     private String ipAddr;
-
     @Override
     public String toString() {
         return "AuditLog{id=" + getId() + ", action='" + action + "', entity='" + entity + "'}";
