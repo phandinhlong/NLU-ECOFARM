@@ -1,9 +1,9 @@
 package jakarta.ecofarm_backend.modules.ver.facade.impl;
 
 import jakarta.ecofarm_backend.common.dto.response.BatchInfo;
+import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
 import jakarta.ecofarm_backend.common.dto.response.BlockchainStatus;
 import jakarta.ecofarm_backend.common.dto.response.EventData;
-import jakarta.ecofarm_backend.common.dto.response.ExceptionResponse;
 import jakarta.ecofarm_backend.common.dto.response.GreenhouseInfo;
 import jakarta.ecofarm_backend.common.dto.response.ProofBundle;
 import jakarta.ecofarm_backend.common.dto.response.ProofBundleResponse;
@@ -14,10 +14,13 @@ import jakarta.ecofarm_backend.common.dto.response.PublicTrace;
 import jakarta.ecofarm_backend.common.dto.response.VarietyInfo;
 import jakarta.ecofarm_backend.common.dto.response.VerifyResult;
 import jakarta.ecofarm_backend.common.enums.AnchorStatus;
+import jakarta.ecofarm_backend.common.enums.ErrorCode;
 import jakarta.ecofarm_backend.common.enums.VerificationStatus;
+import jakarta.ecofarm_backend.common.exception.EntityNotFoundException;
 import jakarta.ecofarm_backend.config.BlockchainConfig;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.CultivationEvent;
+import jakarta.ecofarm_backend.infrastructure.persistence.repository.VerTraceRepository;
 import jakarta.ecofarm_backend.modules.blockchain.client.BesuClient;
 import jakarta.ecofarm_backend.modules.blockchain.client.BlockchainClient;
 import jakarta.ecofarm_backend.modules.blockchain.client.PolygonClient;
@@ -25,12 +28,8 @@ import jakarta.ecofarm_backend.modules.packaging.service.MerkleTreeService;
 import jakarta.ecofarm_backend.modules.ver.cache.AnchorRootCache;
 import jakarta.ecofarm_backend.modules.ver.facade.TraceFacade;
 import jakarta.ecofarm_backend.modules.ver.repository.TraceData;
-import jakarta.ecofarm_backend.modules.ver.repository.VerTraceRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.web3j.abi.FunctionEncoder;
@@ -73,31 +72,31 @@ public class TraceFacadeImpl implements TraceFacade {
     private AnchorRootCache anchorRootCache;
 
     @Override
-    public PublicTrace getTrace(String code) {
+    public BaseResponse<PublicTrace> getTrace(String code) {
         log.info("getTrace code={}", code);
-        return mapToResponse(requireTrace(code));
+        return BaseResponse.build(mapToResponse(requireTrace(code)));
     }
 
     @Override
-    public VerifyResult verifyTrace(String code) {
-        return doVerify(code, requireTrace(code));
+    public BaseResponse<VerifyResult> verifyTrace(String code) {
+        return BaseResponse.build(doVerify(code, requireTrace(code)));
     }
 
     @Override
-    public ProofBundleResponse getProofBundle(String code) {
+    public BaseResponse<ProofBundleResponse> getProofBundle(String code) {
         TraceData data = requireTrace(code);
-        return ProofBundleResponse.builder()
+        return BaseResponse.build(ProofBundleResponse.builder()
                 .code(data.getCode())
                 .trace(mapToResponse(data))
                 .proof(mapProof(data))
                 .verification(doVerify(code, data))
-                .build();
+                .build());
     }
 
     private TraceData requireTrace(String code) {
         TraceData data = traceRepository.load(code);
         if (data == null) {
-            throw qrNotFound();
+            throw new EntityNotFoundException(ErrorCode.QR_NOT_FOUND);
         }
         return data;
     }
@@ -240,60 +239,47 @@ public class TraceFacadeImpl implements TraceFacade {
                 .build();
     }
 
-    private WebApplicationException qrNotFound() {
-        return new WebApplicationException(Response.status(Response.Status.NOT_FOUND)
-                .type(MediaType.APPLICATION_JSON)
-                .entity(ExceptionResponse.builder()
-                        .code(Response.Status.NOT_FOUND.getStatusCode())
-                        .errorCode("QR_NOT_FOUND")
-                        .message("Không tìm thấy mã truy xuất")
-                        .isSuccess(false)
-                        .build())
-                .build());
-    }
-
     private PublicTrace mapToResponse(TraceData data) {
-        PublicTrace trace = new PublicTrace();
-        trace.setCode(data.getCode());
+        PublicTrace.PublicTraceBuilder trace = PublicTrace.builder().code(data.getCode());
 
         if (data.getBatchCode() != null) {
-            BatchInfo batch = new BatchInfo(
-                    data.getBatchCode(),
-                    data.getBatchStatus(),
-                    data.getVarietyName(),
-                    data.getGreenhouseCode(),
-                    data.getGreenhouseName(),
-                    data.getSowDate());
-            batch.setHarvestDate(data.getHarvestDate());
-            batch.setActivatedAt(data.getActivatedAt());
-            batch.setActive(data.getBatchActive());
-            batch.setRecalled(data.getRecalled());
-            trace.setBatch(batch);
+            trace.batch(BatchInfo.builder()
+                    .batchCode(data.getBatchCode())
+                    .status(data.getBatchStatus())
+                    .varietyName(data.getVarietyName())
+                    .greenhouseCode(data.getGreenhouseCode())
+                    .greenhouseName(data.getGreenhouseName())
+                    .sowDate(data.getSowDate())
+                    .harvestDate(data.getHarvestDate())
+                    .activatedAt(data.getActivatedAt())
+                    .active(data.getBatchActive())
+                    .recalled(data.getRecalled())
+                    .build());
         }
 
         if (data.getVarietyCode() != null) {
-            trace.setVariety(VarietyInfo.builder()
+            trace.variety(VarietyInfo.builder()
                     .code(data.getVarietyCode())
                     .name(data.getVarietyName())
                     .build());
         }
         if (data.getGreenhouseCode() != null) {
-            trace.setGreenhouse(GreenhouseInfo.builder()
+            trace.greenhouse(GreenhouseInfo.builder()
                     .code(data.getGreenhouseCode())
                     .name(data.getGreenhouseName())
                     .build());
         }
 
-        trace.setCertificates(data.getCertificates());
-        trace.setMetrics(data.getMetrics());
-        trace.setTimeline(data.getTimeline());
+        trace.certificates(data.getCertificates());
+        trace.metrics(data.getMetrics());
+        trace.timeline(data.getTimeline());
         if (data.getMerkleRoot() != null) {
-            trace.setBlockchain(mapBlockchain(data));
+            trace.blockchain(mapBlockchain(data));
         }
         if (data.getRecalls() != null && !data.getRecalls().isEmpty()) {
-            trace.setRecall(data.getRecalls().get(0));
+            trace.recall(data.getRecalls().get(0));
         }
-        return trace;
+        return trace.build();
     }
 
     private BlockchainStatus mapBlockchain(TraceData data) {
@@ -301,7 +287,6 @@ public class TraceFacadeImpl implements TraceFacade {
                 ? data.getAnchors().get(0)
                 : null;
 
-        VerificationStatus status = VerificationStatus.UNVERIFIED;
         String chainName = null;
         String txHash = null;
         Long anchoredAt = null;
@@ -315,12 +300,9 @@ public class TraceFacadeImpl implements TraceFacade {
             if (explorerUrl == null && anchor.getTxHash() != null && isPublicChain(anchor.getChainId())) {
                 explorerUrl = "https://amoy.polygonscan.com/tx/" + anchor.getTxHash();
             }
-            if (AnchorStatus.CONFIRMED.name().equalsIgnoreCase(anchor.getStatus())) {
-                status = VerificationStatus.VERIFIED;
-            } else if (AnchorStatus.PENDING.name().equalsIgnoreCase(anchor.getStatus())) {
-                status = VerificationStatus.PENDING;
-            }
         }
+
+        VerificationStatus status = VerificationStatus.fromAnchorStatus(anchorStatusOf(anchor));
 
         return BlockchainStatus.builder()
                 .anchored(status == VerificationStatus.VERIFIED)
@@ -337,16 +319,18 @@ public class TraceFacadeImpl implements TraceFacade {
                 .build();
     }
 
-    private ProofBundle mapProof(TraceData data) {
-        ProofBundle proof = new ProofBundle();
-        proof.setBatchCode(data.getBatchCode());
-        proof.setBatchIdHash(Hash.sha3String(batchKey(data)));
-        proof.setHashAlgorithm("keccak256");
-        proof.setCanonicalization("RFC8785");
-        proof.setSalt(data.getSaltEnc() != null ? String.valueOf(data.getSaltEnc()) : null);
-        proof.setMerkleRoot(data.getMerkleRoot());
-        proof.setGeneratedAt(System.currentTimeMillis());
+    private static AnchorStatus anchorStatusOf(PublicChainStatus anchor) {
+        if (anchor == null || anchor.getStatus() == null) {
+            return null;
+        }
+        try {
+            return AnchorStatus.valueOf(anchor.getStatus());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
 
+    private ProofBundle mapProof(TraceData data) {
         List<String> leafHashes = buildLeafHashes(data);
         List<CultivationEvent> events = data.getEvents() != null ? data.getEvents() : List.of();
         List<ProofLeaf> leaves = new ArrayList<>();
@@ -357,10 +341,9 @@ public class TraceFacadeImpl implements TraceFacade {
             leaf.setLeaf(leafHashes.get(i));
             leaves.add(leaf);
         }
-        proof.setLeaves(leaves);
 
+        List<ProofEvent> proofEvents = new ArrayList<>();
         if (data.getTimeline() != null) {
-            List<ProofEvent> proofEvents = new ArrayList<>();
             for (EventData e : data.getTimeline()) {
                 ProofEvent event = new ProofEvent();
                 event.setSeq(e.getSeq());
@@ -368,24 +351,35 @@ public class TraceFacadeImpl implements TraceFacade {
                 event.setPayload(e);
                 proofEvents.add(event);
             }
-            proof.setEvents(proofEvents);
         }
 
         PublicChainStatus anchor = data.getAnchors() != null && !data.getAnchors().isEmpty()
                 ? data.getAnchors().get(0)
                 : null;
+        Anchor anchorEntity = null;
         if (anchor != null) {
-            Anchor entity = new Anchor();
-            entity.setChainId(anchor.getChainId());
-            entity.setContractAddress(anchor.getContractAddress());
-            entity.setTxHash(anchor.getTxHash());
-            entity.setBlockNumber(anchor.getBlockNumber());
-            entity.setStatus(anchor.getStatus());
-            entity.setAnchoredAt(anchor.getAnchoredAt());
-            entity.setExplorerUrl(anchor.getExplorerUrl());
-            proof.setAnchor(entity);
+            anchorEntity = new Anchor();
+            anchorEntity.setChainId(anchor.getChainId());
+            anchorEntity.setContractAddress(anchor.getContractAddress());
+            anchorEntity.setTxHash(anchor.getTxHash());
+            anchorEntity.setBlockNumber(anchor.getBlockNumber());
+            anchorEntity.setStatus(anchor.getStatus());
+            anchorEntity.setAnchoredAt(anchor.getAnchoredAt());
+            anchorEntity.setExplorerUrl(anchor.getExplorerUrl());
         }
-        return proof;
+
+        return ProofBundle.builder()
+                .batchCode(data.getBatchCode())
+                .batchIdHash(Hash.sha3String(batchKey(data)))
+                .hashAlgorithm("keccak256")
+                .canonicalization("RFC8785")
+                .salt(data.getSaltEnc() != null ? String.valueOf(data.getSaltEnc()) : null)
+                .merkleRoot(data.getMerkleRoot())
+                .generatedAt(System.currentTimeMillis())
+                .leaves(leaves)
+                .events(proofEvents)
+                .anchor(anchorEntity)
+                .build();
     }
 
     private List<String> buildLeafHashes(TraceData data) {
