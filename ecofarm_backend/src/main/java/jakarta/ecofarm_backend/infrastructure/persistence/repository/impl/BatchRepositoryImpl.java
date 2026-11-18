@@ -111,7 +111,7 @@ public class BatchRepositoryImpl implements BatchRepository {
                   AND (e.isActive IS NULL OR e.isActive = true)
                 """, Long.class);
         query.setParameter("batchId", batchId);
-        query.setParameter("eventType", "THU_PHAN");
+        query.setParameter("eventType", "POLLINATION");
         return query.getSingleResult();
     }
 
@@ -129,7 +129,7 @@ public class BatchRepositoryImpl implements BatchRepository {
                 GROUP BY e.batch.id
                 """, Object[].class);
         query.setParameter("batchIds", batchIds);
-        query.setParameter("eventType", "THU_PHAN");
+        query.setParameter("eventType", "POLLINATION");
         for (Object[] row : query.getResultList()) {
             result.put((Long) row[0], (Long) row[1]);
         }

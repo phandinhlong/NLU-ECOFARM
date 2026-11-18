@@ -1,5 +1,9 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
+import jakarta.ecofarm_backend.common.enums.AmendReason;
+import jakarta.ecofarm_backend.common.enums.EventChainStatus;
+import jakarta.ecofarm_backend.common.enums.EventReviewStatus;
+import jakarta.ecofarm_backend.common.enums.EventType;
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
@@ -26,17 +30,51 @@ public class CultivationEvent extends BaseEntity {
     @Column(name = "seq")
     private Integer seq;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "event_type")
-    private String eventType;
+    private EventType eventType;
 
-    @Column(name = "payload")
-    private Long payload;
+    @Column(name = "payload", columnDefinition = "TEXT")
+    private String payload;
 
     @Column(name = "event_hash")
     private String eventHash;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private String status;
+    private EventChainStatus status;
+
+    @Column(name = "occurred_at")
+    private Long occurredAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "review_status")
+    @Builder.Default
+    private EventReviewStatus reviewStatus = EventReviewStatus.UNREVIEWED;
+
+    // JPA relation thay cho DB foreign key (users.id)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "reviewed_by", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    @JsonIgnore
+    private User reviewedBy;
+
+    @Column(name = "reviewed_at")
+    private Long reviewedAt;
+
+    @Column(name = "reject_reason", columnDefinition = "TEXT")
+    private String rejectReason;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "pending_approver_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    @JsonIgnore
+    private User pendingApprover;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "amend_reason")
+    private AmendReason amendReason;
+
+    @Column(name = "amend_note", columnDefinition = "TEXT")
+    private String amendNote;
 
     // JPA relation thay cho DB foreign key (users.id)
     @ManyToOne(fetch = FetchType.LAZY, optional = true)

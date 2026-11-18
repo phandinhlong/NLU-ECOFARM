@@ -16,9 +16,7 @@
     <include file="db/changes/004-catalog-varieties.sql"/>
     <include file="db/changes/005-catalog-certificates.sql"/>
     <include file="/db/changes/003-packaging-schema.sql"/>
-    <include file="db/changes/006-audit-table.sql"/>
-    <include file="db/changes/006-audit-id-default.sql"/>
-    <include file="db/changes/006-audit-guard.sql"/>
-    <include file="db/changes/006-audit-indexes.sql"/>
+    <include file="db/changes/006-event-log-schema.sql"/>
+    <include file="db/changes/007-event-type-rename.sql"/>
 
 </databaseChangeLog>

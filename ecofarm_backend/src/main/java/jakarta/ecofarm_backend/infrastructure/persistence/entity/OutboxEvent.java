@@ -1,7 +1,9 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.entity;
 
+import jakarta.ecofarm_backend.common.enums.OutboxTarget;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -34,6 +36,14 @@ public class OutboxEvent extends BaseEntity {
 
     @Column(name = "next_attempt_at")
     private Long nextAttemptAt;
+
+    @Column(name = "event_id")
+    private Long eventId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "target_chain")
+    @Builder.Default
+    private OutboxTarget targetChain = OutboxTarget.BOTH;
 
     public enum OutboxStatus { PENDING, PROCESSING, SUCCESS, FAILED }
 
