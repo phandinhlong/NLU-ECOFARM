@@ -12,6 +12,7 @@ import lombok.ToString;
 @ToString
 public class CertificateRequest {
     @NotNull(message = "Nhà màng không được trống")
+    @Positive
     private Long greenhouseId;
 
     @NotBlank(message = "Loại chứng nhận không được trống")
@@ -34,6 +35,6 @@ public class CertificateRequest {
     private String fileKey;
 
     private Boolean active;
-
+    @Positive
     private Long version;
 }

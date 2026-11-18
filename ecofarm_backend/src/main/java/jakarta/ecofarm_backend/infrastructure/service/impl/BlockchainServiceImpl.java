@@ -1,11 +1,16 @@
 package jakarta.ecofarm_backend.infrastructure.service.impl;
 
 import jakarta.ecofarm_backend.common.dto.request.RecallRequest;
-import jakarta.ecofarm_backend.common.dto.response.AnchorStatus;
 import jakarta.ecofarm_backend.common.dto.response.PrivateChainStatus;
 import jakarta.ecofarm_backend.common.dto.response.ProofBundle;
 import jakarta.ecofarm_backend.common.dto.response.PublicChainStatus;
 import jakarta.ecofarm_backend.common.dto.response.ReconciliationItem;
+import jakarta.ecofarm_backend.common.enums.AnchorEvent;
+import jakarta.ecofarm_backend.common.enums.AnchorStatus;
+import jakarta.ecofarm_backend.common.enums.BatchStatus;
+import jakarta.ecofarm_backend.common.enums.ErrorCode;
+import jakarta.ecofarm_backend.common.exception.ConflictException;
+import jakarta.ecofarm_backend.common.exception.EntityNotFoundException;
 import jakarta.ecofarm_backend.config.BlockchainConfig;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Batch;
@@ -24,13 +29,12 @@ import jakarta.ecofarm_backend.infrastructure.service.ReconciliationService;
 import jakarta.ecofarm_backend.modules.blockchain.client.PolygonClient;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.Response;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @ApplicationScoped
 public class BlockchainServiceImpl implements BlockchainService {
@@ -71,13 +75,9 @@ public class BlockchainServiceImpl implements BlockchainService {
     public Map<String, Object> getReconciliation(int page, int size, boolean onlyMismatch) {
         List<ReconciliationItem> items = reconciliationService.reconcileAll();
         if (onlyMismatch) {
-            List<ReconciliationItem> mismatch = new ArrayList<>();
-            for (ReconciliationItem item : items) {
-                if (!"OK".equals(item.getResult())) {
-                    mismatch.add(item);
-                }
-            }
-            items = mismatch;
+            items = items.stream()
+                    .filter(item -> !"OK".equals(item.getResult()))
+                    .toList();
         }
         int total = items.size();
         int from = Math.min(page * size, total);
@@ -93,85 +93,96 @@ public class BlockchainServiceImpl implements BlockchainService {
     }
 
     @Override
-    public AnchorStatus getAnchorStatus(Long batchId) {
-        AnchorStatus status = new AnchorStatus();
-        status.setBatchId(batchId);
+    public jakarta.ecofarm_backend.common.dto.response.AnchorStatus getAnchorStatus(Long batchId) {
+        Optional<MerkleSnapshot> snapshotOpt = Optional.ofNullable(snapshotService.findByBatchId(batchId));
 
-        MerkleSnapshot snapshot = snapshotService.findByBatchId(batchId);
-        if (snapshot == null) {
-            status.setBatchStatus("DRAFT");
-            status.setPrivateChain(new PrivateChainStatus(false, null));
-            PublicChainStatus publicChain = new PublicChainStatus();
-            publicChain.setRequiredConfirmations(config.getRequiredConfirmations());
-            publicChain.setStatus("PENDING");
-            status.setPublicChain(publicChain);
-            status.setAttempts(0);
-            return status;
+        if (snapshotOpt.isEmpty()) {
+            return jakarta.ecofarm_backend.common.dto.response.AnchorStatus.builder()
+                    .batchId(batchId)
+                    .batchStatus(BatchStatus.DRAFT.name())
+                    .privateChain(PrivateChainStatus.builder().finalized(false).txHash(null).build())
+                    .publicChain(PublicChainStatus.builder()
+                            .requiredConfirmations(config.getRequiredConfirmations())
+                            .status(AnchorStatus.PENDING.name())
+                            .build())
+                    .attempts(0)
+                    .build();
         }
 
-        status.setSnapshot(new AnchorStatus.SnapshotInfo(
-                snapshot.getId(), snapshot.getMerkleRoot(), snapshot.getLeafCount()));
+        MerkleSnapshot snapshot = snapshotOpt.get();
+
+        jakarta.ecofarm_backend.common.dto.response.AnchorStatus.SnapshotInfo snapshotInfo =
+                jakarta.ecofarm_backend.common.dto.response.AnchorStatus.SnapshotInfo.builder()
+                        .id(snapshot.getId())
+                        .merkleRoot(snapshot.getMerkleRoot())
+                        .leafCount(snapshot.getLeafCount())
+                        .build();
 
         List<Anchor> anchors = anchorService.findBySnapshotId(snapshot.getId());
-        if (anchors.isEmpty()) {
-            status.setBatchStatus("ANCHORING");
-            status.setPrivateChain(new PrivateChainStatus(false, null));
-            PublicChainStatus publicChain = new PublicChainStatus();
-            publicChain.setRequiredConfirmations(config.getRequiredConfirmations());
-            publicChain.setStatus("PENDING");
-            status.setPublicChain(publicChain);
-            status.setAttempts(0);
-            return status;
+        Optional<Anchor> lastAnchorOpt = anchors.isEmpty()
+                ? Optional.empty()
+                : Optional.of(anchors.get(anchors.size() - 1));
+
+        if (lastAnchorOpt.isEmpty()) {
+            return jakarta.ecofarm_backend.common.dto.response.AnchorStatus.builder()
+                    .batchId(batchId)
+                    .snapshot(snapshotInfo)
+                    .batchStatus(BatchStatus.ANCHORING.name())
+                    .privateChain(PrivateChainStatus.builder().finalized(false).txHash(null).build())
+                    .publicChain(PublicChainStatus.builder()
+                            .requiredConfirmations(config.getRequiredConfirmations())
+                            .status(AnchorStatus.PENDING.name())
+                            .build())
+                    .attempts(0)
+                    .build();
         }
 
-        Anchor anchor = anchors.get(anchors.size() - 1);
-        String statusStr = anchor.getStatus() != null ? anchor.getStatus() : "CONFIRMED";
-        switch (statusStr) {
-            case "PENDING":
-            case "SUBMITTED":
-                status.setBatchStatus("ANCHORING");
-                break;
-            case "FAILED":
-                status.setBatchStatus("ANCHOR_FAILED");
-                break;
-            default:
-                status.setBatchStatus("ACTIVE");
-                break;
-        }
+        Anchor anchor = lastAnchorOpt.get();
+        AnchorStatus anchorStatus = AnchorStatus.fromString(anchor.getStatus());
+        BatchStatus batchStatus = anchorStatus.toBatchStatus();
 
-        status.setPrivateChain(new PrivateChainStatus("CONFIRMED".equals(statusStr), anchor.getTxHash()));
+        PrivateChainStatus privateChain = PrivateChainStatus.builder()
+                .finalized(AnchorStatus.CONFIRMED == anchorStatus)
+                .txHash(anchor.getTxHash())
+                .build();
 
-        PublicChainStatus publicChain = new PublicChainStatus();
-        publicChain.setId(anchor.getId());
-        publicChain.setSnapshotId(anchor.getSnapshot() != null ? anchor.getSnapshot().getId() : null);
-        publicChain.setChainId(anchor.getChainId());
-        publicChain.setContractAddress(anchor.getContractAddress());
-        publicChain.setTxHash(anchor.getTxHash());
-        publicChain.setBlockNumber(anchor.getBlockNumber());
-        publicChain.setConfirmations(anchor.getConfirmations());
-        publicChain.setStatus(statusStr);
-        publicChain.setExplorerUrl(anchor.getExplorerUrl());
-        publicChain.setAnchoredAt(anchor.getAnchoredAt());
-        publicChain.setRequiredConfirmations(config.getRequiredConfirmations());
-        status.setPublicChain(publicChain);
+        PublicChainStatus publicChain = PublicChainStatus.builder()
+                .id(anchor.getId())
+                .snapshotId(Optional.ofNullable(anchor.getSnapshot()).map(s -> s.getId()).orElse(null))
+                .chainId(anchor.getChainId())
+                .contractAddress(anchor.getContractAddress())
+                .txHash(anchor.getTxHash())
+                .blockNumber(anchor.getBlockNumber())
+                .confirmations(anchor.getConfirmations())
+                .status(anchorStatus.name())
+                .explorerUrl(anchor.getExplorerUrl())
+                .anchoredAt(anchor.getAnchoredAt())
+                .requiredConfirmations(config.getRequiredConfirmations())
+                .build();
 
-        status.setAttempts(anchors.size());
-        status.setLastError(null);
-        status.setNextAttemptAt(null);
-
-        return status;
+        return jakarta.ecofarm_backend.common.dto.response.AnchorStatus.builder()
+                .batchId(batchId)
+                .batchStatus(batchStatus.name())
+                .snapshot(snapshotInfo)
+                .privateChain(privateChain)
+                .publicChain(publicChain)
+                .attempts(anchors.size())
+                .lastError(null)
+                .nextAttemptAt(null)
+                .build();
     }
 
     @Override
     public Anchor retryAnchor(Long anchorId) {
-        Anchor anchor = anchorService.findById(anchorId);
-        if (anchor == null) {
-            throw new WebApplicationException(Response.Status.NOT_FOUND);
+        Anchor anchor = Optional.ofNullable(anchorService.findById(anchorId))
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.ANCHOR_NOT_FOUND));
+
+        AnchorStatus current = AnchorStatus.fromString(anchor.getStatus());
+        if (!current.canFire(AnchorEvent.RETRY)) {
+            throw new ConflictException(ErrorCode.ANCHOR_NOT_RETRYABLE);
         }
-        if (!"FAILED".equals(anchor.getStatus())) {
-            throw new WebApplicationException(Response.Status.CONFLICT);
-        }
-        anchor.setStatus("PENDING");
+
+        anchor.setStatus(current.fire(AnchorEvent.RETRY).name());
         anchor.setAnchoredAt(System.currentTimeMillis());
         anchorService.persist(anchor);
         return anchor;
@@ -179,8 +190,11 @@ public class BlockchainServiceImpl implements BlockchainService {
 
     @Override
     public Recall recallBatch(Long batchId, RecallRequest req, User currentUser) {
+        Batch batch = Optional.ofNullable(batchService.findById(batchId))
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.BATCH_NOT_FOUND));
+
         Recall recall = Recall.builder()
-                .batch(batchService.findById(batchId))
+                .batch(batch)
                 .reason(req.getReason())
                 .createdByUser(currentUser)
                 .build();
@@ -190,31 +204,33 @@ public class BlockchainServiceImpl implements BlockchainService {
 
     @Override
     public ProofBundle getProofBundle(Long batchId) {
-        MerkleSnapshot snapshot = snapshotService.findByBatchId(batchId);
-        ProofBundle bundle = new ProofBundle();
-        Batch batch = batchService.findById(batchId);
-        bundle.setBatchCode(batch != null && batch.getBatchCode() != null ? batch.getBatchCode() : "BATCH-" + batchId);
-        bundle.setBatchIdHash("0x" + Long.toHexString(batchId));
-        bundle.setHashAlgorithm("keccak256");
-        bundle.setCanonicalization("RFC8785");
-        bundle.setSalt("0xfaceb00c");
+        Optional<MerkleSnapshot> snapshotOpt = Optional.ofNullable(snapshotService.findByBatchId(batchId));
+        Optional<Batch> batchOpt = Optional.ofNullable(batchService.findById(batchId));
 
-        if (snapshot != null) {
-            bundle.setMerkleRoot(snapshot.getMerkleRoot());
-        } else {
-            bundle.setMerkleRoot("0xdeadbeefcafe1234");
-        }
+        String batchCode = batchOpt
+                .map(Batch::getBatchCode)
+                .orElse("BATCH-" + batchId);
+        String merkleRoot = snapshotOpt
+                .map(MerkleSnapshot::getMerkleRoot)
+                .orElse("0xdeadbeefcafe1234");
 
-        bundle.setLeaves(new ArrayList<>());
-        bundle.setEvents(new ArrayList<>());
-        if (snapshot != null) {
-            List<Anchor> anchors = anchorService.findBySnapshotId(snapshot.getId());
-            if (!anchors.isEmpty()) {
-                bundle.setAnchor(anchors.get(anchors.size() - 1));
-            }
-        }
-        bundle.setGeneratedAt(System.currentTimeMillis());
-        return bundle;
+        Optional<Anchor> lastAnchorOpt = snapshotOpt
+                .map(s -> anchorService.findBySnapshotId(s.getId()))
+                .filter(list -> !list.isEmpty())
+                .map(list -> list.get(list.size() - 1));
+
+        return ProofBundle.builder()
+                .batchCode(batchCode)
+                .batchIdHash("0x" + Long.toHexString(batchId))
+                .hashAlgorithm("keccak256")
+                .canonicalization("RFC8785")
+                .salt("0xfaceb00c")
+                .merkleRoot(merkleRoot)
+                .leaves(new ArrayList<>())
+                .events(new ArrayList<>())
+                .anchor(lastAnchorOpt.orElse(null))
+                .generatedAt(System.currentTimeMillis())
+                .build();
     }
 
     @Override

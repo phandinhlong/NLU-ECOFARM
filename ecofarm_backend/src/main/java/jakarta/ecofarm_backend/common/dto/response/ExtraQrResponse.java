@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.common.dto.response;
 
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -12,7 +13,9 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ExtraQrResponse {
+    @Positive
     private Long batchId;
+    @Positive
     private Long packageId;
     private Integer previousUnitCount;
     private Integer addedCount;

@@ -35,6 +35,6 @@ public class VarietyRequest {
     private Integer minIsolationDays;
 
     private Boolean active;
-
+    @Positive
     private Long version;
 }

@@ -13,6 +13,8 @@ import jakarta.ecofarm_backend.common.dto.response.PublicChainStatus;
 import jakarta.ecofarm_backend.common.dto.response.PublicTrace;
 import jakarta.ecofarm_backend.common.dto.response.VarietyInfo;
 import jakarta.ecofarm_backend.common.dto.response.VerifyResult;
+import jakarta.ecofarm_backend.common.enums.AnchorStatus;
+import jakarta.ecofarm_backend.common.enums.VerificationStatus;
 import jakarta.ecofarm_backend.config.BlockchainConfig;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.CultivationEvent;
@@ -299,7 +301,7 @@ public class TraceFacadeImpl implements TraceFacade {
                 ? data.getAnchors().get(0)
                 : null;
 
-        String status = "UNVERIFIED";
+        VerificationStatus status = VerificationStatus.UNVERIFIED;
         String chainName = null;
         String txHash = null;
         Long anchoredAt = null;
@@ -313,28 +315,26 @@ public class TraceFacadeImpl implements TraceFacade {
             if (explorerUrl == null && anchor.getTxHash() != null && isPublicChain(anchor.getChainId())) {
                 explorerUrl = "https://amoy.polygonscan.com/tx/" + anchor.getTxHash();
             }
-            if ("CONFIRMED".equalsIgnoreCase(anchor.getStatus())) {
-                status = "VERIFIED";
-            } else if ("PENDING".equalsIgnoreCase(anchor.getStatus())) {
-                status = "PENDING";
+            if (AnchorStatus.CONFIRMED.name().equalsIgnoreCase(anchor.getStatus())) {
+                status = VerificationStatus.VERIFIED;
+            } else if (AnchorStatus.PENDING.name().equalsIgnoreCase(anchor.getStatus())) {
+                status = VerificationStatus.PENDING;
             }
         }
 
-        BlockchainStatus blockchain = new BlockchainStatus(
-                "VERIFIED".equals(status),
-                chainName,
-                data.getMerkleRoot(),
-                txHash,
-                anchoredAt,
-                explorerUrl);
-        blockchain.setStatus(status);
-        blockchain.setLeafCount(data.getLeafCount());
-        if (anchor != null) {
-            blockchain.setChainId(anchor.getChainId());
-            blockchain.setContractAddress(anchor.getContractAddress());
-            blockchain.setBlockNumber(anchor.getBlockNumber());
-        }
-        return blockchain;
+        return BlockchainStatus.builder()
+                .anchored(status == VerificationStatus.VERIFIED)
+                .chainName(chainName)
+                .merkleRoot(data.getMerkleRoot())
+                .txHash(txHash)
+                .anchoredAt(anchoredAt)
+                .explorerUrl(explorerUrl)
+                .status(status.name())
+                .leafCount(data.getLeafCount())
+                .chainId(anchor != null ? anchor.getChainId() : null)
+                .contractAddress(anchor != null ? anchor.getContractAddress() : null)
+                .blockNumber(anchor != null ? anchor.getBlockNumber() : null)
+                .build();
     }
 
     private ProofBundle mapProof(TraceData data) {
