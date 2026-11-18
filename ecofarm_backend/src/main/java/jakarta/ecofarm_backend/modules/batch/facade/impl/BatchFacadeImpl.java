@@ -25,10 +25,19 @@ import jakarta.ecofarm_backend.infrastructure.service.UserService;
 import jakarta.ecofarm_backend.infrastructure.security.UserSecurityDetailsPrincipal;
 import jakarta.ecofarm_backend.common.enums.BatchStatus;
 import jakarta.ecofarm_backend.common.dto.request.AssignWorkersRequest;
+import jakarta.ecofarm_backend.common.dto.request.CreateBatchRequest;
+import jakarta.ecofarm_backend.common.dto.request.HarvestBatchParam;
+import jakarta.ecofarm_backend.common.dto.request.HarvestRequest;
+import jakarta.ecofarm_backend.common.dto.request.RecordQcParam;
+import jakarta.ecofarm_backend.common.dto.request.RecordQcRequest;
+import jakarta.ecofarm_backend.common.dto.request.ReviewQcParam;
+import jakarta.ecofarm_backend.common.dto.request.ReviewQcRequest;
 import jakarta.ecofarm_backend.common.dto.response.BatchDetailResponse;
 import jakarta.ecofarm_backend.common.dto.response.BatchListItemResponse;
-import jakarta.ecofarm_backend.common.dto.request.CreateBatchRequest;
+import jakarta.ecofarm_backend.common.dto.response.HarvestResponse;
+import jakarta.ecofarm_backend.common.dto.response.QcResponse;
 import jakarta.ecofarm_backend.common.dto.response.WorkerSummaryResponse;
+import jakarta.ecofarm_backend.infrastructure.service.QcService;
 import jakarta.ecofarm_backend.modules.batch.facade.BatchFacade;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -75,6 +84,9 @@ public class BatchFacadeImpl implements BatchFacade {
 
     @Inject
     private HttpServletRequest httpRequest;
+
+    @Inject
+    private QcService qcService;
 
     @Override
     public BaseResponse<CursorPageResponse<BatchListItemResponse>> findBatchesByCriteria(PageCriteria criteria) {
@@ -266,6 +278,44 @@ public class BatchFacadeImpl implements BatchFacade {
                 .build()));
 
         return BaseResponse.build(Boolean.TRUE);
+    }
+
+    @Override
+    public BaseResponse<QcResponse> recordQc(Long batchId, RecordQcRequest request) {
+        RecordQcParam param = RecordQcParam.builder()
+                .batchId(batchId)
+                .request(request)
+                .actorId(resolveActorId())
+                .clientIp(resolveClientIp())
+                .build();
+        return BaseResponse.build(qcService.recordQc(param));
+    }
+
+    @Override
+    public BaseResponse<QcResponse> reviewQc(Long batchId, ReviewQcRequest request) {
+        ReviewQcParam param = ReviewQcParam.builder()
+                .batchId(batchId)
+                .request(request)
+                .adminId(resolveActorId())
+                .clientIp(resolveClientIp())
+                .build();
+        return BaseResponse.build(qcService.reviewQc(param));
+    }
+
+    @Override
+    public BaseResponse<QcResponse> getLatestQc(Long batchId) {
+        return BaseResponse.build(qcService.getLatestQc(batchId));
+    }
+
+    @Override
+    public BaseResponse<HarvestResponse> harvestBatch(Long batchId, HarvestRequest request) {
+        HarvestBatchParam param = HarvestBatchParam.builder()
+                .batchId(batchId)
+                .request(request)
+                .actorId(resolveActorId())
+                .clientIp(resolveClientIp())
+                .build();
+        return BaseResponse.build(qcService.harvestBatch(param));
     }
 
     private BatchDetailResponse toDetail(Batch batch) {

@@ -5,13 +5,19 @@ import jakarta.ecofarm_backend.common.dto.request.PageCriteria;
 import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
 import jakarta.ecofarm_backend.common.dto.response.CursorPageResponse;
 import jakarta.ecofarm_backend.common.dto.request.AssignWorkersRequest;
+import jakarta.ecofarm_backend.common.dto.request.CreateBatchRequest;
+import jakarta.ecofarm_backend.common.dto.request.HarvestRequest;
+import jakarta.ecofarm_backend.common.dto.request.RecordQcRequest;
+import jakarta.ecofarm_backend.common.dto.request.ReviewQcRequest;
 import jakarta.ecofarm_backend.common.dto.response.BatchDetailResponse;
 import jakarta.ecofarm_backend.common.dto.response.BatchListItemResponse;
-import jakarta.ecofarm_backend.common.dto.request.CreateBatchRequest;
+import jakarta.ecofarm_backend.common.dto.response.HarvestResponse;
+import jakarta.ecofarm_backend.common.dto.response.QcResponse;
 import jakarta.ecofarm_backend.common.dto.response.WorkerSummaryResponse;
 import jakarta.ecofarm_backend.modules.batch.facade.BatchFacade;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import jakarta.ws.rs.BeanParam;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -73,5 +79,31 @@ public class BatchResource {
     @POST
     public Response createBatch(@Valid CreateBatchRequest request) {
         return Response.status(Response.Status.CREATED).entity(batchFacade.createBatch(request)).build();
+    }
+
+    @POST
+    @Path("/{id}/qc")
+    public BaseResponse<QcResponse> recordQc(@PathParam("id") @Positive Long id, @Valid RecordQcRequest request) {
+        return batchFacade.recordQc(id, request);
+    }
+
+    @GET
+    @Path("/{id}/qc")
+    public BaseResponse<QcResponse> getLatestQc(@PathParam("id") @Positive Long id) {
+        return batchFacade.getLatestQc(id);
+    }
+
+    @POST
+    @Path("/{id}/qc/review")
+    @RequireRoles({"ADMIN"})
+    public BaseResponse<QcResponse> reviewQc(@PathParam("id") @Positive Long id, @Valid ReviewQcRequest request) {
+        return batchFacade.reviewQc(id, request);
+    }
+
+    @POST
+    @Path("/{id}/harvest")
+    @RequireRoles({"ADMIN", "ENGINEER", "FARMER"})
+    public BaseResponse<HarvestResponse> harvestBatch(@PathParam("id") @Positive Long id, @Valid HarvestRequest request) {
+        return batchFacade.harvestBatch(id, request);
     }
 }

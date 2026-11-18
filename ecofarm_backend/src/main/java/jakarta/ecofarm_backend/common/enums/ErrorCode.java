@@ -35,9 +35,19 @@ public enum ErrorCode {
     BATCH_NOT_ASSIGNED(2011, "You are not assigned to this batch"),
     VARIETY_NOT_FOUND(2012, "Variety not found"),
     INVALID_WORKER(2013, "Invalid worker"),
+    QC_SAMPLE_COUNT_INVALID(2014, "Độ Brix và cân nặng phải nhập đúng 5 mẫu"),
+    QC_SAMPLE_VALUE_INVALID(2015, "Giá trị mẫu Brix hoặc cân nặng không hợp lệ"),
+    QC_ISOLATION_NOT_MET(2016, "Thời gian cách ly chưa đủ; không thể đánh giá đạt"),
+    QC_MAX_ATTEMPTS_EXCEEDED(2017, "Lô đã vượt quá số lần QC tối đa (3 lần) và đã bị hủy"),
+    QC_BATCH_STATUS_INVALID(2018, "Lô không ở trạng thái hợp lệ để thực hiện kiểm định QC"),
+    QC_RECORD_NOT_FOUND(2019, "Không tìm thấy bản ghi QC"),
+    QC_ADMIN_NOTE_REQUIRED(2020, "Ghi chú của Admin là bắt buộc khi duyệt QC"),
+    QC_ALREADY_SUPERSEDED(2021, "Bản ghi QC này đã bị thay thế hoặc đã được xử lý"),
+    PRE_HARVEST_QC_REQUIRED(2028, "Lô chưa đạt kiểm định chất lượng trước thu hoạch; không được phép thu hoạch"),
     ANCHOR_NOT_FOUND(3001, "Anchor not found"),
     ANCHOR_NOT_RETRYABLE(3002, "Anchor is not in FAILED state; cannot retry"),
     SNAPSHOT_NOT_FOUND(3003, "Merkle snapshot not found for this batch");
+
 
     private final Integer code;
     private final String message;

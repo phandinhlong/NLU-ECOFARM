@@ -12,5 +12,6 @@ public enum EventType {
     IRRIGATE,
     TASK_ASSIGNED,
     EVENT_APPROVED,
-    EVENT_REJECTED
+    EVENT_REJECTED,
+    QC
 }
