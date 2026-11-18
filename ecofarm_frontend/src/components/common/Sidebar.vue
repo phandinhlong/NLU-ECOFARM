@@ -5,9 +5,7 @@ import { useUserStore } from '@/stores'
 const userStore = useUserStore()
 
 const roles = computed(() => userStore.user?.role ?? [])
-const canManageCatalog = computed(() =>
-  roles.value.some((role) => role === 'ADMIN' || role === 'ENGINEER'),
-)
+const canManageCatalog = computed(() => roles.value.includes('ADMIN'))
 
 const navSections = computed(() => {
   const businessSection = {

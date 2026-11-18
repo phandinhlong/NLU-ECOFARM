@@ -1,5 +1,28 @@
 export type GreenhouseStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE'
 
+export interface CursorPageResponse<T> {
+  content: T[]
+  lastIndex: number | null
+  hasMore: boolean
+}
+
+export interface GreenhouseQuery {
+  status?: string
+  keyword?: string
+  lastIndex?: number
+}
+
+export interface VarietyQuery {
+  keyword?: string
+  lastIndex?: number
+}
+
+export interface CertificateQuery {
+  greenhouseId?: number
+  expiringInDays?: number
+  lastIndex?: number
+}
+
 export interface Greenhouse {
   id: number
   code: string
@@ -8,6 +31,7 @@ export interface Greenhouse {
   gpsLng: number | null
   areaM2: number | null
   status: GreenhouseStatus
+  active: boolean
   version: number
   batchCount: number
 }
@@ -19,6 +43,7 @@ export interface GreenhouseInput {
   gpsLng?: number | null
   areaM2?: number | null
   status?: GreenhouseStatus
+  active?: boolean
   version?: number
 }
 
@@ -29,6 +54,7 @@ export interface Variety {
   daysPollinationToHarvest: number | null
   minBrix: number | null
   minIsolationDays: number | null
+  active: boolean
   version: number
   batchCount: number
 }
@@ -39,15 +65,8 @@ export interface VarietyInput {
   daysPollinationToHarvest?: number | null
   minBrix?: number | null
   minIsolationDays?: number | null
+  active?: boolean
   version?: number
-}
-
-export interface PageResponse<T> {
-  content: T[]
-  page: number
-  size: number
-  totalElements: number
-  totalPages: number
 }
 
 export type CertType = 'VIETGAP' | 'GLOBALGAP' | 'ORGANIC_INTERNAL'
@@ -74,26 +93,14 @@ export interface CertificateInput {
   validFrom: string
   validTo: string
   fileKey?: string | null
-}
-
-export interface CertificateQuery {
-  page?: number
-  size?: number
-  greenhouseId?: number
-  expiringInDays?: number
+  active?: boolean
+  version?: number
 }
 
 export const CERT_TYPE_LABELS: Record<string, string> = {
   VIETGAP: 'VietGAP',
   GLOBALGAP: 'GlobalGAP',
   ORGANIC_INTERNAL: 'Organic (nội bộ)',
-}
-
-export interface CatalogQuery {
-  page?: number
-  size?: number
-  status?: string
-  q?: string
 }
 
 export const GREENHOUSE_STATUS_LABELS: Record<GreenhouseStatus, string> = {

@@ -1,30 +1,35 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import PageHeader from '@/components/common/PageHeader.vue'
-import PagerBar from '@/components/common/PagerBar.vue'
 import SoftBadge from '@/components/common/SoftBadge.vue'
-import { useCertificatesQuery, useCreateCertificateMutation } from '@/composables/useCertificates'
-import { useGreenhousesQuery } from '@/composables/useGreenhouses'
+import { catalogService } from '@/api/services/catalog.service'
+import { useCertificateList, useSaveCertificateMutation } from '@/composables/useCertificates'
 import {
   CERT_TYPE_LABELS,
-  type CatalogQuery,
   type Certificate,
   type CertificateInput,
   type CertificateQuery,
-  type PageResponse,
+  type Greenhouse,
 } from '@/api/types/catalog'
 
-const params = ref<CertificateQuery>({ page: 0, size: 10 })
+const params = ref<CertificateQuery>({})
 
-const { data, isLoading, isError, error } = useCertificatesQuery(params)
-const { mutate: create, isPending: isSaving, error: saveError, reset: resetSaveError } =
-  useCreateCertificateMutation()
+const { items, hasMore, loading, error, load, loadMore } = useCertificateList(params)
+const { save, isSaving, saveError, resetSaveError } = useSaveCertificateMutation()
 
-const greenhouseOptions = ref<CatalogQuery>({ page: 0, size: 100 })
-const { data: greenhousePage } = useGreenhousesQuery(greenhouseOptions)
-const greenhouses = computed(() => greenhousePage.value?.content ?? [])
+const greenhouses = ref<Greenhouse[]>([])
+
+onMounted(async () => {
+  load()
+  try {
+    greenhouses.value = await catalogService.fetchAllGreenhouses()
+  } catch {
+    // Bỏ qua — danh sách nhà màng để trống, bảng vẫn hiển thị bình thường
+  }
+})
 
 const showModal = ref(false)
+const editing = ref<Certificate | null>(null)
 const greenhouseFilter = ref('')
 const expiringFilter = ref('')
 const form = reactive({
@@ -34,14 +39,14 @@ const form = reactive({
   validFrom: '',
   validTo: '',
   fileKey: '',
+  active: true,
 })
 
 const certTypes = Object.entries(CERT_TYPE_LABELS)
-
-const page = computed<PageResponse<Certificate>>(
-  () =>
-    data.value ?? { content: [], page: 0, size: 10, totalElements: 0, totalPages: 0 },
-)
+const missingGreenhouseId = computed(() => {
+  const id = editing.value?.greenhouseId
+  return id != null && !greenhouses.value.some((item) => item.id === id) ? id : null
+})
 
 const daysLeft = (validTo: string | null): number | null => {
   if (!validTo) return null
@@ -66,17 +71,32 @@ const greenhouseLabel = (id: number | null): string => {
 }
 
 const openCreate = () => {
+  editing.value = null
   form.greenhouseId = ''
   form.certType = 'VIETGAP'
   form.certNo = ''
   form.validFrom = ''
   form.validTo = ''
   form.fileKey = ''
+  form.active = true
   resetSaveError()
   showModal.value = true
 }
 
-const submit = () => {
+const openEdit = (row: Certificate) => {
+  editing.value = row
+  form.greenhouseId = row.greenhouseId?.toString() ?? ''
+  form.certType = row.certType
+  form.certNo = row.certNo
+  form.validFrom = row.validFrom ?? ''
+  form.validTo = row.validTo ?? ''
+  form.fileKey = row.fileKey ?? ''
+  form.active = row.active
+  resetSaveError()
+  showModal.value = true
+}
+
+const submit = async () => {
   const payload: CertificateInput = {
     greenhouseId: form.greenhouseId === '' ? null : Number(form.greenhouseId),
     certType: form.certType,
@@ -85,37 +105,40 @@ const submit = () => {
     validTo: form.validTo,
     fileKey: form.fileKey.trim() || undefined,
   }
-  create(payload, {
-    onSuccess: () => {
-      showModal.value = false
-    },
-  })
+  if (editing.value) {
+    payload.active = form.active
+    payload.version = editing.value.version
+  }
+  try {
+    await save({ id: editing.value?.id, data: payload })
+    showModal.value = false
+    await load()
+  } catch {
+    // Lỗi đã được gán vào saveError để hiển thị trong modal
+  }
 }
 
 watch(greenhouseFilter, () => {
   params.value = {
     ...params.value,
     greenhouseId: greenhouseFilter.value === '' ? undefined : Number(greenhouseFilter.value),
-    page: 0,
   }
+  load()
 })
 
 watch(expiringFilter, () => {
   params.value = {
     ...params.value,
     expiringInDays: expiringFilter.value === '' ? undefined : Number(expiringFilter.value),
-    page: 0,
   }
+  load()
 })
 
 const resetFilter = () => {
   greenhouseFilter.value = ''
   expiringFilter.value = ''
-  params.value = { page: 0, size: params.value.size }
-}
-
-const goToPage = (next: number) => {
-  params.value = { ...params.value, page: next }
+  params.value = {}
+  load()
 }
 </script>
 
@@ -164,14 +187,14 @@ const goToPage = (next: number) => {
             Hệ thống cảnh báo khi chứng nhận còn dưới 30 ngày hiệu lực.
           </p>
         </div>
-        <SoftBadge variant="info" :label="`${page.totalElements} chứng nhận`" />
+        <SoftBadge variant="info" :label="`${items.length}${hasMore ? '+' : ''} chứng nhận`" />
       </div>
 
-      <BAlert v-if="isError" variant="danger" class="mx-3 mt-3 mb-0">
-        Không tải được danh sách chứng nhận: {{ error?.message }}
+      <BAlert v-if="error" variant="danger" class="mx-3 mt-3 mb-0">
+        Không tải được danh sách chứng nhận: {{ error }}
       </BAlert>
 
-      <div v-if="isLoading" class="d-flex justify-content-center py-5">
+      <div v-if="loading && items.length === 0" class="d-flex justify-content-center py-5">
         <BSpinner />
       </div>
 
@@ -186,15 +209,16 @@ const goToPage = (next: number) => {
               <th scope="col">Hết hạn</th>
               <th scope="col">Trạng thái</th>
               <th scope="col">Tệp PDF</th>
+              <th scope="col" class="text-end">Thao tác</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-if="page.content.length === 0">
-              <td colspan="7" class="text-center text-body-secondary py-4">
+            <tr v-if="items.length === 0">
+              <td colspan="8" class="text-center text-body-secondary py-4">
                 Chưa có chứng nhận nào
               </td>
             </tr>
-            <tr v-for="row in page.content" :key="row.id">
+            <tr v-for="row in items" :key="row.id">
               <td class="fw-semibold">{{ row.certNo }}</td>
               <td>
                 <SoftBadge variant="info" :label="CERT_TYPE_LABELS[row.certType] ?? row.certType" />
@@ -222,30 +246,33 @@ const goToPage = (next: number) => {
                   {{ row.fileKey ?? '—' }}
                 </span>
               </td>
+              <td class="text-end">
+                <BButton size="sm" variant="outline-primary" @click="openEdit(row)">Sửa</BButton>
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <PagerBar
-        :page="page.page"
-        :total-pages="page.totalPages"
-        :total-elements="page.totalElements"
-        :size="page.size"
-        unit="chứng nhận"
-        @update:page="goToPage"
-      />
+      <div v-if="hasMore" class="p-3 border-top text-center">
+        <BButton variant="outline-secondary" :disabled="loading" @click="loadMore">
+          {{ loading ? 'Đang tải...' : 'Tải thêm' }}
+        </BButton>
+      </div>
     </section>
 
-    <BModal v-model="showModal" title="Thêm chứng nhận">
-      <BAlert v-if="saveError" variant="danger" dismissible>
-        {{ saveError.message }}
+    <BModal v-model="showModal" :title="editing ? 'Sửa chứng nhận' : 'Thêm chứng nhận'">
+      <BAlert v-if="saveError" :model-value="true" variant="danger" dismissible>
+        {{ saveError }}
       </BAlert>
       <form class="d-flex flex-column gap-3" novalidate @submit.prevent="submit">
         <div>
           <label class="form-label small fw-semibold mb-1" for="cert-greenhouse">Nhà màng</label>
           <BFormSelect id="cert-greenhouse" v-model="form.greenhouseId" required>
             <option value="" disabled>Chọn nhà màng</option>
+            <option v-if="missingGreenhouseId != null" :value="String(missingGreenhouseId)">
+              #{{ missingGreenhouseId }} — Nhà màng hiện tại (không có trong danh sách đang sử dụng)
+            </option>
             <option v-for="item in greenhouses" :key="item.id" :value="String(item.id)">
               {{ item.code }} — {{ item.name }}
             </option>
@@ -283,6 +310,19 @@ const goToPage = (next: number) => {
           />
           <p class="small text-body-secondary mt-2 mb-0">
             Tải tệp lên MinIO trước, sau đó nhập khóa tệp (fileKey) vào đây.
+          </p>
+        </div>
+        <div v-if="editing">
+          <label class="form-label small fw-semibold mb-1" for="cert-active">
+            Trạng thái dữ liệu (is_active)
+          </label>
+          <BFormSelect id="cert-active" v-model="form.active" aria-describedby="cert-active-warning">
+            <option :value="true">Đang sử dụng (true)</option>
+            <option :value="false">Xóa mềm (false)</option>
+          </BFormSelect>
+          <p id="cert-active-warning" class="small text-warning mt-2 mb-0" role="note">
+            Cảnh báo: Chọn Xóa mềm (false) sẽ ẩn chứng nhận khỏi danh sách đang sử dụng,
+            nhưng vẫn giữ dữ liệu lịch sử đã liên kết.
           </p>
         </div>
       </form>

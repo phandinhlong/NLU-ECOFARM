@@ -78,9 +78,7 @@ export const batchService = {
       })
       .then((r) => r.data.data),
 
-  listGreenhouses: () =>
-    catalogService.listGreenhouses({ page: 0, size: 100 }).then((r) => r.data.data.content),
+  listGreenhouses: () => catalogService.fetchAllGreenhouses(),
 
-  listVarieties: () =>
-    catalogService.listVarieties({ page: 0, size: 100 }).then((r) => r.data.data.content),
+  listVarieties: () => catalogService.fetchAllVarieties(),
 }

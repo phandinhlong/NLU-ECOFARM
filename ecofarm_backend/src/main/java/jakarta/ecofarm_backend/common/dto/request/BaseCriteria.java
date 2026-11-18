@@ -11,6 +11,8 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 @NoArgsConstructor
 public abstract class BaseCriteria {
 
+    public static final int LENGTH = 20;
+
     @Override
     public String toString() {
         return ReflectionToStringBuilder.toString(this, ToStringStyle.SHORT_PREFIX_STYLE);

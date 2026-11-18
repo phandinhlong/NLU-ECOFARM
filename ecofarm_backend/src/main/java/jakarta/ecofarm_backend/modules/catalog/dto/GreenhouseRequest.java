@@ -35,5 +35,7 @@ public class GreenhouseRequest {
     @Pattern(regexp = "ACTIVE|INACTIVE|MAINTENANCE", message = "Trạng thái phải là ACTIVE, INACTIVE hoặc MAINTENANCE")
     private String status;
 
+    private Boolean active;
+
     private Long version;
 }

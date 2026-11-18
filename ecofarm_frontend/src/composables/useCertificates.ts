@@ -1,22 +1,33 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
-import type { Ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import { catalogService } from '@/api/services/catalog.service'
 import type { CertificateInput, CertificateQuery } from '@/api/types/catalog'
+import { useCursorList } from '@/composables/useCursorList'
 
-export const useCertificatesQuery = (params: Ref<CertificateQuery>) =>
-  useQuery({
-    queryKey: ['certificates', params],
-    queryFn: () => catalogService.listCertificates(params.value).then((r) => r.data.data),
-  })
+export const useCertificateList = (params: Ref<CertificateQuery>) =>
+  useCursorList((lastIndex) => catalogService.listCertificates({ ...params.value, lastIndex }))
 
-export const useCreateCertificateMutation = () => {
-  const queryClient = useQueryClient()
+export const useSaveCertificateMutation = () => {
+  const isSaving = ref(false)
+  const saveError = ref<string | null>(null)
 
-  return useMutation({
-    mutationFn: (data: CertificateInput) =>
-      catalogService.createCertificate(data).then((r) => r.data.data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['certificates'] })
-    },
-  })
+  const save = async ({ id, data }: { id?: number; data: CertificateInput }) => {
+    isSaving.value = true
+    saveError.value = null
+    try {
+      return id == null
+        ? await catalogService.createCertificate(data)
+        : await catalogService.updateCertificate(id, data)
+    } catch (err) {
+      saveError.value = err instanceof Error ? err.message : 'Đã xảy ra lỗi'
+      throw err
+    } finally {
+      isSaving.value = false
+    }
+  }
+
+  const resetSaveError = () => {
+    saveError.value = null
+  }
+
+  return { save, isSaving, saveError, resetSaveError }
 }

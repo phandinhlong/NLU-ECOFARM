@@ -37,8 +37,6 @@ public class PageCriteria extends BaseCriteria {
     @Positive
     private Long lastIndex;
 
-    public static final int LENGTH = 20;
-
     public Optional<BatchStatus> getStatusFilter() {
         return Optional.ofNullable(status);
     }

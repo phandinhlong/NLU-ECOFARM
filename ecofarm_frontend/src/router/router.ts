@@ -13,7 +13,7 @@ declare module 'vue-router' {
 }
 
 /** Các role được phép vào khu vực quản trị */
-const ADMIN_ROLES = ['ADMIN', 'ENGINEER']
+const ADMIN_ROLES = ['ADMIN']
 /** Trang mặc định cho tài khoản không có quyền quản trị */
 const NON_ADMIN_HOME = 'batch-activation'
 
