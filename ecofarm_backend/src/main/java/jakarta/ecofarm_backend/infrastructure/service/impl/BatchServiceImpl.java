@@ -92,4 +92,9 @@ public class BatchServiceImpl implements BatchService {
     public void persistAssignment(BatchAssignment assignment) {
         this.batchRepository.persistAssignment(assignment);
     }
+
+    @Override
+    public Boolean isOwnerBatch(Long batchId, Long userId) {
+        return this.batchRepository.isOwnerBatch(batchId, userId);
+    }
 }

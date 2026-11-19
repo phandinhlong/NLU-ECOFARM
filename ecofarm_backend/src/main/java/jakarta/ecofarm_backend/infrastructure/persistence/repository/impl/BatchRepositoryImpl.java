@@ -140,8 +140,8 @@ public class BatchRepositoryImpl implements BatchRepository {
     public List<BatchAssignment> findAssignments(Long batchId) {
         return em.createQuery("""
                 SELECT DISTINCT a FROM BatchAssignment a
-                JOIN FETCH a.user
-                LEFT JOIN FETCH a.user.roles
+                JOIN FETCH a.assignee
+                LEFT JOIN FETCH a.assignee.roles
                 LEFT JOIN FETCH a.assignedBy
                 WHERE a.batch.id = :batchId AND (a.isActive IS NULL OR a.isActive = true)
                 ORDER BY a.id
@@ -173,7 +173,7 @@ public class BatchRepositoryImpl implements BatchRepository {
     public Boolean isAssigned(Long batchId, Long userId) {
         TypedQuery<Long> query = em.createQuery("""
                 SELECT COUNT(a) FROM BatchAssignment a
-                WHERE a.batch.id = :batchId AND a.user.id = :userId
+                WHERE a.batch.id = :batchId AND a.assignee.id = :userId
                   AND (a.isActive IS NULL OR a.isActive = true)
                 """, Long.class);
         query.setParameter("batchId", batchId);
@@ -184,7 +184,7 @@ public class BatchRepositoryImpl implements BatchRepository {
     @Override
     public List<User> findAssignedWorkerPage(Long batchId, Long lastIndex, int limit) {
         TypedQuery<User> query = em.createQuery("""
-                SELECT DISTINCT a.user FROM BatchAssignment a JOIN a.user u
+                SELECT DISTINCT a.assignee FROM BatchAssignment a JOIN a.assignee u
                 LEFT JOIN FETCH u.roles
                 WHERE a.batch.id = :batchId AND (a.isActive IS NULL OR a.isActive = true)
                   AND (:lastIndex IS NULL OR u.id < :lastIndex)
@@ -199,7 +199,7 @@ public class BatchRepositoryImpl implements BatchRepository {
     @Override
     public List<Long> findAssignedUserIds(Long batchId) {
         return em.createQuery("""
-                SELECT a.user.id FROM BatchAssignment a
+                SELECT a.assignee.id FROM BatchAssignment a
                 WHERE a.batch.id = :batchId AND (a.isActive IS NULL OR a.isActive = true)
                 """, Long.class)
                 .setParameter("batchId", batchId)
@@ -219,5 +219,17 @@ public class BatchRepositoryImpl implements BatchRepository {
     @Override
     public void persistAssignment(BatchAssignment assignment) {
         em.persist(assignment);
+    }
+
+    @Override
+    public Boolean isOwnerBatch(Long batchId, Long userId) {
+        TypedQuery<Long> query = em.createQuery("""
+                SELECT COUNT(a) FROM BatchAssignment a
+                WHERE a.batch.id = :batchId AND a.assigner.id = :userId
+                  AND (a.isActive IS NULL OR a.isActive = true)
+                """, Long.class);
+        query.setParameter("batchId", batchId);
+        query.setParameter("userId", userId);
+        return query.getSingleResult() > 0;
     }
 }

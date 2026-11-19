@@ -47,7 +47,15 @@ public enum ErrorCode {
     TASK_ALREADY_COMPLETED(4010, "Task is already completed or cancelled"),
     ANCHOR_FAILED(4011, "Failed to anchor data on blockchain"),
     ANCHOR_NOT_FOUND(3001, "Anchor not found"),
-    ANCHOR_NOT_RETRYABLE(3002, "Anchor is not in FAILED state; cannot retry");
+    ANCHOR_NOT_RETRYABLE(3002, "Anchor is not in FAILED state; cannot retry"),
+    EVENT_NOT_FOUND(4001, "Cultivation event not found"),
+    FILE_EMPTY(4002, "File cannot be empty"),
+    FILE_TOO_LARGE(4003, "File exceeds maximum allowed size"),
+    FILE_TYPE_NOT_ALLOWED(4004, "File type is not supported"),
+    FILE_CONTENT_MISMATCH(4005, "File content does not match declared MIME type"),
+    INTERNAL_SERVER_ERROR(5000, "Internal server error"),
+    FILE_READ_ERROR(5001, "Failed to read file content"),
+    SYSTEM_HASH_ERROR(5002, "SHA-256 algorithm not available on system");
 
     private final Integer code;
     private final String message;

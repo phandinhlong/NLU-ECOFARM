@@ -17,20 +17,18 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 public class BatchAssignment extends BaseEntity {
 
-    // JPA relation thay cho DB foreign key (batches.id)
     @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "batch_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     @JsonIgnore
     private Batch batch;
 
-    // JPA relation thay cho DB foreign key (users.id)
     @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "user_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     @JsonIgnore
-    private User user;
+    private User assignee;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "assigned_by", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     @JsonIgnore
-    private User assignedBy;
+    private User assigner;
 }
