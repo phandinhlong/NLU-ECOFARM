@@ -31,6 +31,40 @@ export interface CultivationEvent {
   recordedAt: string | null
   clientEventId: string | null
   amendsEventId: number | null
+  batchCode?: string | null
+  greenhouseId?: number | null
+  greenhouseName?: string | null
+  pendingApproverId?: number | null
+  assignerId?: number | null
+  assignerActive?: boolean | null
+  rejectReason?: string | null
+  amendReason?: string | null
+  amendNote?: string | null
+}
+
+export type AmendReason = 'WRONG_QUANTITY' | 'WRONG_BED' | 'WRONG_TIME' | 'OTHER'
+
+export const AMEND_REASON_LABELS: Record<AmendReason, string> = {
+  WRONG_QUANTITY: 'Sai số lượng',
+  WRONG_BED: 'Sai luống',
+  WRONG_TIME: 'Sai thời điểm',
+  OTHER: 'Khác',
+}
+
+export interface RejectEventInput {
+  reason: string
+}
+
+export interface ReassignApproverInput {
+  engineerId: number
+}
+
+export interface AmendEventInput {
+  clientEventId: string
+  occurredAt: string
+  data: Record<string, unknown>
+  reasonCode: AmendReason
+  note?: string
 }
 
 export interface CreateEventInput {

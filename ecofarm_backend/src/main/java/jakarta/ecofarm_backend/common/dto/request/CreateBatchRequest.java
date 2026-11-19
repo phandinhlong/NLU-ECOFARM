@@ -13,15 +13,15 @@ import lombok.ToString;
 public class CreateBatchRequest {
 
     @NotNull(message = "Nhà màng không được trống")
-    @Positive(message = "Mã nhà màng không hợp lệ")
+    @Positive(message = "Invalid greenhouse id")
     private Long greenhouseId;
 
     @NotNull(message = "Giống không được trống")
-    @Positive(message = "Mã giống không hợp lệ")
+    @Positive(message = "Invalid variety id")
     private Long varietyId;
 
 
-    @NotBlank(message = "Ngày gieo không được trống")
+    @NotBlank(message = "Sow date must not be blank")
     @Pattern(regexp = "\\d{4}-\\d{2}-\\d{2}", message = "Ngày gieo phải có dạng yyyy-MM-dd")
     private String sowDate;
 }

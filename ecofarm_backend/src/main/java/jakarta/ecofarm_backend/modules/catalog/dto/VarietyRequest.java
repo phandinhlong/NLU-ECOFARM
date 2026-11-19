@@ -13,12 +13,12 @@ import java.math.BigDecimal;
 @Getter
 @ToString
 public class VarietyRequest {
-    @NotBlank(message = "Mã giống không được trống")
-    @Size(max = 32, message = "Mã giống tối đa 32 ký tự")
+    @NotBlank(message = "Variety code must not be blank")
+    @Size(max = 32, message = "Variety code must be at most 32 characters")
     private String code;
 
-    @NotBlank(message = "Tên giống không được trống")
-    @Size(max = 128, message = "Tên giống tối đa 128 ký tự")
+    @NotBlank(message = "Variety name must not be blank")
+    @Size(max = 128, message = "Variety name must be at most 128 characters")
     private String name;
 
     @Min(value = 1, message = "Số ngày từ thụ phấn đến thu hoạch phải lớn hơn 0")

@@ -71,7 +71,12 @@ const onConfirm = () => {
       </div>
       <div v-for="f in fields" :key="f.key">
         <label :for="`task-field-${f.key}`" class="form-label small fw-semibold mb-1">{{ f.label }}</label>
+        <BFormSelect v-if="f.type === 'select'" :id="`task-field-${f.key}`" v-model="data[f.key]">
+          <option value="">Chọn</option>
+          <option v-for="opt in f.options" :key="opt" :value="opt">{{ opt }}</option>
+        </BFormSelect>
         <input
+          v-else
           :id="`task-field-${f.key}`"
           v-model="data[f.key]"
           :type="f.type"

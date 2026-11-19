@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.infrastructure.service.impl;
 
+import jakarta.ecofarm_backend.common.dto.request.UserCriteria;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.UserRepository;
 import jakarta.ecofarm_backend.infrastructure.service.UserService;
@@ -42,5 +43,10 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<User> findActiveWorkerPage(Long lastIndex, int limit) {
         return this.userRepository.findActiveWorkerPage(lastIndex, limit);
+    }
+
+    @Override
+    public List<User> findPage(UserCriteria criteria) {
+        return this.userRepository.findPage(criteria);
     }
 }

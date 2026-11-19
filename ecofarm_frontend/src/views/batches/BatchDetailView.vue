@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import SoftBadge from '@/components/common/SoftBadge.vue'
 import TaskList from '@/components/batch/TaskList.vue'
 import EventTimeline from '@/components/batch/EventTimeline.vue'
-import { useBatchQuery } from '@/composables/useBatches'
+import { useBatchQuery, useDeleteBatchMutation, useUpdateBatchMutation } from '@/composables/useBatches'
 import { useAssignedWorkersStore, useUserStore, useWorkerLookupStore } from '@/stores'
 import {
   ALLOWED_NEXT,
@@ -40,6 +40,8 @@ const nextStatuses = computed<BatchStatus[]>(() =>
   data.value ? (ALLOWED_NEXT[data.value.status] ?? []) : [],
 )
 
+const logOpen = ref(true)
+const tasksOpen = ref(true)
 const showAdd = ref(false)
 const addSelected = ref<number[]>([])
 const addError = ref('')
@@ -86,6 +88,57 @@ const removeWorker = async (worker: WorkerSummary) => {
     removePending.value = false
   }
 }
+
+const showRemove = ref(false)
+const removeTarget = ref<WorkerSummary | null>(null)
+const taskListRef = ref<{ openCreate: () => void } | null>(null)
+
+const askRemove = (worker: WorkerSummary) => {
+  removeTarget.value = worker
+  showRemove.value = true
+}
+
+const confirmRemove = async () => {
+  if (!removeTarget.value) return
+  await removeWorker(removeTarget.value)
+  showRemove.value = false
+  removeTarget.value = null
+}
+
+const showEdit = ref(false)
+const editSowDate = ref('')
+const editError = ref('')
+const showDelete = ref(false)
+const deleteError = ref('')
+const updateMutation = useUpdateBatchMutation(id)
+const deleteMutation = useDeleteBatchMutation()
+
+const openEdit = () => {
+  editSowDate.value = data.value?.sowDate?.slice(0, 10) ?? ''
+  editError.value = ''
+  showEdit.value = true
+}
+
+const submitEdit = () => {
+  if (!data.value) return
+  editError.value = ''
+  updateMutation.mutate(
+    { sowDate: editSowDate.value, version: data.value.version },
+    {
+      onSuccess: () => (showEdit.value = false),
+      onError: (err) => (editError.value = (err as Problem)?.message || 'Cập nhật thất bại.'),
+    },
+  )
+}
+
+const confirmDelete = () => {
+  if (!data.value) return
+  deleteError.value = ''
+  deleteMutation.mutate(data.value.id, {
+    onSuccess: () => router.push({ name: 'batches' }),
+    onError: (err) => (deleteError.value = (err as Problem)?.message || 'Xóa thất bại.'),
+  })
+}
 </script>
 
 <template>
@@ -94,8 +147,11 @@ const removeWorker = async (worker: WorkerSummary) => {
       <FontAwesomeIcon icon="arrow-left" aria-hidden="true" /> Danh sách lô
     </RouterLink>
 
-    <div v-if="isLoading" class="d-flex justify-content-center py-5">
-      <BSpinner />
+    <div v-if="isLoading" class="d-flex flex-column gap-2 py-3">
+      <span class="placeholder placeholder-glow col-8 rounded" style="height: 20px"></span>
+      <span class="placeholder placeholder-glow col-12 rounded" style="height: 14px"></span>
+      <span class="placeholder placeholder-glow col-10 rounded" style="height: 14px"></span>
+      <span class="placeholder placeholder-glow col-6 rounded" style="height: 14px"></span>
     </div>
 
     <template v-else-if="isError">
@@ -137,6 +193,17 @@ const removeWorker = async (worker: WorkerSummary) => {
       </BAlert>
 
       <section class="border rounded-3 bg-body p-3 p-lg-4 mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <p class="fw-semibold mb-0"><FontAwesomeIcon icon="seedling" aria-hidden="true" /> Thông tin lô</p>
+          <div v-if="isEngineer" class="d-flex gap-1">
+            <BButton v-if="!locked" size="sm" variant="outline-secondary" aria-label="Sửa lô" @click="openEdit">
+              <FontAwesomeIcon icon="pen-to-square" aria-hidden="true" />
+            </BButton>
+            <BButton v-if="data.status === 'DRAFT'" size="sm" variant="outline-danger" aria-label="Xóa lô" @click="showDelete = true">
+              <FontAwesomeIcon icon="trash-can" aria-hidden="true" />
+            </BButton>
+          </div>
+        </div>
         <div class="row g-3">
           <div class="col-12 col-md-6">
             <div class="small text-body-secondary"><FontAwesomeIcon icon="warehouse" aria-hidden="true" /> Nhà màng</div>
@@ -181,24 +248,24 @@ const removeWorker = async (worker: WorkerSummary) => {
             <FontAwesomeIcon icon="plus" aria-hidden="true" /> Thêm công nhân
           </BButton>
         </div>
-        <div class="d-flex flex-wrap gap-2">
+        <div class="worker-scroll d-flex flex-wrap gap-2">
           <span v-if="assigned.length === 0" class="small text-body-secondary">
             <FontAwesomeIcon icon="user-group" aria-hidden="true" /> Chưa phân công công nhân
           </span>
           <span
             v-for="u in assigned"
             :key="u.id"
-            class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-semibold d-inline-flex align-items-center gap-1"
+            class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle fw-semibold d-inline-flex align-items-center gap-1"
           >
             {{ u.fullName }}
             <BButton
               v-if="canManage && !locked"
               size="sm"
               variant="link"
-              class="p-0 text-primary-emphasis text-decoration-none"
+              class="p-0 text-secondary-emphasis text-decoration-none"
               :disabled="removePending"
               :aria-label="`Gỡ ${u.fullName}`"
-              @click="removeWorker(u)"
+              @click="askRemove(u)"
             >
               &times;
             </BButton>
@@ -218,7 +285,18 @@ const removeWorker = async (worker: WorkerSummary) => {
 
       <section class="border rounded-3 bg-body p-3 p-lg-4 mb-3">
         <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
-          <p class="fw-semibold mb-0"><FontAwesomeIcon icon="clock-rotate-left" aria-hidden="true" /> Nhật ký canh tác</p>
+          <p class="fw-semibold mb-0">
+            <FontAwesomeIcon icon="clock-rotate-left" aria-hidden="true" /> Nhật ký canh tác
+            <BButton
+              size="sm"
+              variant="link"
+              class="p-0 ms-1 text-body-secondary"
+              :aria-label="logOpen ? 'Thu gọn nhật ký' : 'Mở rộng nhật ký'"
+              @click="logOpen = !logOpen"
+            >
+              <FontAwesomeIcon :icon="logOpen ? 'chevron-up' : 'chevron-down'" aria-hidden="true" />
+            </BButton>
+          </p>
           <BButton
             v-if="(isEngineer || isFarmer) && !locked"
             size="sm"
@@ -233,15 +311,39 @@ const removeWorker = async (worker: WorkerSummary) => {
             </BButton>
           </span>
         </div>
-        <EventTimeline :batch-id="id" />
-        <p class="fw-semibold mt-3 mb-2">Công việc</p>
-        <TaskList
-          :batch-id="id"
-          :is-engineer="isEngineer"
-          :is-farmer="isFarmer"
-          :locked="locked"
-          :workers="assigned"
-        />
+        <div v-show="logOpen" class="log-scroll">
+          <EventTimeline :batch-id="id" />
+        </div>
+      </section>
+
+      <section class="border rounded-3 bg-body p-3 p-lg-4 mb-3">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
+          <p class="fw-semibold mb-0">
+            <FontAwesomeIcon icon="list-check" aria-hidden="true" /> Công việc
+            <BButton
+              size="sm"
+              variant="link"
+              class="p-0 ms-1 text-body-secondary"
+              :aria-label="tasksOpen ? 'Thu gọn công việc' : 'Mở rộng công việc'"
+              @click="tasksOpen = !tasksOpen"
+            >
+              <FontAwesomeIcon :icon="tasksOpen ? 'chevron-up' : 'chevron-down'" aria-hidden="true" />
+            </BButton>
+          </p>
+          <BButton v-if="isEngineer && !locked" size="sm" variant="outline-primary" @click="taskListRef?.openCreate()">
+            <FontAwesomeIcon icon="plus" aria-hidden="true" /> Giao việc
+          </BButton>
+        </div>
+        <div v-show="tasksOpen" class="log-scroll">
+          <TaskList
+            ref="taskListRef"
+            :batch-id="id"
+            :is-engineer="isEngineer"
+            :is-farmer="isFarmer"
+            :locked="locked"
+            :workers="assigned"
+          />
+        </div>
       </section>
 
       <section class="border rounded-3 bg-body p-3 p-lg-4">
@@ -258,6 +360,41 @@ const removeWorker = async (worker: WorkerSummary) => {
         </div>
       </section>
     </template>
+
+    <BModal v-model="showEdit" title="Sửa lô">
+      <template #title>
+        <FontAwesomeIcon icon="pen-to-square" aria-hidden="true" /> Sửa lô
+      </template>
+      <BAlert v-if="editError" variant="danger">{{ editError }}</BAlert>
+      <label class="form-label small fw-semibold mb-1" for="edit-sow">Ngày xuống giống</label>
+      <BFormInput id="edit-sow" v-model="editSowDate" type="date" />
+      <template #footer>
+        <BButton variant="outline-secondary" @click="showEdit = false">Hủy</BButton>
+        <BButton variant="primary" :disabled="updateMutation.isPending.value" @click="submitEdit">
+          {{ updateMutation.isPending.value ? 'Đang lưu...' : 'Lưu' }}
+        </BButton>
+      </template>
+    </BModal>
+
+    <BModal v-model="showDelete" title="Xóa lô">
+      <template #title>
+        <FontAwesomeIcon icon="trash-can" aria-hidden="true" /> Xóa lô
+      </template>
+      <BAlert v-if="deleteError" variant="danger">{{ deleteError }}</BAlert>
+      <p class="mb-0">Xóa lô <span class="fw-semibold">{{ data?.batchCode }}</span>? Hành động này không thể hoàn tác.</p>
+      <template #footer>
+        <BButton variant="outline-secondary" @click="showDelete = false">Hủy</BButton>
+        <BButton variant="danger" :disabled="deleteMutation.isPending.value" @click="confirmDelete">Xóa</BButton>
+      </template>
+    </BModal>
+
+    <BModal v-model="showRemove" title="Gỡ công nhân">
+      <p class="mb-0">Gỡ {{ removeTarget?.fullName }} khỏi lô?</p>
+      <template #footer>
+        <BButton variant="outline-secondary" @click="showRemove = false">Hủy</BButton>
+        <BButton variant="danger" :disabled="removePending" @click="confirmRemove">Gỡ</BButton>
+      </template>
+    </BModal>
 
     <BModal v-model="showAdd" title="Thêm công nhân">
       <template #title>
@@ -290,3 +427,16 @@ const removeWorker = async (worker: WorkerSummary) => {
     </BModal>
   </div>
 </template>
+
+<style scoped>
+@media (min-width: 992px) {
+  .log-scroll {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+  .worker-scroll {
+    max-height: 8rem;
+    overflow-y: auto;
+  }
+}
+</style>

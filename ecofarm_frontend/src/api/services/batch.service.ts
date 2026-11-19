@@ -9,6 +9,7 @@ import type {
   BatchCreateInput,
   BatchDetail,
   BatchListParams,
+  BatchUpdateInput,
   CursorPageResponse,
   ExportQrParams,
   ExtraQrRequest,
@@ -55,6 +56,12 @@ export const batchService = {
 
   createBatch: (input: BatchCreateInput) =>
     axios.post<ApiResponse<BatchDetail>>(`${API_V1}/batches`, input).then((r) => r.data.data),
+
+  updateBatch: (id: number, input: BatchUpdateInput) =>
+    axios.patch<ApiResponse<BatchDetail>>(`${API_V1}/batches/${id}`, input).then((r) => r.data.data),
+
+  deleteBatch: (id: number) =>
+    axios.delete<ApiResponse<boolean>>(`${API_V1}/batches/${id}`).then((r) => r.data.data),
 
   addWorkers: (batchId: number, userIds: number[]) =>
     axios

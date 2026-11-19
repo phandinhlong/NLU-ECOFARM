@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.infrastructure.service;
 
+import jakarta.ecofarm_backend.common.dto.request.UserCriteria;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 
 import java.util.List;
@@ -13,4 +14,5 @@ public interface UserService {
     Optional<User> findByEmail(String email);
 
     List<User> findActiveWorkerPage(Long lastIndex, int limit);
+    List<User> findPage(UserCriteria criteria);
 }

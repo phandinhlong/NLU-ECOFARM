@@ -37,4 +37,18 @@ public class EventResponse {
     private String clientEventId;
     @Positive
     private Long amendsEventId;
+    @Size(max = 64)
+    private String batchCode;
+    @Positive
+    private Long greenhouseId;
+    @Size(max = 128)
+    private String greenhouseName;
+    @Positive
+    private Long pendingApproverId;
+    @Positive
+    private Long assignerId;
+    private Boolean assignerActive;
+    private String rejectReason;
+    private String amendReason;
+    private String amendNote;
 }
