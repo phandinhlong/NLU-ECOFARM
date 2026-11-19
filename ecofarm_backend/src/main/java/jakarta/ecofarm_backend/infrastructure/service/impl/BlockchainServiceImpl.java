@@ -281,7 +281,7 @@ public class BlockchainServiceImpl implements BlockchainService {
     @Override
     public Anchor anchorToPolygon(Long batchId) {
         MerkleSnapshot snapshot = Optional.ofNullable(snapshotService.findByBatchId(batchId))
-                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.SNAPSHOT_NOT_FOUND));
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.ANCHOR_NOT_FOUND));
         Anchor anchor = Anchor.builder()
                 .chainId(config.getPublicChainId())
                 .status(AnchorStatus.PENDING.name())
