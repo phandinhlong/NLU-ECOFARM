@@ -742,8 +742,13 @@ public class QcServiceImpl implements QcService {
 
         String actorRef = inspectedById != null ? "usr_" + inspectedById : null;
 
+        Long eventId = cultivationEventService.findByClientEventId(record.getClientEventId())
+                .map(CultivationEvent::getId)
+                .orElse(null);
+
         return QcResponse.builder()
                 .id(record.getId())
+                .eventId(eventId)
                 .batchId(batchId)
                 .batchCode(batchCode)
                 .avgBrix(record.getBrix())

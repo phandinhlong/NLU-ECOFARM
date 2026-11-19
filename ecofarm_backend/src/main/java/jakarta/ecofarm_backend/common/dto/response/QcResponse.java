@@ -15,6 +15,8 @@ public class QcResponse {
     @Positive
     private Long id;
     @Positive
+    private Long eventId;
+    @Positive
     private Long batchId;
     private String batchCode;
     @Positive
