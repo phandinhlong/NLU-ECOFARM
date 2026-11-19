@@ -147,7 +147,7 @@ public class PackagingFacadeImpl implements PackagingFacade {
                 ? currentStatus.fire(BatchEvent.START_ANCHORING).name()
                 : BatchStatus.ANCHORING.name());
         batch.setActivatedAt(now);
-        batchRepository.merge(batch);
+        batchRepository.save(batch);
 
         // 4. Tạo Anchor PENDING
         Anchor anchor = Anchor.builder()
