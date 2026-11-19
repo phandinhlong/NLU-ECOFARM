@@ -35,7 +35,6 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 @Path("/v1/batches")
 @Tag(name = "Batch", description = "Quản lý lô canh tác")
-@RequireRoles({"ENGINEER"})
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class BatchResource {
@@ -51,6 +50,7 @@ public class BatchResource {
 
     @GET
     @Path("/workers")
+    @RequireRoles({"ADMIN", "ENGINEER", "PACKER", "QUALITY_CONTROL"})
     public BaseResponse<CursorPageResponse<WorkerSummaryResponse>> findBatchWorkers(@QueryParam("lastIndex") Long lastIndex) {
         return batchFacade.findBatchWorkers(lastIndex);
     }
@@ -71,55 +71,62 @@ public class BatchResource {
 
     @POST
     @Path("/{id}/workers")
+    @RequireRoles({"ENGINEER"})
     public BaseResponse<Boolean> addWorkers(@PathParam("id") Long id, @Valid AssignWorkersRequest request) {
         return batchFacade.addWorkers(id, request);
     }
 
     @DELETE
     @Path("/{id}/workers")
+    @RequireRoles({"ENGINEER"})
     public BaseResponse<Boolean> removeWorkers(@PathParam("id") Long id, @Valid AssignWorkersRequest request) {
         return batchFacade.removeWorkers(id, request);
     }
 
     @POST
+    @RequireRoles({"ENGINEER"})
     public Response createBatch(@Valid CreateBatchRequest request) {
         return Response.status(Response.Status.CREATED).entity(batchFacade.createBatch(request)).build();
     }
 
     @PATCH
     @Path("/{id}")
+    @RequireRoles({"ENGINEER"})
     public BaseResponse<BatchDetailResponse> updateBatch(@PathParam("id") @Positive Long id, @Valid UpdateBatchRequest request) {
         return batchFacade.updateBatch(id, request);
     }
 
     @DELETE
     @Path("/{id}")
+    @RequireRoles({"ENGINEER"})
     public BaseResponse<Boolean> deleteBatch(@PathParam("id") @Positive Long id) {
         return batchFacade.deleteBatch(id);
     }
 
     @POST
     @Path("/{id}/qc")
+    @RequireRoles({"ENGINEER", "QUALITY_CONTROL"})
     public BaseResponse<QcResponse> recordQc(@PathParam("id") @Positive Long id, @Valid RecordQcRequest request) {
         return batchFacade.recordQc(id, request);
     }
 
     @GET
     @Path("/{id}/qc")
+    @RequireRoles({"ENGINEER", "QUALITY_CONTROL", "ADMIN", "USER"})
     public BaseResponse<QcResponse> getLatestQc(@PathParam("id") @Positive Long id) {
         return batchFacade.getLatestQc(id);
     }
 
     @POST
     @Path("/{id}/qc/review")
-    @RequireRoles({"ADMIN"})
+    @RequireRoles({"ADMIN", "ENGINEER", "QUALITY_CONTROL"})
     public BaseResponse<QcResponse> reviewQc(@PathParam("id") @Positive Long id, @Valid ReviewQcRequest request) {
         return batchFacade.reviewQc(id, request);
     }
 
     @POST
     @Path("/{id}/harvest")
-    @RequireRoles({"ADMIN", "ENGINEER", "FARMER"})
+    @RequireRoles({"ENGINEER", "FARMER"})
     public BaseResponse<HarvestResponse> harvestBatch(@PathParam("id") @Positive Long id, @Valid HarvestRequest request) {
         return batchFacade.harvestBatch(id, request);
     }

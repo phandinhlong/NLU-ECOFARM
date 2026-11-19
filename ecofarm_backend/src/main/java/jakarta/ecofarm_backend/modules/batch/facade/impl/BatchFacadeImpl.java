@@ -355,6 +355,7 @@ public class BatchFacadeImpl implements BatchFacade {
     }
 
     @Override
+    @Transactional
     public BaseResponse<QcResponse> recordQc(Long batchId, RecordQcRequest request) {
         RecordQcParam param = RecordQcParam.builder()
                 .batchId(batchId)
@@ -366,6 +367,7 @@ public class BatchFacadeImpl implements BatchFacade {
     }
 
     @Override
+    @Transactional
     public BaseResponse<QcResponse> reviewQc(Long batchId, ReviewQcRequest request) {
         ReviewQcParam param = ReviewQcParam.builder()
                 .batchId(batchId)
@@ -382,6 +384,7 @@ public class BatchFacadeImpl implements BatchFacade {
     }
 
     @Override
+    @Transactional
     public BaseResponse<HarvestResponse> harvestBatch(Long batchId, HarvestRequest request) {
         HarvestBatchParam param = HarvestBatchParam.builder()
                 .batchId(batchId)

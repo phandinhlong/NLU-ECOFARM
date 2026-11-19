@@ -57,8 +57,11 @@ public class QcServiceImpl implements QcService {
     @Inject
     private AnchorService anchorService;
 
+    public QcServiceImpl() {
+    }
+
     @lombok.Builder
-    private record EvaluateQcParam(
+    public static record EvaluateQcParam(
             Batch batch,
             List<CultivationEvent> events,
             RecordQcRequest request,
@@ -67,7 +70,7 @@ public class QcServiceImpl implements QcService {
             double avgWeight
     ) {}
 
-    private record QcAssessment(
+    public static record QcAssessment(
             boolean passed,
             String status,
             String failureReason,
@@ -82,7 +85,6 @@ public class QcServiceImpl implements QcService {
     ) {}
 
     @Override
-    @Transactional
     public QcResponse recordQc(RecordQcParam param) {
         RecordQcRequest request = param.getRequest();
         Batch batch = Optional.ofNullable(batchService.findById(param.getBatchId()))
@@ -225,14 +227,15 @@ public class QcServiceImpl implements QcService {
     }
 
     @Override
-    @Transactional
     public QcResponse reviewQc(ReviewQcParam param) {
         ReviewQcRequest request = param.getRequest();
 
-        User admin = userService.findById(param.getAdminId())
+        User reviewer = userService.findById(param.getAdminId())
                 .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND));
 
-        if (admin.getRoles().stream().noneMatch(r -> r.getRoleName() == RoleEnum.ADMIN)) {
+        boolean canReview = reviewer.getRoles().stream()
+                .anyMatch(r -> r.getRoleName() == RoleEnum.ADMIN || r.getRoleName() == RoleEnum.ENGINEER || r.getRoleName() == RoleEnum.QUALITY_CONTROL);
+        if (!canReview) {
             throw new PermissionDeniedException(ErrorCode.PERMISSION_DENIED);
         }
         String adminNote = Optional.ofNullable(request.getNote())
@@ -252,29 +255,20 @@ public class QcServiceImpl implements QcService {
         boolean approved = "APPROVED".equalsIgnoreCase(request.getDecision());
 
         if (approved) {
-            boolean engineerPassed = Boolean.TRUE.equals(pendingQc.getPassed());
-            if (engineerPassed) {
-                pendingQc.setStatus("QC_PASSED");
-                pendingQc.setFailureReason(null);
-                batch.setStatus(BatchStatus.QC_PASSED.name());
-            } else {
-                boolean maxAttempts = Optional.ofNullable(pendingQc.getAttemptNumber()).orElse(1) >= 3;
-                pendingQc.setStatus(maxAttempts ? "REJECTED" : "FAILED");
-                pendingQc.setFailureReason("QUALITY_NOT_MET");
-                if (maxAttempts) {
-                    batch.setStatus(BatchStatus.REJECTED.name());
-                }
-            }
+            pendingQc.setStatus("QC_PASSED");
+            pendingQc.setPassed(true);
+            pendingQc.setFailureReason(null);
+            batch.setStatus(BatchStatus.QC_PASSED.name());
         } else {
             pendingQc.setStatus("REJECTED");
             pendingQc.setPassed(false);
-            pendingQc.setFailureReason("ADMIN_REJECTED: " + adminNote);
+            pendingQc.setFailureReason("REVIEW_REJECTED: " + adminNote);
             batch.setStatus(BatchStatus.REJECTED.name());
         }
 
         pendingQc.setAdminDecision(request.getDecision().toUpperCase());
         pendingQc.setAdminNote(adminNote);
-        pendingQc.setReviewedByUser(admin);
+        pendingQc.setReviewedByUser(reviewer);
         pendingQc.setReviewedAt(now);
 
         qcRecordService.merge(pendingQc);
@@ -285,7 +279,7 @@ public class QcServiceImpl implements QcService {
                 .ifPresent(event -> {
                     event.setReviewStatus(approved ? EventReviewStatus.APPROVED : EventReviewStatus.REJECTED);
                     event.setStatus(approved ? EventChainStatus.CONFIRMED : EventChainStatus.SUPERSEDED);
-                    event.setReviewedBy(admin);
+                    event.setReviewedBy(reviewer);
                     event.setReviewedAt(now);
                     if (!approved) {
                         event.setRejectReason(adminNote);
@@ -294,8 +288,8 @@ public class QcServiceImpl implements QcService {
                 });
 
         AuditLog auditLog = AuditLog.builder()
-                .actor(admin)
-                .action("QC_ADMIN_REVIEW")
+                .actor(reviewer)
+                .action("QC_REVIEW")
                 .entity("batches")
                 .entityId(batch.getId())
                 .detail(toJson(Map.of(
@@ -308,7 +302,7 @@ public class QcServiceImpl implements QcService {
                 .build();
         auditLogService.persist(auditLog);
 
-        String msg = approved ? "Admin đã duyệt kết quả kiểm định QC" : "Admin đã từ chối kiểm định QC; lô đã bị hủy";
+        String msg = approved ? "Đã duyệt kết quả kiểm định QC; Lô chuyển sang trạng thái QC_PASSED" : "Đã từ chối kiểm định QC; lô đã bị hủy";
         return toResponse(pendingQc, msg);
     }
 
@@ -323,7 +317,6 @@ public class QcServiceImpl implements QcService {
     }
 
     @Override
-    @Transactional
     public HarvestResponse harvestBatch(HarvestBatchParam param) {
         HarvestRequest request = param.getRequest();
 
@@ -494,16 +487,32 @@ public class QcServiceImpl implements QcService {
         if (isolationEventOpt.isEmpty()) {
             Map<String, Object> criteriaEval = buildCriteriaEvaluation(avgBrix, brixPass, avgWeight, weightPass,
                     minIsolationDays, null, null, false,
-                    sowDate, expectedHarvestDate, daysSinceSowing, false, "ENGINEER_PENDING_ADMIN");
+                    sowDate, expectedHarvestDate, daysSinceSowing, false, "ENGINEER");
+
+            if (Boolean.TRUE.equals(request.getPassed())) {
+                return new QcAssessment(
+                        true,
+                        "QC_PASSED",
+                        null,
+                        0,
+                        null,
+                        minIsolationDays,
+                        "Kỹ sư xác nhận QC Đạt (Lô chưa ghi nhận sự kiện cách ly, kỹ sư xác nhận đạt yêu cầu chất lượng). Lô chuyển sang trạng thái QC_PASSED và ĐƯỢC PHÉP THU HOẠCH.",
+                        false,
+                        expectedHarvestDate,
+                        daysSinceSowing,
+                        criteriaEval
+                );
+            }
 
             return new QcAssessment(
-                    Boolean.TRUE.equals(request.getPassed()),
+                    false,
                     "PENDING_REVIEW",
                     "WAITING_ADMIN_ISOLATION_APPROVAL",
                     null,
                     null,
                     minIsolationDays,
-                    "Chưa có sự kiện ngừng phân cách ly; kết quả QC đang chờ Admin kiểm duyệt",
+                    "Chưa có sự kiện ngừng phân cách ly; kết quả QC đang chờ kiểm duyệt",
                     false,
                     expectedHarvestDate,
                     daysSinceSowing,
@@ -527,6 +536,21 @@ public class QcServiceImpl implements QcService {
                 sowDate, expectedHarvestDate, daysSinceSowing, systemSuggestedPassed, "ENGINEER");
 
         if (deficit > 0) {
+            if (Boolean.TRUE.equals(request.getPassed())) {
+                return new QcAssessment(
+                        true,
+                        "QC_PASSED",
+                        null,
+                        0,
+                        actualIsolationDays,
+                        minIsolationDays,
+                        "Kỹ sư xác nhận QC Đạt (Thời gian cách ly thực tế: " + actualIsolationDays + "/" + minIsolationDays + " ngày; kỹ sư phê duyệt đạt chất lượng). Lô chuyển sang trạng thái QC_PASSED và ĐƯỢC PHÉP THU HOẠCH.",
+                        systemSuggestedPassed,
+                        expectedHarvestDate,
+                        daysSinceSowing,
+                        criteriaEval
+                );
+            }
             return new QcAssessment(
                     false,
                     "REJECTED",

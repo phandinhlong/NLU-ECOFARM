@@ -7,8 +7,8 @@ import java.util.Map;
 public enum BatchStatus {
     DRAFT,
     GROWING,
-    HARVESTED,
     QC_PASSED,
+    HARVESTED,
     REJECTED,
     ANCHORING(true),
     ANCHOR_FAILED(true),
@@ -36,14 +36,11 @@ public enum BatchStatus {
         map.put(DRAFT, transitions(BatchEvent.START_GROWING, GROWING));
         map.put(GROWING, transitions(
                 BatchEvent.PASS_QC, QC_PASSED,
-                BatchEvent.HARVEST, HARVESTED,
                 BatchEvent.REJECT, REJECTED));
         map.put(QC_PASSED, transitions(
                 BatchEvent.HARVEST, HARVESTED,
-                BatchEvent.START_ANCHORING, ANCHORING,
                 BatchEvent.REJECT, REJECTED));
         map.put(HARVESTED, transitions(
-                BatchEvent.PASS_QC, QC_PASSED,
                 BatchEvent.START_ANCHORING, ANCHORING,
                 BatchEvent.REJECT, REJECTED));
         map.put(ANCHORING, transitions(

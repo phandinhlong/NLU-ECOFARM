@@ -23,7 +23,7 @@ import java.util.Map;
 
 @Path("/v1/block-chain")
 @Tag(name = "Blockchain", description = "Quản lý neo Blockchain, sổ cái và đối soát")
-@RequireRoles(value = {"ADMIN", "QUALITY_CONTROL", "FARMER"})
+@RequireRoles(value = {"ADMIN", "ENGINEER"})
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class BlockchainResource {
