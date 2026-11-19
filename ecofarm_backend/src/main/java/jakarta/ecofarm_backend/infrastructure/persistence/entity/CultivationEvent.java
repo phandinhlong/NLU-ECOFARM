@@ -97,7 +97,7 @@ public class CultivationEvent extends BaseEntity {
     @Builder.Default
     private List<CultivationEvent> amendedEvents = new ArrayList<>();
 
-    @OneToMany(mappedBy = "event", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "event", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @Builder.Default
     private List<EventAttachment> eventAttachments = new ArrayList<>();
 

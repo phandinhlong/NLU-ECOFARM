@@ -7,6 +7,7 @@ import jakarta.ecofarm_backend.common.dto.request.AssignWorkersRequest;
 import jakarta.ecofarm_backend.common.dto.response.BatchDetailResponse;
 import jakarta.ecofarm_backend.common.dto.response.BatchListItemResponse;
 import jakarta.ecofarm_backend.common.dto.request.CreateBatchRequest;
+import jakarta.ecofarm_backend.common.dto.request.UpdateBatchRequest;
 import jakarta.ecofarm_backend.common.dto.response.WorkerSummaryResponse;
 
 public interface BatchFacade {
@@ -16,6 +17,10 @@ public interface BatchFacade {
     BaseResponse<BatchDetailResponse> findBatchDetail(Long batchId);
 
     BaseResponse<BatchDetailResponse> createBatch(CreateBatchRequest request);
+
+    BaseResponse<BatchDetailResponse> updateBatch(Long batchId, UpdateBatchRequest request);
+
+    BaseResponse<Boolean> deleteBatch(Long batchId);
 
     BaseResponse<CursorPageResponse<WorkerSummaryResponse>> findBatchWorkers(Long lastIndex);
 

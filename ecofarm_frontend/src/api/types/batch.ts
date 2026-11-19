@@ -277,6 +277,7 @@ export interface BatchListParams {
   status?: BatchStatus
   greenhouseId?: number
   batchCode?: string
+  mine?: boolean
 }
 
 export interface CursorPageResponse<T> {

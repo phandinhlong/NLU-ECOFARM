@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.infrastructure.service;
 
+import jakarta.ecofarm_backend.common.dto.request.EventPageCriteria;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.CultivationEvent;
 
 import java.util.List;
@@ -9,11 +10,11 @@ public interface CultivationEventService {
 
     List<CultivationEvent> findByBatchIdOrderBySeqAsc(Long batchId);
 
-    /**
-     * Finds active CultivationEvent by ID with batch eagerly fetched.
-     *
-     * @param id event ID
-     * @return Optional containing entity if found and active, otherwise Optional.empty()
-     */
+    List<CultivationEvent> findPage(EventPageCriteria criteria);
+
+    CultivationEvent save(CultivationEvent event);
+
     Optional<CultivationEvent> findById(Long id);
+
+    Optional<CultivationEvent> findByClientEventId(String clientEventId);
 }

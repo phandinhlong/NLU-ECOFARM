@@ -17,17 +17,18 @@ import jakarta.ecofarm_backend.infrastructure.persistence.entity.BatchAssignment
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Greenhouse;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Variety;
-import jakarta.ecofarm_backend.infrastructure.persistence.repository.AuditLogRepository;
+import jakarta.ecofarm_backend.infrastructure.service.AuditLogService;
 import jakarta.ecofarm_backend.infrastructure.service.BatchService;
-import jakarta.ecofarm_backend.infrastructure.persistence.repository.GreenhouseRepository;
-import jakarta.ecofarm_backend.infrastructure.persistence.repository.VarietyRepository;
+import jakarta.ecofarm_backend.infrastructure.service.GreenhouseService;
 import jakarta.ecofarm_backend.infrastructure.service.UserService;
+import jakarta.ecofarm_backend.infrastructure.service.VarietyService;
 import jakarta.ecofarm_backend.infrastructure.security.UserSecurityDetailsPrincipal;
 import jakarta.ecofarm_backend.common.enums.BatchStatus;
 import jakarta.ecofarm_backend.common.dto.request.AssignWorkersRequest;
 import jakarta.ecofarm_backend.common.dto.response.BatchDetailResponse;
 import jakarta.ecofarm_backend.common.dto.response.BatchListItemResponse;
 import jakarta.ecofarm_backend.common.dto.request.CreateBatchRequest;
+import jakarta.ecofarm_backend.common.dto.request.UpdateBatchRequest;
 import jakarta.ecofarm_backend.common.dto.response.WorkerSummaryResponse;
 import jakarta.ecofarm_backend.modules.batch.facade.BatchFacade;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -59,16 +60,16 @@ public class BatchFacadeImpl implements BatchFacade {
     private BatchService batchService;
 
     @Inject
-    private GreenhouseRepository greenhouseRepository;
+    private GreenhouseService greenhouseService;
 
     @Inject
-    private VarietyRepository varietyRepository;
+    private VarietyService varietyService;
 
     @Inject
     private UserService userService;
 
     @Inject
-    private AuditLogRepository auditLogRepository;
+    private AuditLogService auditLogService;
 
     @Inject
     private CurrentUserUtil currentUser;
@@ -117,14 +118,14 @@ public class BatchFacadeImpl implements BatchFacade {
     public BaseResponse<BatchDetailResponse> createBatch(CreateBatchRequest request) {
         Long actorId = resolveActorId();
         String ipAddr = resolveClientIp();
-        User actor = requireEngineerOrAdmin(actorId);
+        User actor = requireEngineer(actorId);
 
-        Greenhouse greenhouse = greenhouseRepository.findById(request.getGreenhouseId());
+        Greenhouse greenhouse = greenhouseService.findById(request.getGreenhouseId());
         if (greenhouse == null) {
             throw new EntityNotFoundException(ErrorCode.GREENHOUSE_NOT_FOUND);
         }
 
-        Variety variety = varietyRepository.findById(request.getVarietyId());
+        Variety variety = varietyService.findById(request.getVarietyId());
         if (variety == null) {
             throw new EntityNotFoundException(ErrorCode.VARIETY_NOT_FOUND);
         }
@@ -145,9 +146,9 @@ public class BatchFacadeImpl implements BatchFacade {
                 .saltEnc(SECURE_RANDOM.nextLong())
                 .createdBy(actor)
                 .build();
-        batchService.persist(batch);
+        batchService.save(batch);
 
-        auditLogRepository.persist(buildAuditLog(AuditLogParam.builder()
+        auditLogService.persist(buildAuditLog(AuditLogParam.builder()
                 .actorId(actorId)
                 .action("BATCH_CREATE")
                 .entity("batches")
@@ -157,6 +158,79 @@ public class BatchFacadeImpl implements BatchFacade {
                 .build()));
 
         return BaseResponse.build(toDetail(batch));
+    }
+
+    @Override
+    @Transactional
+    public BaseResponse<BatchDetailResponse> updateBatch(Long batchId, UpdateBatchRequest request) {
+        Long actorId = resolveActorId();
+        String ipAddr = resolveClientIp();
+        requireEngineer(actorId);
+
+        Batch batch = batchService.findById(batchId);
+        if (batch == null) {
+            throw new EntityNotFoundException(ErrorCode.BATCH_NOT_FOUND);
+        }
+        if (statusOf(batch).isLocked()) {
+            throw new ConflictException(ErrorCode.BATCH_LOCKED);
+        }
+        if (request.getVersion() != null && !request.getVersion().equals(batch.getVersion())) {
+            throw new ConflictException(ErrorCode.VERSION_CONFLICT);
+        }
+
+        LocalDate sowDate;
+        try {
+            sowDate = LocalDate.parse(request.getSowDate());
+        } catch (DateTimeParseException e) {
+            throw new ConflictException(ErrorCode.INVALID_DATE);
+        }
+
+        batch.setSowDate(sowDate);
+        Batch updated = batchService.save(batch);
+
+        auditLogService.persist(buildAuditLog(AuditLogParam.builder()
+                .actorId(actorId)
+                .action("BATCH_UPDATE")
+                .entity("batches")
+                .entityId(batchId)
+                .detail(toJson(Map.of("sowDate", sowDate.toString())))
+                .ipAddr(ipAddr)
+                .build()));
+
+        return BaseResponse.build(toDetail(updated));
+    }
+
+    @Override
+    @Transactional
+    public BaseResponse<Boolean> deleteBatch(Long batchId) {
+        Long actorId = resolveActorId();
+        String ipAddr = resolveClientIp();
+        requireEngineer(actorId);
+
+        Batch batch = batchService.findById(batchId);
+        if (batch == null) {
+            throw new EntityNotFoundException(ErrorCode.BATCH_NOT_FOUND);
+        }
+        if (statusOf(batch) != BatchStatus.DRAFT) {
+            throw new ConflictException(ErrorCode.BATCH_LOCKED);
+        }
+        if (batchService.countEvents(batchId) > 0 || !batchService.findAssignments(batchId).isEmpty()) {
+            throw new ConflictException(ErrorCode.CATALOG_DELETE_LOCKED);
+        }
+
+        batch.setActive(false);
+        batchService.save(batch);
+
+        auditLogService.persist(buildAuditLog(AuditLogParam.builder()
+                .actorId(actorId)
+                .action("BATCH_DELETE")
+                .entity("batches")
+                .entityId(batchId)
+                .detail(toJson(Map.of("batchCode", batch.getBatchCode())))
+                .ipAddr(ipAddr)
+                .build()));
+
+        return BaseResponse.build(Boolean.TRUE);
     }
 
     @Override
@@ -190,7 +264,7 @@ public class BatchFacadeImpl implements BatchFacade {
     public BaseResponse<Boolean> addWorkers(Long batchId, AssignWorkersRequest request) {
         Long actorId = resolveActorId();
         String ipAddr = resolveClientIp();
-        requireEngineerOrAdmin(actorId);
+        requireEngineer(actorId);
 
         Batch batch = batchService.findById(batchId);
         if (batch == null) {
@@ -222,11 +296,11 @@ public class BatchFacadeImpl implements BatchFacade {
 
         List<Long> added = new ArrayList<>();
         for (User worker : toAdd) {
-            batchService.persistAssignment(BatchAssignment.builder().batch(batch).assignee(worker).build());
+            batchService.persistAssignment(BatchAssignment.builder().batch(batch).assignee(worker).assignedBy(requireActor(actorId)).build());
             added.add(worker.getId());
         }
 
-        auditLogRepository.persist(buildAuditLog(AuditLogParam.builder()
+        auditLogService.persist(buildAuditLog(AuditLogParam.builder()
                 .actorId(actorId)
                 .action("BATCH_ADD_WORKERS")
                 .entity("batches")
@@ -243,7 +317,7 @@ public class BatchFacadeImpl implements BatchFacade {
     public BaseResponse<Boolean> removeWorkers(Long batchId, AssignWorkersRequest request) {
         Long actorId = resolveActorId();
         String ipAddr = resolveClientIp();
-        requireEngineerOrAdmin(actorId);
+        requireEngineer(actorId);
 
         Batch batch = batchService.findById(batchId);
         if (batch == null) {
@@ -256,7 +330,7 @@ public class BatchFacadeImpl implements BatchFacade {
         List<Long> userIds = request.getUserIds() == null ? List.of() : request.getUserIds().stream().distinct().toList();
         batchService.removeAssignments(batchId, userIds);
 
-        auditLogRepository.persist(buildAuditLog(AuditLogParam.builder()
+        auditLogService.persist(buildAuditLog(AuditLogParam.builder()
                 .actorId(actorId)
                 .action("BATCH_REMOVE_WORKERS")
                 .entity("batches")
@@ -273,7 +347,6 @@ public class BatchFacadeImpl implements BatchFacade {
         Variety variety = batch.getVariety();
         BatchStatus status = statusOf(batch);
         Long pollinationDate = batchService.findPollinationDate(batch.getId());
-        List<BatchAssignment> assignments = batchService.findAssignments(batch.getId());
 
         return BatchDetailResponse.builder()
                 .id(batch.getId())
@@ -292,7 +365,7 @@ public class BatchFacadeImpl implements BatchFacade {
                 .expectedHarvestDate(expectedHarvestDate(variety, pollinationDate))
                 .createdBy(batch.getCreatedBy() == null ? null : batch.getCreatedBy().getId())
                 .activatedAt(toLocalDateTime(batch.getActivatedAt()))
-                .workerCount((long) assignments.size())
+                .workerCount(batchService.countAssignmentsByBatchIds(List.of(batch.getId())).getOrDefault(batch.getId(), 0L))
                 .eventCount(batchService.countEvents(batch.getId()))
                 .assignedUsers(assignments.stream().map(BatchAssignment::getAssignee).map(this::toWorker).toList())
                 .version(batch.getVersion())
@@ -358,9 +431,9 @@ public class BatchFacadeImpl implements BatchFacade {
                 .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND));
     }
 
-    private User requireEngineerOrAdmin(Long actorId) {
+    private User requireEngineer(Long actorId) {
         User actor = requireActor(actorId);
-        if (!hasRole(actor, RoleEnum.ENGINEER) && !hasRole(actor, RoleEnum.ADMIN)) {
+        if (!hasRole(actor, RoleEnum.ENGINEER)) {
             throw new PermissionDeniedException(ErrorCode.PERMISSION_DENIED);
         }
         return actor;

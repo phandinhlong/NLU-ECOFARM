@@ -1,7 +1,8 @@
 package jakarta.ecofarm_backend.common.dto.response;
 
 import java.time.LocalDateTime;
-import java.util.List;
+
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,9 +18,11 @@ public class BatchDetailResponse {
     private String batchCode;
     private String status;
     private Boolean locked;
+    @Positive
     private Long greenhouseId;
     private String greenhouseCode;
     private String greenhouseName;
+    @Positive
     private Long varietyId;
     private String varietyName;
     private Integer daysPollinationToHarvest;
@@ -29,9 +32,11 @@ public class BatchDetailResponse {
     private String expectedHarvestDate;
     private Long createdBy;
     private LocalDateTime activatedAt;
+    @Positive
     private Long workerCount;
+    @Positive
     private Long eventCount;
-    private List<WorkerSummaryResponse> assignedUsers;
+    @Positive
     private Long version;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

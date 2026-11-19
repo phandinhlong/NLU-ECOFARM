@@ -23,6 +23,7 @@ declare module 'vue' {
     BModal: typeof import('bootstrap-vue-next/components/BModal')['BModal']
     BrandHeader: typeof import('./src/components/common/BrandHeader.vue')['default']
     BSpinner: typeof import('bootstrap-vue-next/components/BSpinner')['BSpinner']
+    EventTimeline: typeof import('./src/components/batch/EventTimeline.vue')['default']
     LoginForm: typeof import('./src/components/auth/LoginForm.vue')['default']
     MerkleDetailsModal: typeof import('./src/components/batch/MerkleDetailsModal.vue')['default']
     PageHeader: typeof import('./src/components/common/PageHeader.vue')['default']
@@ -33,6 +34,9 @@ declare module 'vue' {
     Sidebar: typeof import('./src/components/common/Sidebar.vue')['default']
     SoftBadge: typeof import('./src/components/common/SoftBadge.vue')['default']
     StickerPreview: typeof import('./src/components/batch/StickerPreview.vue')['default']
+    TaskCompleteModal: typeof import('./src/components/batch/TaskCompleteModal.vue')['default']
+    TaskCreateModal: typeof import('./src/components/batch/TaskCreateModal.vue')['default']
+    TaskList: typeof import('./src/components/batch/TaskList.vue')['default']
     VietGapModal: typeof import('./src/components/batch/VietGapModal.vue')['default']
   }
 }

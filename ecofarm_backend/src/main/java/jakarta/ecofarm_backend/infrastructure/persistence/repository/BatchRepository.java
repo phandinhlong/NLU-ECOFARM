@@ -16,9 +16,7 @@ public interface BatchRepository {
 
     Batch findByBatchCode(String batchCode);
 
-    Batch merge(Batch batch);
-
-    void persist(Batch batch);
+    Batch save(Batch batch);
 
     Boolean existsByBatchCode(String batchCode);
 
