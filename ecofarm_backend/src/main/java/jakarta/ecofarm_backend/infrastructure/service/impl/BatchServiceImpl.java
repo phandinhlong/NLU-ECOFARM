@@ -34,13 +34,8 @@ public class BatchServiceImpl implements BatchService {
     }
 
     @Override
-    public Batch merge(Batch batch) {
-        return this.batchRepository.merge(batch);
-    }
-
-    @Override
-    public void persist(Batch batch) {
-        this.batchRepository.persist(batch);
+    public Batch save(Batch batch) {
+        return this.batchRepository.save(batch);
     }
 
     @Override

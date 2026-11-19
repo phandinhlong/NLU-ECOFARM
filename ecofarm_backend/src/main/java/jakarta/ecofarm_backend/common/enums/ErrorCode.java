@@ -35,6 +35,16 @@ public enum ErrorCode {
     BATCH_NOT_ASSIGNED(2011, "You are not assigned to this batch"),
     VARIETY_NOT_FOUND(2012, "Variety not found"),
     INVALID_WORKER(2013, "Invalid worker"),
+    EVENT_NOT_FOUND(4001, "Event not found"),
+    EVENT_SCHEMA_INVALID(4002, "Event data is invalid"),
+    EVENT_ORDER_INVALID(4003, "Event order is invalid"),
+    EVENT_ALREADY_REVIEWED(4004, "Event has already been reviewed"),
+    EVENT_ALREADY_SUPERSEDED(4005, "Event has already been amended"),
+    WORKER_INVALID_ROLE(4006, "Worker role is invalid"),
+    WORKER_NOT_ASSIGNED(4007, "Worker is not assigned to this batch"),
+    EVENT_APPROVER_NOT_ASSIGNED(4008, "You are not the assigned approver"),
+    TASK_NOT_FOUND(4009, "Task not found"),
+    TASK_ALREADY_COMPLETED(4010, "Task is already completed or cancelled"),
     QC_SAMPLE_COUNT_INVALID(2014, "Độ Brix và cân nặng phải nhập đúng 5 mẫu"),
     QC_SAMPLE_VALUE_INVALID(2015, "Giá trị mẫu Brix hoặc cân nặng không hợp lệ"),
     QC_ISOLATION_NOT_MET(2016, "Thời gian cách ly chưa đủ; không thể đánh giá đạt"),
@@ -45,9 +55,7 @@ public enum ErrorCode {
     QC_ALREADY_SUPERSEDED(2021, "Bản ghi QC này đã bị thay thế hoặc đã được xử lý"),
     PRE_HARVEST_QC_REQUIRED(2028, "Lô chưa đạt kiểm định chất lượng trước thu hoạch; không được phép thu hoạch"),
     ANCHOR_NOT_FOUND(3001, "Anchor not found"),
-    ANCHOR_NOT_RETRYABLE(3002, "Anchor is not in FAILED state; cannot retry"),
-    SNAPSHOT_NOT_FOUND(3003, "Merkle snapshot not found for this batch");
-
+    ANCHOR_NOT_RETRYABLE(3002, "Anchor is not in FAILED state; cannot retry");
 
     private final Integer code;
     private final String message;

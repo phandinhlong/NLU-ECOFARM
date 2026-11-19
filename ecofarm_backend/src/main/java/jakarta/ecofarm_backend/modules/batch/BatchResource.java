@@ -11,9 +11,10 @@ import jakarta.ecofarm_backend.common.dto.request.RecordQcRequest;
 import jakarta.ecofarm_backend.common.dto.request.ReviewQcRequest;
 import jakarta.ecofarm_backend.common.dto.response.BatchDetailResponse;
 import jakarta.ecofarm_backend.common.dto.response.BatchListItemResponse;
-import jakarta.ecofarm_backend.common.dto.response.HarvestResponse;
-import jakarta.ecofarm_backend.common.dto.response.QcResponse;
+import jakarta.ecofarm_backend.common.dto.request.CreateBatchRequest;
+import jakarta.ecofarm_backend.common.dto.request.UpdateBatchRequest;
 import jakarta.ecofarm_backend.common.dto.response.WorkerSummaryResponse;
+import jakarta.ecofarm_backend.common.enums.RoleEnum;
 import jakarta.ecofarm_backend.modules.batch.facade.BatchFacade;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -22,6 +23,7 @@ import jakarta.ws.rs.BeanParam;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -33,7 +35,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 @Path("/v1/batches")
 @Tag(name = "Batch", description = "Quản lý lô canh tác")
-@RequireRoles(value = {"ADMIN", "ENGINEER", "QUALITY_CONTROL"})
+@RequireRoles({"ENGINEER"})
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class BatchResource {
@@ -42,6 +44,7 @@ public class BatchResource {
     private BatchFacade batchFacade;
 
     @GET
+    @RequireRoles({"ENGINEER", "FARMER"})
     public BaseResponse<CursorPageResponse<BatchListItemResponse>> findBatchesByCriteria(@BeanParam PageCriteria criteria) {
         return batchFacade.findBatchesByCriteria(criteria);
     }
@@ -54,12 +57,14 @@ public class BatchResource {
 
     @GET
     @Path("/{id}")
+    @RequireRoles({"ENGINEER", "FARMER"})
     public BaseResponse<BatchDetailResponse> findBatchDetail(@PathParam("id") Long id) {
         return batchFacade.findBatchDetail(id);
     }
 
     @GET
     @Path("/{id}/workers")
+    @RequireRoles({"ENGINEER", "FARMER"})
     public BaseResponse<CursorPageResponse<WorkerSummaryResponse>> findAssignedWorkersByBatchId(@PathParam("id") Long id, @QueryParam("lastIndex") Long lastIndex) {
         return batchFacade.findAssignedWorkersByBatchId(id, lastIndex);
     }
@@ -79,6 +84,18 @@ public class BatchResource {
     @POST
     public Response createBatch(@Valid CreateBatchRequest request) {
         return Response.status(Response.Status.CREATED).entity(batchFacade.createBatch(request)).build();
+    }
+
+    @PATCH
+    @Path("/{id}")
+    public BaseResponse<BatchDetailResponse> updateBatch(@PathParam("id") @Positive Long id, @Valid UpdateBatchRequest request) {
+        return batchFacade.updateBatch(id, request);
+    }
+
+    @DELETE
+    @Path("/{id}")
+    public BaseResponse<Boolean> deleteBatch(@PathParam("id") @Positive Long id) {
+        return batchFacade.deleteBatch(id);
     }
 
     @POST

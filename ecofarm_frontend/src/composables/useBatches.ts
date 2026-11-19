@@ -9,6 +9,12 @@ export const useBatchQuery = (id: Ref<number>) =>
     queryFn: () => batchService.getBatch(id.value),
   })
 
+export const useMyBatchesQuery = () =>
+  useQuery({
+    queryKey: ['batches', 'mine'],
+    queryFn: () => batchService.listBatches({ mine: true }),
+  })
+
 export const useBatchLookupQuery = () =>
   useQuery({
     queryKey: ['batch-lookups'],
