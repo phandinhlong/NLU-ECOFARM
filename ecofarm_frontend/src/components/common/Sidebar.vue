@@ -10,7 +10,10 @@ const canManageCatalog = computed(() => roles.value.includes('ADMIN'))
 const navSections = computed(() => {
   const businessSection = {
     title: 'Nghiệp vụ',
-    items: [{ label: 'Kích hoạt lô & In tem', to: '/batch-activation' }],
+    items: [
+      { label: 'Kích hoạt lô & In tem', to: '/batch-activation' },
+      { label: 'Kiểm định & Thu hoạch', to: '/qc-harvest' },
+    ],
   }
 
   if (!canManageCatalog.value) return [businessSection]

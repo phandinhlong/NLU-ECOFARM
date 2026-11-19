@@ -103,6 +103,18 @@ const router = createRouter({
           meta: { title: 'Kích hoạt lô & In tem' },
         },
         {
+          path: 'qc-harvest',
+          name: 'qc-harvest',
+          component: () => import('@/views/qc/QcHarvestView.vue'),
+          meta: { title: 'Kiểm định chất lượng & Thu hoạch' },
+        },
+        {
+          path: 'batches/:id/qc',
+          name: 'batch-qc',
+          component: () => import('@/views/qc/QcHarvestView.vue'),
+          meta: { title: 'Kiểm định chất lượng & Thu hoạch' },
+        },
+        {
           path: 'batches',
           name: 'batches',
           component: () => import('@/views/batches/BatchListView.vue'),
