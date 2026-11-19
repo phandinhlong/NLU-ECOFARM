@@ -272,6 +272,11 @@ export interface BatchCreateInput {
   sowDate: string
 }
 
+export interface BatchUpdateInput {
+  sowDate: string
+  version?: number
+}
+
 export interface BatchListParams {
   lastIndex?: number
   status?: BatchStatus

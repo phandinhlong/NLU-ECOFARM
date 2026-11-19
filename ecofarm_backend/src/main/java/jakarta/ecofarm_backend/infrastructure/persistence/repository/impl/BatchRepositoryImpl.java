@@ -26,7 +26,7 @@ public class BatchRepositoryImpl implements BatchRepository {
         criteria.getGreenhouseFilter().ifPresent(value -> jpql.append(" AND b.greenhouse.id = :greenhouseId"));
         criteria.getBatchCodeKeywordFilter().ifPresent(value -> jpql.append(" AND LOWER(b.batchCode) LIKE :batchCodeKeyword"));
         criteria.getMineUserFilter().ifPresent(value ->
-                jpql.append(" AND EXISTS (SELECT a FROM BatchAssignment a WHERE a.batch = b AND a.user.id = :mineUserId)"));
+                jpql.append(" AND EXISTS (SELECT a FROM BatchAssignment a WHERE a.batch = b AND a.assignee.id = :mineUserId AND (a.isActive IS NULL OR a.isActive = true))"));
     }
 
     private void bindFilters(TypedQuery<?> query, PageCriteria criteria) {
@@ -142,6 +142,7 @@ public class BatchRepositoryImpl implements BatchRepository {
                 SELECT DISTINCT a FROM BatchAssignment a
                 JOIN FETCH a.assignee
                 LEFT JOIN FETCH a.assignee.roles
+                LEFT JOIN FETCH a.assigner
                 WHERE a.batch.id = :batchId AND (a.isActive IS NULL OR a.isActive = true)
                 ORDER BY a.id
                 """, BatchAssignment.class)
@@ -211,7 +212,7 @@ public class BatchRepositoryImpl implements BatchRepository {
             return;
         }
         findAssignments(batchId).stream()
-                .filter(a -> userIds.contains(a.getUser().getId()))
+                .filter(a -> userIds.contains(a.getAssignee().getId()))
                 .forEach(a -> a.setActive(false));
     }
 

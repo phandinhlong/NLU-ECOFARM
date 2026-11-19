@@ -13,12 +13,12 @@ import java.math.BigDecimal;
 @Getter
 @ToString
 public class GreenhouseRequest {
-    @NotBlank(message = "Mã nhà màng không được trống")
-    @Size(max = 32, message = "Mã nhà màng tối đa 32 ký tự")
+    @NotBlank(message = "Greenhouse code must not be blank")
+    @Size(max = 32, message = "Greenhouse code must be at most 32 characters")
     private String code;
 
-    @NotBlank(message = "Tên nhà màng không được trống")
-    @Size(max = 128, message = "Tên nhà màng tối đa 128 ký tự")
+    @NotBlank(message = "Greenhouse name must not be blank")
+    @Size(max = 128, message = "Greenhouse name must be at most 128 characters")
     private String name;
 
     @DecimalMin(value = "-90", message = "Vĩ độ tối thiểu là -90")

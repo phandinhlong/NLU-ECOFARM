@@ -19,6 +19,6 @@ public class CompleteTaskRequest {
     @NotBlank
     private String occurredAt;
 
-    @Size(max = 50, message = "Dữ liệu sự kiện tối đa 50 trường")
+    @Size(max = 50, message = "Event data must have at most 50 fields")
     private Map<String, Object> data;
 }

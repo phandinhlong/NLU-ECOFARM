@@ -16,7 +16,7 @@ import java.util.Map;
 public class CreateEventRequest {
 
     @NotBlank
-    @Size(max = 64, message = "clientEventId tối đa 64 ký tự")
+    @Size(max = 64, message = "clientEventId must be at most 64 characters")
     private String clientEventId;
 
     @NotNull
@@ -27,6 +27,6 @@ public class CreateEventRequest {
     @NotBlank
     private String occurredAt;
 
-    @Size(max = 50, message = "Dữ liệu sự kiện tối đa 50 trường")
+    @Size(max = 50, message = "Event data must have at most 50 fields")
     private Map<String, Object> data;
 }

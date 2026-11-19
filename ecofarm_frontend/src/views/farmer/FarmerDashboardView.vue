@@ -23,8 +23,11 @@ const openBatch = (batch: Batch) => {
       <SoftBadge variant="info" :label="`${batches.length} lô`" />
     </div>
 
-    <div v-if="isLoading" class="d-flex justify-content-center py-5">
-      <BSpinner />
+    <div v-if="isLoading" class="d-flex flex-column gap-2 py-3">
+      <span class="placeholder placeholder-glow col-8 rounded" style="height: 20px"></span>
+      <span class="placeholder placeholder-glow col-12 rounded" style="height: 14px"></span>
+      <span class="placeholder placeholder-glow col-10 rounded" style="height: 14px"></span>
+      <span class="placeholder placeholder-glow col-6 rounded" style="height: 14px"></span>
     </div>
 
     <BAlert v-else-if="isError" variant="danger" class="d-flex gap-2 align-items-center">

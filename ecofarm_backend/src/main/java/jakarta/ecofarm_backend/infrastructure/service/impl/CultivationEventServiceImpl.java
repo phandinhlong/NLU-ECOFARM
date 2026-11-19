@@ -1,6 +1,7 @@
 package jakarta.ecofarm_backend.infrastructure.service.impl;
 
 import jakarta.ecofarm_backend.common.dto.request.EventPageCriteria;
+import jakarta.ecofarm_backend.common.enums.EventReviewStatus;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.CultivationEvent;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.CultivationEventRepository;
 import jakarta.ecofarm_backend.infrastructure.service.CultivationEventService;
@@ -32,13 +33,18 @@ public class CultivationEventServiceImpl implements CultivationEventService {
     }
 
     @Override
-    public CultivationEvent save(CultivationEvent event) {
-        return this.cultivationEventRepository.save(event);
+    public List<CultivationEvent> findReviewPage(Long greenhouseId, EventPageCriteria criteria) {
+        return this.cultivationEventRepository.findReviewPage(greenhouseId, criteria);
     }
 
     @Override
-    public Optional<CultivationEvent> findById(Long id) {
-        return this.cultivationEventRepository.findById(id);
+    public Long countReviewPage(Long greenhouseId, EventReviewStatus reviewStatus) {
+        return this.cultivationEventRepository.countReviewPage(greenhouseId, reviewStatus);
+    }
+
+    @Override
+    public CultivationEvent save(CultivationEvent event) {
+        return this.cultivationEventRepository.save(event);
     }
 
     @Override

@@ -1,5 +1,7 @@
 package jakarta.ecofarm_backend.infrastructure.persistence.repository.impl;
 
+import jakarta.ecofarm_backend.common.dto.request.BaseCriteria;
+import jakarta.ecofarm_backend.common.dto.request.UserCriteria;
 import jakarta.ecofarm_backend.common.enums.RoleEnum;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.User;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.UserRepository;
@@ -95,5 +97,40 @@ public class UserRepositoryImpl implements UserRepository {
                 .setParameter("lastIndex", lastIndex);
         query.setMaxResults(limit);
         return query.getResultList();
+    }
+
+    @Override
+    public List<User> findPage(UserCriteria criteria) {
+        StringBuilder jpql = new StringBuilder("""
+                SELECT DISTINCT u FROM User u
+                LEFT JOIN FETCH u.roles
+                WHERE u.isActive = true
+                """);
+
+        RoleEnum role = criteria.getRoleFilter().map(this::parseRole).orElse(null);
+        if (role != null) {
+            jpql.append(" AND EXISTS (SELECT r FROM Role r WHERE r MEMBER OF u.roles AND r.roleName = :role)");
+        }
+        criteria.getKeywordFilter().ifPresent(value ->
+                jpql.append(" AND (LOWER(u.fullName) LIKE :keyword OR LOWER(u.email) LIKE :keyword)"));
+        jpql.append(" AND (:lastId IS NULL OR u.id < :lastId) ORDER BY u.id DESC");
+
+        TypedQuery<User> query = this.entityManager.createQuery(jpql.toString(), User.class);
+        if (role != null) {
+            query.setParameter("role", role);
+        }
+        criteria.getKeywordFilter().ifPresent(value ->
+                query.setParameter("keyword", "%" + value.trim().toLowerCase() + "%"));
+        query.setParameter("lastId", criteria.getLastIdFilter().orElse(null));
+        query.setMaxResults(BaseCriteria.LENGTH + 1);
+        return query.getResultList();
+    }
+
+    private RoleEnum parseRole(String value) {
+        try {
+            return RoleEnum.valueOf(value.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }

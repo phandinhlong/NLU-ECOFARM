@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SoftBadge from '@/components/common/SoftBadge.vue'
 import TaskList from '@/components/batch/TaskList.vue'
@@ -22,6 +22,9 @@ const problem = computed(() => error.value as (Error & { status?: number } & Par
 const errorStatus = computed(() => problem.value?.status ?? 0)
 const locked = computed(() => data.value?.locked ?? false)
 const statusMeta = computed(() => (data.value ? STATUS_META[data.value.status] : null))
+
+const logOpen = ref(true)
+const tasksOpen = ref(true)
 </script>
 
 <template>
@@ -30,8 +33,11 @@ const statusMeta = computed(() => (data.value ? STATUS_META[data.value.status] :
       <FontAwesomeIcon icon="arrow-left" aria-hidden="true" /> Lô của tôi
     </RouterLink>
 
-    <div v-if="isLoading" class="d-flex justify-content-center py-5">
-      <BSpinner />
+    <div v-if="isLoading" class="d-flex flex-column gap-2 py-3">
+      <span class="placeholder placeholder-glow col-8 rounded" style="height: 20px"></span>
+      <span class="placeholder placeholder-glow col-12 rounded" style="height: 14px"></span>
+      <span class="placeholder placeholder-glow col-10 rounded" style="height: 14px"></span>
+      <span class="placeholder placeholder-glow col-6 rounded" style="height: 14px"></span>
     </div>
 
     <template v-else-if="isError">
@@ -99,7 +105,18 @@ const statusMeta = computed(() => (data.value ? STATUS_META[data.value.status] :
 
       <section class="border rounded-3 bg-body p-3">
         <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
-          <p class="fw-semibold mb-0"><FontAwesomeIcon icon="clock-rotate-left" aria-hidden="true" /> Nhật ký canh tác</p>
+          <p class="fw-semibold mb-0">
+            <FontAwesomeIcon icon="clock-rotate-left" aria-hidden="true" /> Nhật ký canh tác
+            <BButton
+              size="sm"
+              variant="link"
+              class="p-0 ms-1 text-body-secondary"
+              :aria-label="logOpen ? 'Thu gọn nhật ký' : 'Mở rộng nhật ký'"
+              @click="logOpen = !logOpen"
+            >
+              <FontAwesomeIcon :icon="logOpen ? 'chevron-up' : 'chevron-down'" aria-hidden="true" />
+            </BButton>
+          </p>
           <BButton
             v-if="isFarmer && !locked"
             size="sm"
@@ -109,10 +126,39 @@ const statusMeta = computed(() => (data.value ? STATUS_META[data.value.status] :
             <FontAwesomeIcon icon="plus" aria-hidden="true" /> Ghi nhật ký
           </BButton>
         </div>
-        <EventTimeline :batch-id="id" />
-        <p class="fw-semibold mt-3 mb-2">Công việc</p>
-        <TaskList :batch-id="id" :is-engineer="false" :is-farmer="isFarmer" :locked="locked" :workers="[]" />
+        <div v-show="logOpen" class="log-scroll">
+          <EventTimeline :batch-id="id" />
+        </div>
+      </section>
+
+      <section class="border rounded-3 bg-body p-3 mb-3">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
+          <p class="fw-semibold mb-0">
+            <FontAwesomeIcon icon="list-check" aria-hidden="true" /> Công việc
+            <BButton
+              size="sm"
+              variant="link"
+              class="p-0 ms-1 text-body-secondary"
+              :aria-label="tasksOpen ? 'Thu gọn công việc' : 'Mở rộng công việc'"
+              @click="tasksOpen = !tasksOpen"
+            >
+              <FontAwesomeIcon :icon="tasksOpen ? 'chevron-up' : 'chevron-down'" aria-hidden="true" />
+            </BButton>
+          </p>
+        </div>
+        <div v-show="tasksOpen" class="log-scroll">
+          <TaskList :batch-id="id" :is-engineer="false" :is-farmer="isFarmer" :locked="locked" :workers="[]" />
+        </div>
       </section>
     </template>
   </div>
 </template>
+
+<style scoped>
+@media (min-width: 992px) {
+  .log-scroll {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+}
+</style>
