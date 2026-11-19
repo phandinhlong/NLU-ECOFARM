@@ -14,7 +14,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 @Path("/v1/certificates")
-@RequireRoles({"ADMIN"})
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class CertificateResource {
@@ -23,17 +22,20 @@ public class CertificateResource {
     private CertificateFacade certificateFacade;
 
     @GET
+    @RequireRoles({"ADMIN", "ENGINEER", "FARMER", "PACKER", "QUALITY_CONTROL", "USER"})
     public BaseResponse<CursorPageResponse<CertificateResponse>> findCertificates(@BeanParam CertificateCriteria criteria) {
         return certificateFacade.findCertificates(criteria);
     }
 
     @GET
     @Path("/statistics")
+    @RequireRoles({"ADMIN", "ENGINEER", "FARMER", "PACKER", "QUALITY_CONTROL", "USER"})
     public BaseResponse<Long> countCertificates(@BeanParam CertificateCriteria criteria) {
         return certificateFacade.countCertificates(criteria);
     }
 
     @POST
+    @RequireRoles({"ADMIN", "ENGINEER"})
     public Response createCertificate(@Valid CertificateRequest request) {
         return Response.status(Response.Status.CREATED)
                 .entity(certificateFacade.createCertificate(request))
@@ -42,6 +44,7 @@ public class CertificateResource {
 
     @PUT
     @Path("/{id}")
+    @RequireRoles({"ADMIN", "ENGINEER"})
     public BaseResponse<CertificateResponse> updateCertificate(@PathParam("id") Long id, @Valid CertificateRequest request) {
         return certificateFacade.updateCertificate(id, request);
     }

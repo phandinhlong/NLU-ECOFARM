@@ -1,5 +1,6 @@
 package jakarta.ecofarm_backend.infrastructure.service.impl;
 
+import jakarta.ecofarm_backend.common.dto.response.PageResponse;
 import jakarta.ecofarm_backend.infrastructure.persistence.entity.Anchor;
 import jakarta.ecofarm_backend.infrastructure.persistence.repository.AnchorRepository;
 import jakarta.ecofarm_backend.infrastructure.service.AnchorService;
@@ -30,8 +31,10 @@ public class AnchorServiceImpl implements AnchorService {
     }
 
     @Override
-    public List<Anchor> findAll() {
-        return this.anchorRepository.findAll();
+    public PageResponse<Anchor> findPage(int page, int size) {
+        List<Anchor> content = this.anchorRepository.findPage(page, size);
+        long total = this.anchorRepository.count();
+        return new PageResponse<>(content, page, size, total);
     }
 
     @Override

@@ -5,45 +5,63 @@ import { useUserStore } from '@/stores'
 const userStore = useUserStore()
 
 const roles = computed(() => userStore.user?.role ?? [])
-const canManageCatalog = computed(() => roles.value.includes('ADMIN'))
-const canReview = computed(() => roles.value.includes('ENGINEER') || roles.value.includes('ADMIN'))
+const isAdmin = computed(() => roles.value.includes('ADMIN'))
+const isEngineer = computed(() => roles.value.includes('ENGINEER'))
+const isPacker = computed(() => roles.value.includes('PACKER'))
+const isQc = computed(() => roles.value.includes('QUALITY_CONTROL'))
+
+const canViewDashboard = computed(() => isAdmin.value || isEngineer.value)
+const canManageBatches = computed(() => isEngineer.value || isAdmin.value)
+const canManageCatalog = computed(() => isAdmin.value || isEngineer.value)
+const canReviewEvents = computed(() => isEngineer.value || isAdmin.value)
+const canQcHarvest = computed(() => isEngineer.value || isAdmin.value || isQc.value)
+const canPack = computed(() => isPacker.value || isEngineer.value || isAdmin.value)
 
 const navSections = computed(() => {
-  const businessSection = {
-    title: 'Nghiệp vụ',
-    items: [
-      { label: 'Kích hoạt lô & In tem', to: '/batch-activation' },
-      ...(canReview.value ? [{ label: 'Duyệt nhật ký', to: '/events/review' }] : []),
-    ],
-  }
+  const sections = []
 
-  if (!canManageCatalog.value) return [businessSection]
-
-  return [
-    {
+  if (canViewDashboard.value || canManageBatches.value) {
+    sections.push({
       title: 'Tổng quan',
       items: [
-        { label: 'Tổng quan', to: '/dashboard' },
-        { label: 'Quản lý lô dưa', to: '/batches' }, 
+        ...(canViewDashboard.value ? [{ label: 'Tổng quan', to: '/dashboard' }] : []),
+        ...(canManageBatches.value ? [{ label: 'Quản lý lô dưa', to: '/batches' }] : []),
       ],
-    },
-    {
+    })
+  }
+
+  if (canManageCatalog.value) {
+    sections.push({
       title: 'Quản lý danh mục',
       items: [
         { label: 'Nhà màng', to: '/greenhouses' },
         { label: 'Giống dưa', to: '/varieties' },
         { label: 'Chứng nhận VietGAP', to: '/certificates' },
       ],
-    },
-    businessSection,
+    })
+  }
+
+  const businessItems = [
+    ...(canPack.value ? [{ label: 'Kích hoạt lô & In tem', to: '/batch-activation' }] : []),
+    ...(canReviewEvents.value ? [{ label: 'Duyệt nhật ký', to: '/events/review' }] : []),
+    ...(canQcHarvest.value ? [{ label: 'Kiểm định & Thu hoạch', to: '/qc-harvest' }] : []),
   ]
+
+  if (businessItems.length > 0) {
+    sections.push({
+      title: 'Nghiệp vụ',
+      items: businessItems,
+    })
+  }
+
+  return sections
 })
 </script>
 
 <template>
   <aside class="ef-sidebar flex-shrink-0 bg-body border-end d-flex flex-column">
     <RouterLink
-      :to="canManageCatalog ? '/dashboard' : '/batch-activation'"
+      :to="canViewDashboard ? '/dashboard' : canPack ? '/batch-activation' : '/qc-harvest'"
       class="d-flex align-items-center gap-2 px-3 py-3 border-bottom text-decoration-none"
     >
       <span
@@ -75,7 +93,7 @@ const navSections = computed(() => {
         </RouterLink>
       </template>
 
-      <template v-if="canManageCatalog">
+      <template v-if="isAdmin">
         <p class="ef-nav-title mb-0 px-2 pt-3 pb-1 text-uppercase fw-bold text-body-secondary">
           Quản trị
         </p>

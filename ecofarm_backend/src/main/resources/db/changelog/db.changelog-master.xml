@@ -18,5 +18,6 @@
     <include file="/db/changes/003-packaging-schema.sql"/>
     <include file="db/changes/006-event-log-schema.sql"/>
     <include file="db/changes/007-event-type-rename.sql"/>
+    <include file="db/changes/008-qc-records-schema.sql"/>
 
 </databaseChangeLog>

@@ -38,8 +38,18 @@ public class AnchorRepositoryImpl implements AnchorRepository {
         }
     }
 
-    public List<Anchor> findAll() {
-        return em.createQuery("select a from Anchor a", Anchor.class).getResultList();
+    @Override
+    public List<Anchor> findPage(int page, int size) {
+        return em.createQuery("select a from Anchor a order by a.id desc", Anchor.class)
+                .setFirstResult(page * size)
+                .setMaxResults(size)
+                .getResultList();
+    }
+
+    @Override
+    public long count() {
+        return em.createQuery("select count(a) from Anchor a", Long.class)
+                .getSingleResult();
     }
 
     public List<Anchor> findBySnapshotId(Long snapshotId) {

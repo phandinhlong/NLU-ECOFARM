@@ -1,6 +1,7 @@
 package jakarta.ecofarm_backend.infrastructure.service.impl;
 
 import jakarta.ecofarm_backend.common.dto.request.RecallRequest;
+import jakarta.ecofarm_backend.common.dto.response.PageResponse;
 import jakarta.ecofarm_backend.common.dto.response.PrivateChainStatus;
 import jakarta.ecofarm_backend.common.dto.response.ProofBundle;
 import jakarta.ecofarm_backend.common.dto.response.PublicChainStatus;
@@ -67,8 +68,8 @@ public class BlockchainServiceImpl implements BlockchainService {
     private BlockchainConfig config;
 
     @Override
-    public List<Anchor> getAllAnchors() {
-        return anchorService.findAll();
+    public PageResponse<Anchor> getAllAnchors(int page, int size) {
+        return anchorService.findPage(page, size);
     }
 
     @Override
@@ -275,5 +276,35 @@ public class BlockchainServiceImpl implements BlockchainService {
         result.put("elapsedMs", elapsed);
         result.put("message", "processOutbox() executed manually");
         return result;
+    }
+
+    @Override
+    public Anchor anchorToPolygon(Long batchId) {
+        MerkleSnapshot snapshot = Optional.ofNullable(snapshotService.findByBatchId(batchId))
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.ANCHOR_NOT_FOUND));
+        Anchor anchor = Anchor.builder()
+                .chainId(config.getPublicChainId())
+                .status(AnchorStatus.PENDING.name())
+                .confirmations(0)
+                .build();
+        anchorService.persist(anchor);
+        try {
+            String txHash = polygonClient.sendTransaction(snapshot.getMerkleRoot());
+            AnchorStatus current = AnchorStatus.fromString(anchor.getStatus());
+            anchor.setStatus(current.fire(AnchorEvent.SUBMIT).name());
+            anchor.setTxHash(txHash);
+            anchor.setBlockNumber(polygonClient.getCurrentBlockNumber());
+            anchor.setExplorerUrl("https://amoy.polygonscan.com/tx/" + txHash);
+            anchor.setAnchoredAt(System.currentTimeMillis());
+            anchorService.persist(anchor);
+        } catch (Exception e) {
+            AnchorStatus current = AnchorStatus.fromString(anchor.getStatus());
+            if (current.canFire(AnchorEvent.FAIL)) {
+                anchor.setStatus(current.fire(AnchorEvent.FAIL).name());
+            }
+            anchorService.persist(anchor);
+            throw new RuntimeException("Không thể neo lên Polygon: " + e.getMessage(), e);
+        }
+        return anchor;
     }
 }

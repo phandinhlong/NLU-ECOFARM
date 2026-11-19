@@ -23,7 +23,6 @@ import java.security.Principal;
 
 @Path("/v1/batches")
 @Tag(name = "Packaging", description = "Kích hoạt lô, sinh mã QR và xuất tem in")
-@RequireRoles(value = {"ADMIN", "PACKER", "FARMER", "QUALITY_CONTROL"})
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class PackagingResource {
@@ -39,6 +38,7 @@ public class PackagingResource {
 
     @POST
     @Path("/{batchId}/activate")
+    @RequireRoles({"PACKER", "ENGINEER", "ADMIN"})
     @Operation(
             summary = "Kích hoạt lô và bắt đầu neo blockchain",
             description = "Kiểm tra điều kiện (FR-PCK-001), tạo package, dựng Merkle tree và lưu snapshot, chuyển ANCHORING, tạo outbox + anchor trong cùng một transaction."
@@ -53,6 +53,7 @@ public class PackagingResource {
 
     @GET
     @Path("/{batchId}/qr")
+    @RequireRoles({"PACKER", "ENGINEER", "ADMIN", "QUALITY_CONTROL", "USER"})
     @Produces({"application/pdf", "text/plain", "text/csv", MediaType.APPLICATION_JSON})
     @Operation(
             summary = "Sinh mã QR và xuất tệp in tem (PDF / ZPL / CSV)",
@@ -93,6 +94,7 @@ public class PackagingResource {
 
     @POST
     @Path("/{batchId}/qr/extra")
+    @RequireRoles({"PACKER"})
     @Operation(
             summary = "Sinh thêm tem QR vượt số đơn vị khai báo",
             description = "Sinh thêm tem mới khi có lý do hợp lệ và ghi nhận audit log (FR-PCK-005)."
