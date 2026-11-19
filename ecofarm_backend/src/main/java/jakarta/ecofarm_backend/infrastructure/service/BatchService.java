@@ -39,4 +39,6 @@ public interface BatchService {
     void removeAssignments(Long batchId, List<Long> userIds);
 
     void persistAssignment(BatchAssignment assignment);
+
+    Boolean isOwnerBatch(Long batchId, Long id);
 }

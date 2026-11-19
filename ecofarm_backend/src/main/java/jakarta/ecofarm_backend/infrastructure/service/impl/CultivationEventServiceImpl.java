@@ -18,7 +18,12 @@ public class CultivationEventServiceImpl implements CultivationEventService {
 
     @Override
     public List<CultivationEvent> findByBatchIdOrderBySeqAsc(Long batchId) {
-        return this.cultivationEventRepository.findByBatchIdOrderBySeqAsc(batchId);
+        return cultivationEventRepository.findByBatchIdOrderBySeqAsc(batchId);
+    }
+
+    @Override
+    public Optional<CultivationEvent> findById(Long id) {
+        return cultivationEventRepository.findById(id);
     }
 
     @Override
