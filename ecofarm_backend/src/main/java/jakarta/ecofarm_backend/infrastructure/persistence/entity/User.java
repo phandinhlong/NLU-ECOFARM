@@ -38,7 +38,7 @@ public class User extends BaseEntity {
     @Builder.Default
     private List<Batch> batches = new ArrayList<>();
 
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "assignee", fetch = FetchType.LAZY)
     @Builder.Default
     private List<BatchAssignment> batchAssignments = new ArrayList<>();
 

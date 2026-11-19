@@ -37,6 +37,10 @@ public final class PasswordEncoderUtil {
         }
     }
 
+    public static void main(String[] args) {
+        System.out.println( encode("1234567Abc"));
+    }
+
     private static byte[] sha256(byte[] salt, String rawPassword) {
         try {
             MessageDigest md = MessageDigest.getInstance(SecurityConstant.PASSWORD_HASH_ALGORITHM);

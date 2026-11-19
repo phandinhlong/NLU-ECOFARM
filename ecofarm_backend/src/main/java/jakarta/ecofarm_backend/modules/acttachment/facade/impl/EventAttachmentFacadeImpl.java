@@ -4,6 +4,7 @@ import jakarta.ecofarm_backend.common.dto.response.BaseResponse;
 import jakarta.ecofarm_backend.common.enums.ErrorCode;
 import jakarta.ecofarm_backend.common.exception.EntityNotFoundException;
 import jakarta.ecofarm_backend.common.exception.InternalServerException;
+import jakarta.ecofarm_backend.common.exception.InvalidFileException;
 import jakarta.ecofarm_backend.common.exception.PermissionDeniedException;
 import jakarta.ecofarm_backend.common.util.ByteArrayPart;
 import jakarta.ecofarm_backend.common.util.CurrentUserUtil;
@@ -19,8 +20,9 @@ import jakarta.ecofarm_backend.modules.acttachment.dto.CreateEventAttachmentRequ
 import jakarta.ecofarm_backend.modules.acttachment.facade.EventAttachmentFacade;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.servlet.http.Part;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.core.EntityPart;
+import jakarta.ws.rs.core.MediaType;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,10 +48,9 @@ public class EventAttachmentFacadeImpl implements EventAttachmentFacade {
     @Inject
     private StorageService storageService;
 
-
     @Override
     @Transactional
-    public BaseResponse<Boolean> createAttachment(CreateEventAttachmentRequest request, Part file) {
+    public BaseResponse<Boolean> createAttachment(CreateEventAttachmentRequest request, EntityPart file) {
         UserSecurityDetailsPrincipal principal = currentUser.get();
 
         CultivationEvent event = findActiveEvent(request.getEventId());
@@ -60,12 +61,16 @@ public class EventAttachmentFacadeImpl implements EventAttachmentFacade {
         MimeTypeVerifier.validateFile(file);
 
         byte[] fileBytes = readBytes(file);
-        String declaredMime = file.getContentType();
+        MediaType mediaType = file.getMediaType();
+        String declaredMime = mediaType != null ? mediaType.getType() + "/" + mediaType.getSubtype() : null;
         MimeTypeVerifier.verify(declaredMime, fileBytes);
 
         String sha256 = sha256Hex(fileBytes);
 
-        ByteArrayPart byteArrayPart = ByteArrayPart.builder().original(file).data(fileBytes).build();
+        ByteArrayPart byteArrayPart = ByteArrayPart.builder()
+                .original(file)
+                .data(fileBytes)
+                .build();
 
         String fileKey = storageService.upload(byteArrayPart);
 
@@ -97,8 +102,11 @@ public class EventAttachmentFacadeImpl implements EventAttachmentFacade {
         }
     }
 
-    private byte[] readBytes(Part file) {
-        try (InputStream is = file.getInputStream()) {
+    private byte[] readBytes(EntityPart file) {
+        if (file == null) {
+            throw new InvalidFileException(ErrorCode.FILE_EMPTY);
+        }
+        try (InputStream is = file.getContent()) {
             return is.readAllBytes();
         } catch (IOException e) {
             throw new InternalServerException(ErrorCode.FILE_READ_ERROR, e);

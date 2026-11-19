@@ -66,8 +66,9 @@ public enum AllowedMimeType {
 
     public static AllowedMimeType fromMimeType(String mimeType) {
         if (mimeType == null) return null;
+        String cleanMime = mimeType.split(";")[0].trim();
         for (AllowedMimeType type : values()) {
-            if (type.mimeType.equalsIgnoreCase(mimeType)) {
+            if (type.mimeType.equalsIgnoreCase(cleanMime)) {
                 return type;
             }
         }

@@ -222,7 +222,7 @@ public class BatchFacadeImpl implements BatchFacade {
 
         List<Long> added = new ArrayList<>();
         for (User worker : toAdd) {
-            batchService.persistAssignment(BatchAssignment.builder().batch(batch).user(worker).build());
+            batchService.persistAssignment(BatchAssignment.builder().batch(batch).assignee(worker).build());
             added.add(worker.getId());
         }
 
@@ -294,7 +294,7 @@ public class BatchFacadeImpl implements BatchFacade {
                 .activatedAt(toLocalDateTime(batch.getActivatedAt()))
                 .workerCount((long) assignments.size())
                 .eventCount(batchService.countEvents(batch.getId()))
-                .assignedUsers(assignments.stream().map(BatchAssignment::getUser).map(this::toWorker).toList())
+                .assignedUsers(assignments.stream().map(BatchAssignment::getAssignee).map(this::toWorker).toList())
                 .version(batch.getVersion())
                 .createdAt(toLocalDateTime(batch.getCreatedAt()))
                 .updatedAt(toLocalDateTime(batch.getUpdatedAt()))
