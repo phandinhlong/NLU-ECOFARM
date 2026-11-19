@@ -55,7 +55,8 @@ public enum ErrorCode {
     QC_ALREADY_SUPERSEDED(2021, "Bản ghi QC này đã bị thay thế hoặc đã được xử lý"),
     PRE_HARVEST_QC_REQUIRED(2028, "Lô chưa đạt kiểm định chất lượng trước thu hoạch; không được phép thu hoạch"),
     ANCHOR_NOT_FOUND(3001, "Anchor not found"),
-    ANCHOR_NOT_RETRYABLE(3002, "Anchor is not in FAILED state; cannot retry");
+    ANCHOR_NOT_RETRYABLE(3002, "Anchor is not in FAILED state; cannot retry"),
+    SNAPSHOT_NOT_FOUND(3003, "Merkle snapshot not found for this batch");
 
     private final Integer code;
     private final String message;

@@ -164,7 +164,9 @@ public class QcServiceImpl implements QcService {
         qcRecordService.persist(newQcRecord);
 
         String actorRef = "usr_" + param.getActorId();
-        int nextSeq = cultivationEventService.findNextSeqByBatchId(param.getBatchId());
+        String batchKey = Optional.ofNullable(batch.getBatchCode()).orElse(String.valueOf(param.getBatchId()));
+        String batchIdHash = Hash.sha3String(batchKey);
+        int nextSeq = outboxEventService.findNextSeqByBatchIdHash(batchIdHash);
 
         Map<String, Object> payloadMap = buildQcPayload(evalParam, assessment, actorRef, now);
         String eventPayloadJson = toJson(payloadMap);
@@ -186,11 +188,9 @@ public class QcServiceImpl implements QcService {
                 .recordedAt(now)
                 .clientEventId(request.getClientEventId())
                 .build();
-        cultivationEventService.persist(cultivationEvent);
+        cultivationEventService.save(cultivationEvent);
 
-        String batchKey = Optional.ofNullable(batch.getBatchCode()).orElse(String.valueOf(param.getBatchId()));
-        String batchIdHash = Hash.sha3String(batchKey);
-        int outboxSeq = outboxEventService.findNextSeqByBatchIdHash(batchIdHash);
+        int outboxSeq = nextSeq;
 
         OutboxEvent outbox = OutboxEvent.builder()
                 .batchIdHash(batchIdHash)
@@ -201,7 +201,7 @@ public class QcServiceImpl implements QcService {
                 .build();
         outboxEventService.persist(outbox);
 
-        batchService.merge(batch);
+        batchService.save(batch);
 
         AuditLog auditLog = AuditLog.builder()
                 .actor(actor)
@@ -278,10 +278,10 @@ public class QcServiceImpl implements QcService {
         pendingQc.setReviewedAt(now);
 
         qcRecordService.merge(pendingQc);
-        batchService.merge(batch);
+        batchService.save(batch);
 
         Optional.ofNullable(pendingQc.getClientEventId())
-                .map(cultivationEventService::findByClientEventId)
+                .flatMap(cultivationEventService::findByClientEventId)
                 .ifPresent(event -> {
                     event.setReviewStatus(approved ? EventReviewStatus.APPROVED : EventReviewStatus.REJECTED);
                     event.setStatus(approved ? EventChainStatus.CONFIRMED : EventChainStatus.SUPERSEDED);
@@ -290,7 +290,7 @@ public class QcServiceImpl implements QcService {
                     if (!approved) {
                         event.setRejectReason(adminNote);
                     }
-                    cultivationEventService.merge(event);
+                    cultivationEventService.save(event);
                 });
 
         AuditLog auditLog = AuditLog.builder()
@@ -341,8 +341,8 @@ public class QcServiceImpl implements QcService {
                             + batch.getStatus() + "). Chỉ cho phép thu hoạch khi lô ở trạng thái QC_PASSED."));
         }
 
-        Optional<CultivationEvent> existingHarvest = Optional.ofNullable(
-                cultivationEventService.findByClientEventId(request.getClientEventId()));
+        Optional<CultivationEvent> existingHarvest =
+                cultivationEventService.findByClientEventId(request.getClientEventId());
         if (existingHarvest.isPresent()) {
             return HarvestResponse.builder()
                     .batchId(param.getBatchId())
@@ -359,12 +359,14 @@ public class QcServiceImpl implements QcService {
         LocalDate harvestDate = LocalDate.now();
         batch.setHarvestDate(harvestDate);
         batch.setStatus(BatchStatus.HARVESTED.name());
-        batchService.merge(batch);
+        batchService.save(batch);
 
         long now = System.currentTimeMillis();
         long occurredAt = Optional.ofNullable(request.getHarvestedAt()).orElse(now);
         String actorRef = "usr_" + param.getActorId();
-        int nextSeq = cultivationEventService.findNextSeqByBatchId(param.getBatchId());
+        String batchKey = Optional.ofNullable(batch.getBatchCode()).orElse(String.valueOf(param.getBatchId()));
+        String batchIdHash = Hash.sha3String(batchKey);
+        int nextSeq = outboxEventService.findNextSeqByBatchIdHash(batchIdHash);
 
         Map<String, Object> payloadMap = Map.of(
                 "schemaVersion", "1.0",
@@ -396,7 +398,7 @@ public class QcServiceImpl implements QcService {
                 .recordedAt(now)
                 .clientEventId(request.getClientEventId())
                 .build();
-        cultivationEventService.persist(harvestEvent);
+        cultivationEventService.save(harvestEvent);
 
         String besuTxHash = null;
         Long besuBlockNumber = null;
@@ -419,13 +421,10 @@ public class QcServiceImpl implements QcService {
         } catch (Exception besuEx) {
             System.err.println("Besu anchoring error during harvest: " + besuEx.getMessage());
         }
-        String batchKey = Optional.ofNullable(batch.getBatchCode()).orElse(String.valueOf(param.getBatchId()));
-        String batchIdHash = Hash.sha3String(batchKey);
-        int outboxSeq = outboxEventService.findNextSeqByBatchIdHash(batchIdHash);
 
         OutboxEvent outbox = OutboxEvent.builder()
                 .batchIdHash(batchIdHash)
-                .seq(outboxSeq)
+                .seq(nextSeq)
                 .eventData(payloadJson)
                 .status(besuTxHash != null ? OutboxEvent.OutboxStatus.SUCCESS : OutboxEvent.OutboxStatus.PENDING)
                 .attempts(besuTxHash != null ? 1 : 0)
@@ -663,7 +662,7 @@ public class QcServiceImpl implements QcService {
                         && (ev.getStatus() == EventChainStatus.CONFIRMED || ev.getStatus() == EventChainStatus.PENDING))
                 .forEach(ev -> {
                     ev.setStatus(EventChainStatus.SUPERSEDED);
-                    cultivationEventService.merge(ev);
+                    cultivationEventService.save(ev);
                 });
 
         qcRecordService.findByBatchId(batchId).stream()

@@ -17,31 +17,6 @@ public class CultivationEventServiceImpl implements CultivationEventService {
     private CultivationEventRepository cultivationEventRepository;
 
     @Override
-    public void persist(CultivationEvent event) {
-        this.cultivationEventRepository.persist(event);
-    }
-
-    @Override
-    public CultivationEvent merge(CultivationEvent event) {
-        return this.cultivationEventRepository.merge(event);
-    }
-
-    @Override
-    public CultivationEvent findById(Long id) {
-        return this.cultivationEventRepository.findById(id);
-    }
-
-    @Override
-    public CultivationEvent findByClientEventId(String clientEventId) {
-        return this.cultivationEventRepository.findByClientEventId(clientEventId);
-    }
-
-    @Override
-    public Integer findNextSeqByBatchId(Long batchId) {
-        return this.cultivationEventRepository.findNextSeqByBatchId(batchId);
-    }
-
-    @Override
     public List<CultivationEvent> findByBatchIdOrderBySeqAsc(Long batchId) {
         return this.cultivationEventRepository.findByBatchIdOrderBySeqAsc(batchId);
     }
