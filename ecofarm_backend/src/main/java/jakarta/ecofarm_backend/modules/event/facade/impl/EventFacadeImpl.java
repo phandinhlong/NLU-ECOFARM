@@ -479,7 +479,7 @@ public class EventFacadeImpl implements EventFacade {
     private void approvalScope(CultivationEvent event, UserSecurityDetailsPrincipal principal, boolean allowAdminOverride) {
         User recorder = event.getRecordedBy();
         BatchAssignment assignment = findRecorderAssignment(event);
-        User assigner = assignment == null ? null : assignment.getAssignedBy();
+        User assigner = assignment == null ? null : assignment.getAssigner();
         boolean assignerActive = assigner != null && assigner.isActive();
         boolean isAdmin = principal.hasRole(RoleEnum.ADMIN.name());
 
@@ -559,7 +559,7 @@ public class EventFacadeImpl implements EventFacade {
             return null;
         }
         return batchService.findAssignments(event.getBatch().getId()).stream()
-                .filter(a -> a.getUser() != null && a.getUser().getId().equals(event.getRecordedBy().getId()))
+                .filter(a -> a.getAssignee() != null && a.getAssignee().getId().equals(event.getRecordedBy().getId()))
                 .findFirst().orElse(null);
     }
 
@@ -569,7 +569,7 @@ public class EventFacadeImpl implements EventFacade {
                 ? (Map<String, Object>) payload.get("data")
                 : new LinkedHashMap<>();
         BatchAssignment assignment = findRecorderAssignment(event);
-        User assigner = assignment == null ? null : assignment.getAssignedBy();
+        User assigner = assignment == null ? null : assignment.getAssigner();
         return EventResponse.builder()
                 .id(event.getId())
                 .batchId(event.getBatch() == null ? null : event.getBatch().getId())

@@ -48,11 +48,6 @@ public class CultivationEventServiceImpl implements CultivationEventService {
     }
 
     @Override
-    public Optional<CultivationEvent> findById(Long id) {
-        return this.cultivationEventRepository.findById(id);
-    }
-
-    @Override
     public Optional<CultivationEvent> findByClientEventId(String clientEventId) {
         return this.cultivationEventRepository.findByClientEventId(clientEventId);
     }
