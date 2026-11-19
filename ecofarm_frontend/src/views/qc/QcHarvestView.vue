@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { batchService } from '@/api/services/batch.service'
+import { attachmentService } from '@/api/services/attachment.service'
 import type { Batch } from '@/api/types/batch'
 import type { Problem } from '@/api/types/batch'
 import {
@@ -24,6 +25,7 @@ const userStore = useUserStore()
 
 const roles = computed(() => userStore.user?.role ?? [])
 const isAdmin = computed(() => roles.value.includes('ADMIN'))
+const canReviewQc = computed(() => roles.value.includes('ADMIN') || roles.value.includes('ENGINEER') || roles.value.includes('QUALITY_CONTROL'))
 
 // Batch selection
 const selectedBatchId = ref<number | null>(null)
@@ -277,7 +279,24 @@ const handleSubmitQc = async () => {
       },
     })
 
-    submitSuccessMessage.value = `Ghi nhận QC lần ${result.attemptNumber || 1} thành công! Trạng thái: ${result.status}`
+    const uploadedCount = photoFiles.value.length
+    if (uploadedCount > 0 && result.eventId) {
+      for (const file of photoFiles.value) {
+        try {
+          await attachmentService.createAttachment({
+            eventId: result.eventId,
+            file,
+            capturedAt: Date.now(),
+          })
+        } catch (uploadErr) {
+          console.error('Lỗi tải ảnh minh chứng qua module attachment:', uploadErr)
+        }
+      }
+    }
+
+    submitSuccessMessage.value = `Ghi nhận QC lần ${result.attemptNumber || 1} thành công! Trạng thái: ${result.status}${uploadedCount > 0 ? ` (Đã tải ${uploadedCount} ảnh qua module attachment)` : ''}`
+    photoFiles.value = []
+    photoHashes.value = []
     await refetchQc()
     await loadBatches()
   } catch (err: any) {
@@ -460,11 +479,11 @@ const selectBatch = (id: number) => {
 
         <!-- Admin Review Form for PENDING_REVIEW -->
         <div
-          v-if="latestQc.status === 'PENDING_REVIEW' && isAdmin"
+          v-if="latestQc.status === 'PENDING_REVIEW' && canReviewQc"
           class="mt-3 pt-3 border-top bg-light-subtle p-3 rounded-2"
         >
           <h6 class="fw-bold text-primary mb-2">
-            Admin Phê duyệt QC
+            Phê duyệt QC
           </h6>
           <p class="small text-body-secondary mb-3">
             Lô dưa thiếu sự kiện ghi nhận cách ly hoặc cần xác nhận thủ công từ Quản trị viên.

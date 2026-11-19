@@ -22,8 +22,13 @@ const NON_ADMIN_HOME = 'batch-activation'
 const isFarmerOnly = (user: User) =>
   user.role.includes('FARMER') && !user.role.includes('ENGINEER') && !user.role.includes('ADMIN')
 
-const homeFor = (user: User) =>
-  isFarmerOnly(user) ? FARMER_HOME : user.role.includes('ADMIN') ? 'dashboard' : NON_ADMIN_HOME
+const homeFor = (user: User) => {
+  if (isFarmerOnly(user)) return FARMER_HOME
+  if (user.role.includes('ADMIN') || user.role.includes('ENGINEER')) return 'dashboard'
+  if (user.role.includes('PACKER')) return 'batch-activation'
+  if (user.role.includes('QUALITY_CONTROL')) return 'qc-harvest'
+  return 'dashboard'
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -96,73 +101,73 @@ const router = createRouter({
           path: 'dashboard',
           name: 'dashboard',
           component: () => import('@/views/DashboardView.vue'),
-          meta: { title: 'Tổng quan', roles: ADMIN_ROLES },
+          meta: { title: 'Tổng quan', roles: ['ADMIN', 'ENGINEER'] },
         },
         {
           path: 'batch-activation',
           name: 'batch-activation',
           component: () => import('@/views/batch/BatchActivationView.vue'),
-          meta: { title: 'Kích hoạt lô & In tem' },
+          meta: { title: 'Kích hoạt lô & In tem', roles: ['PACKER', 'ENGINEER', 'ADMIN', 'USER'] },
         },
         {
           path: 'batches/:id/activation',
           name: 'batch-activation-detail',
           component: () => import('@/views/batch/BatchActivationView.vue'),
-          meta: { title: 'Kích hoạt lô & In tem' },
+          meta: { title: 'Kích hoạt lô & In tem', roles: ['PACKER', 'ENGINEER', 'ADMIN', 'USER'] },
         },
         {
           path: 'qc-harvest',
           name: 'qc-harvest',
           component: () => import('@/views/qc/QcHarvestView.vue'),
-          meta: { title: 'Kiểm định chất lượng & Thu hoạch' },
+          meta: { title: 'Kiểm định chất lượng & Thu hoạch', roles: ['ENGINEER', 'ADMIN', 'QUALITY_CONTROL'] },
         },
         {
           path: 'batches/:id/qc',
           name: 'batch-qc',
           component: () => import('@/views/qc/QcHarvestView.vue'),
-          meta: { title: 'Kiểm định chất lượng & Thu hoạch' },
+          meta: { title: 'Kiểm định chất lượng & Thu hoạch', roles: ['ENGINEER', 'ADMIN', 'QUALITY_CONTROL'] },
         },
         {
           path: 'batches',
           name: 'batches',
           component: () => import('@/views/batches/BatchListView.vue'),
-          meta: { title: 'Quản lý lô dưa' },
+          meta: { title: 'Quản lý lô dưa', roles: ['ENGINEER', 'ADMIN', 'FARMER', 'USER'] },
         },
         {
           path: 'batches/:id',
           name: 'batch-detail',
           component: () => import('@/views/batches/BatchDetailView.vue'),
-          meta: { title: 'Chi tiết lô' },
+          meta: { title: 'Chi tiết lô', roles: ['ENGINEER', 'ADMIN', 'FARMER', 'USER'] },
         },
         {
           path: 'events/review',
           name: 'event-review',
           component: () => import('@/views/events/EventReviewView.vue'),
-          meta: { title: 'Duyệt nhật ký' },
+          meta: { title: 'Duyệt nhật ký', roles: ['ENGINEER', 'ADMIN'] },
         },
         {
           path: 'farms',
           name: 'farms',
           component: () => import('@/views/PlaceholderView.vue'),
-          meta: { title: 'Trang trại', roles: ADMIN_ROLES },
+          meta: { title: 'Trang trại', roles: ['ADMIN', 'ENGINEER'] },
         },
         {
           path: 'greenhouses',
           name: 'greenhouses',
           component: () => import('@/views/catalog/GreenhouseView.vue'),
-          meta: { title: 'Nhà màng', roles: ADMIN_ROLES },
+          meta: { title: 'Nhà màng', roles: ['ADMIN', 'ENGINEER', 'FARMER', 'USER'] },
         },
         {
           path: 'varieties',
           name: 'varieties',
           component: () => import('@/views/catalog/VarietyView.vue'),
-          meta: { title: 'Giống dưa', roles: ADMIN_ROLES },
+          meta: { title: 'Giống dưa', roles: ['ADMIN', 'ENGINEER', 'FARMER', 'USER'] },
         },
         {
           path: 'certificates',
           name: 'certificates',
           component: () => import('@/views/catalog/CertificateView.vue'),
-          meta: { title: 'Chứng nhận', roles: ADMIN_ROLES },
+          meta: { title: 'Chứng nhận', roles: ['ADMIN', 'ENGINEER', 'FARMER', 'USER'] },
         },
       ],
     },

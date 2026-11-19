@@ -47,6 +47,7 @@ export interface QcCriteriaEvaluation {
 
 export interface QcResponse {
   id: number
+  eventId?: number | null
   batchId: number
   batchCode: string
   avgBrix: number
