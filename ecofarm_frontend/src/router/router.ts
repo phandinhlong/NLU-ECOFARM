@@ -135,6 +135,12 @@ const router = createRouter({
           meta: { title: 'Chi tiết lô' },
         },
         {
+          path: 'events/review',
+          name: 'event-review',
+          component: () => import('@/views/events/EventReviewView.vue'),
+          meta: { title: 'Duyệt nhật ký' },
+        },
+        {
           path: 'farms',
           name: 'farms',
           component: () => import('@/views/PlaceholderView.vue'),

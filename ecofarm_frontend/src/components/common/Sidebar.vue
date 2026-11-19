@@ -6,12 +6,14 @@ const userStore = useUserStore()
 
 const roles = computed(() => userStore.user?.role ?? [])
 const canManageCatalog = computed(() => roles.value.includes('ADMIN'))
+const canReview = computed(() => roles.value.includes('ENGINEER') || roles.value.includes('ADMIN'))
 
 const navSections = computed(() => {
   const businessSection = {
     title: 'Nghiệp vụ',
     items: [
       { label: 'Kích hoạt lô & In tem', to: '/batch-activation' },
+      ...(canReview.value ? [{ label: 'Duyệt nhật ký', to: '/events/review' }] : []),
       { label: 'Kiểm định & Thu hoạch', to: '/qc-harvest' },
     ],
   }

@@ -33,7 +33,7 @@ public class CultivationEventRepositoryImpl implements CultivationEventRepositor
         Long lastIndex = criteria.getLastIndex();
         EventReviewStatus reviewStatus = criteria.getReviewStatus();
         StringBuilder jpql = new StringBuilder(
-                "select distinct e from CultivationEvent e left join fetch e.recordedBy"
+                "select distinct e from CultivationEvent e left join fetch e.batch left join fetch e.batch.greenhouse left join fetch e.recordedBy"
                         + " where e.batch.id = :batchId and (e.isActive is null or e.isActive = true)");
         if (lastIndex != null) {
             jpql.append(" and e.id < :lastIndex");
@@ -55,6 +55,57 @@ public class CultivationEventRepositoryImpl implements CultivationEventRepositor
     }
 
     @Override
+    public List<CultivationEvent> findReviewPage(Long greenhouseId, EventPageCriteria criteria) {
+        Long lastIndex = criteria.getLastIndex();
+        EventReviewStatus reviewStatus = criteria.getReviewStatus();
+        StringBuilder jpql = new StringBuilder(
+                "select distinct e from CultivationEvent e left join fetch e.batch left join fetch e.batch.greenhouse left join fetch e.recordedBy"
+                        + " where (e.isActive is null or e.isActive = true)");
+        if (reviewStatus != null) {
+            jpql.append(" and e.reviewStatus = :reviewStatus");
+        }
+        if (lastIndex != null) {
+            jpql.append(" and e.id < :lastIndex");
+        }
+        if (greenhouseId != null) {
+            jpql.append(" and e.batch.greenhouse.id = :greenhouseId");
+        }
+        jpql.append(" order by e.id desc");
+        Query query = em.createQuery(jpql.toString(), CultivationEvent.class)
+                .setMaxResults(criteria.getLimit());
+        if (reviewStatus != null) {
+            query.setParameter("reviewStatus", reviewStatus);
+        }
+        if (lastIndex != null) {
+            query.setParameter("lastIndex", lastIndex);
+        }
+        if (greenhouseId != null) {
+            query.setParameter("greenhouseId", greenhouseId);
+        }
+        return query.getResultList();
+    }
+
+    @Override
+    public Long countReviewPage(Long greenhouseId, EventReviewStatus reviewStatus) {
+        StringBuilder jpql = new StringBuilder(
+                "select count(distinct e) from CultivationEvent e where (e.isActive is null or e.isActive = true)");
+        if (reviewStatus != null) {
+            jpql.append(" and e.reviewStatus = :reviewStatus");
+        }
+        if (greenhouseId != null) {
+            jpql.append(" and e.batch.greenhouse.id = :greenhouseId");
+        }
+        Query query = em.createQuery(jpql.toString());
+        if (reviewStatus != null) {
+            query.setParameter("reviewStatus", reviewStatus);
+        }
+        if (greenhouseId != null) {
+            query.setParameter("greenhouseId", greenhouseId);
+        }
+        return (Long) query.getSingleResult();
+    }
+
+    @Override
     public CultivationEvent save(CultivationEvent event) {
         if (event.getId() == null) {
             em.persist(event);
@@ -66,7 +117,7 @@ public class CultivationEventRepositoryImpl implements CultivationEventRepositor
     @Override
     public Optional<CultivationEvent> findById(Long id) {
         List<CultivationEvent> rows = em.createQuery(
-                "select distinct e from CultivationEvent e left join fetch e.batch left join fetch e.recordedBy where e.id = :id",
+                "select distinct e from CultivationEvent e left join fetch e.batch left join fetch e.batch.greenhouse left join fetch e.recordedBy where e.id = :id",
                 CultivationEvent.class).setParameter("id", id).getResultList();
         return rows.stream().findFirst();
     }
@@ -74,7 +125,7 @@ public class CultivationEventRepositoryImpl implements CultivationEventRepositor
     @Override
     public Optional<CultivationEvent> findByClientEventId(String clientEventId) {
         List<CultivationEvent> rows = em.createQuery(
-                "select distinct e from CultivationEvent e left join fetch e.batch left join fetch e.recordedBy where e.clientEventId = :clientEventId",
+                "select distinct e from CultivationEvent e left join fetch e.batch left join fetch e.batch.greenhouse left join fetch e.recordedBy where e.clientEventId = :clientEventId",
                 CultivationEvent.class).setParameter("clientEventId", clientEventId).getResultList();
         return rows.stream().findFirst();
     }

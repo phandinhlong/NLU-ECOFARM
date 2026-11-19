@@ -51,15 +51,18 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
 }
 
 export const TASK_STATUS_TONES: Record<TaskStatus, 'success' | 'warning' | 'danger' | 'info' | 'muted'> = {
-  ASSIGNED: 'warning',
-  COMPLETED: 'success',
+  ASSIGNED: 'muted',
+  COMPLETED: 'muted',
   CANCELLED: 'muted',
 }
 
-export const TASK_FIELDS: Record<string, { key: string; label: string; type: 'number' | 'text' | 'datetime-local' }[]> = {
+export const TASK_FIELDS: Record<
+  string,
+  { key: string; label: string; type: 'number' | 'text' | 'datetime-local' | 'select'; options?: string[] }[]
+> = {
   POLLINATION: [
     { key: 'pollinationDate', label: 'Ngày thụ phấn', type: 'datetime-local' },
-    { key: 'method', label: 'Phương pháp (manual/bee)', type: 'text' },
+    { key: 'method', label: 'Phương pháp', type: 'select', options: ['manual', 'bee'] },
     { key: 'flowerCount', label: 'Số hoa', type: 'number' },
   ],
   IRRIGATE: [
@@ -69,7 +72,7 @@ export const TASK_FIELDS: Record<string, { key: string; label: string; type: 'nu
   FERTILIZE_IRRIGATE: [
     { key: 'fertilizerName', label: 'Loại phân', type: 'text' },
     { key: 'amountKg', label: 'Khối lượng (kg)', type: 'number' },
-    { key: 'unit', label: 'Đơn vị (kg/l)', type: 'text' },
+    { key: 'unit', label: 'Đơn vị', type: 'select', options: ['kg', 'l'] },
     { key: 'appliedAt', label: 'Thời điểm', type: 'datetime-local' },
   ],
   PRUNE_SHOOTS: [

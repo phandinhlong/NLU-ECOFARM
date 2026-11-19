@@ -16,6 +16,6 @@ import lombok.ToString;
 public class AssignWorkersRequest {
 
     @NotNull(message = "Danh sách người lao động không được trống")
-    @Size(max = 100, message = "Chỉ được phân công tối đa 100 người lao động cho một lô")
+    @Size(max = 100, message = "At most 100 workers can be assigned to a batch")
     private List<Long> userIds;
 }

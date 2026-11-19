@@ -74,17 +74,12 @@ const cancelTask = (task: BatchTask) => {
   if (!reason) return
   cancelMutation.mutate({ taskId: task.id, reason })
 }
+
+defineExpose({ openCreate })
 </script>
 
 <template>
   <div>
-    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
-      <span class="small text-body-secondary">Danh sách công việc</span>
-      <BButton v-if="isEngineer && !locked" size="sm" variant="outline-primary" @click="openCreate">
-        <FontAwesomeIcon icon="plus" aria-hidden="true" /> Giao việc
-      </BButton>
-    </div>
-
     <div v-if="isLoading" class="d-flex justify-content-center py-4">
       <BSpinner small />
     </div>

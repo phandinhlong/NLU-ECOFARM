@@ -1,6 +1,7 @@
 package jakarta.ecofarm_backend.common.dto.response;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
@@ -36,6 +37,7 @@ public class BatchDetailResponse {
     private Long workerCount;
     @Positive
     private Long eventCount;
+    private List<WorkerSummaryResponse> assignedUsers;
     @Positive
     private Long version;
     private LocalDateTime createdAt;

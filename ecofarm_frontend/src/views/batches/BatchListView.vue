@@ -91,6 +91,7 @@ const resetFilter = () => {
   store.load()
 }
 
+const showAdvanced = ref(false)
 const showCreate = ref(false)
 const formErrors = ref<Record<string, string>>({})
 const generalError = ref('')
@@ -148,48 +149,38 @@ onMounted(() => {
 
 <template>
   <div>
-    <PageHeader title="Quản lý lô dưa">
-      <template #actions>
-        <BButton v-if="canManage" variant="primary" @click="openCreate">
+    <PageHeader title="Quản lý lô dưa" />
+
+    <section class="border rounded-3 bg-body p-3 mb-3">
+      <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+        <div class="hstack gap-1 flex-nowrap" style="min-width: 200px">
+          <BFormInput v-model="searchText" placeholder="Tìm mã lô" @keyup.enter="applyFilter" />
+          <BButton variant="outline-secondary" aria-label="Lọc dữ liệu" title="Lọc dữ liệu" @click="applyFilter">
+            <FontAwesomeIcon icon="filter" aria-hidden="true" />
+          </BButton>
+          <BButton variant="outline-secondary" aria-label="Đặt lại" title="Đặt lại" @click="resetFilter">
+            <FontAwesomeIcon icon="arrow-rotate-left" aria-hidden="true" />
+          </BButton>
+          <BButton variant="outline-secondary" :aria-label="showAdvanced ? 'Ẩn bộ lọc' : 'Bộ lọc nâng cao'" title="showAdvanced ? 'Ẩn bộ lọc' : 'Bộ lọc nâng cao'" @click="showAdvanced = !showAdvanced">
+            <FontAwesomeIcon icon="sliders" aria-hidden="true" />
+          </BButton>
+        </div>
+        <BButton v-if="canManage" variant="primary" class="ms-auto" @click="openCreate">
           <FontAwesomeIcon icon="plus" aria-hidden="true" /> Tạo lô mới
         </BButton>
-      </template>
-    </PageHeader>
-
-    <section class="border rounded-3 bg-body p-3 p-lg-4 mb-3">
-      <div class="row g-3 align-items-end">
-        <div class="col-12 col-md-4">
-          <label class="form-label small fw-semibold text-body-secondary mb-1" for="bat-search">
-            <FontAwesomeIcon icon="magnifying-glass" aria-hidden="true" /> Tìm kiếm
-          </label>
-          <BFormInput
-            id="bat-search"
-            v-model="searchText"
-            placeholder="Nhập mã lô"
-            @keyup.enter="applyFilter"
-          />
-        </div>
-        <div class="col-12 col-md-3">
-          <label class="form-label small fw-semibold text-body-secondary mb-1" for="bat-gh">Nhà màng</label>
-          <BFormSelect id="bat-gh" v-model="greenhouseFilter">
+      </div>
+      <div v-show="showAdvanced" class="row g-2 mt-1">
+        <div class="col-12 col-md-6">
+          <BFormSelect v-model="greenhouseFilter">
             <option value="">Tất cả nhà màng</option>
             <option v-for="gh in greenhouseOptions" :key="gh.id" :value="gh.id">{{ gh.code }}</option>
           </BFormSelect>
         </div>
-        <div class="col-12 col-md-3">
-          <label class="form-label small fw-semibold text-body-secondary mb-1" for="bat-status">Trạng thái</label>
-          <BFormSelect id="bat-status" v-model="statusFilter">
+        <div class="col-12 col-md-6">
+          <BFormSelect v-model="statusFilter">
             <option value="">Tất cả trạng thái</option>
             <option v-for="[value, meta] in statuses" :key="value" :value="value">{{ meta.label }}</option>
           </BFormSelect>
-        </div>
-        <div class="col-12 d-flex gap-2">
-          <BButton variant="primary" @click="applyFilter">
-            <FontAwesomeIcon icon="filter" aria-hidden="true" /> Lọc dữ liệu
-          </BButton>
-          <BButton variant="outline-secondary" @click="resetFilter">
-            <FontAwesomeIcon icon="arrow-rotate-left" aria-hidden="true" /> Đặt lại
-          </BButton>
         </div>
       </div>
     </section>
@@ -197,7 +188,7 @@ onMounted(() => {
     <section class="border rounded-3 bg-body">
       <div class="p-3 border-bottom d-flex flex-wrap gap-2 justify-content-between align-items-center">
         <p class="mb-0 fw-semibold">Danh sách lô dưa</p>
-        <SoftBadge variant="info" :label="`${rows.length} lô`" />
+        <SoftBadge variant="muted" :label="`${rows.length} lô`" />
       </div>
 
       <BAlert v-if="store.error" variant="danger" class="mx-3 mt-3 mb-0 d-flex gap-2 align-items-center">
@@ -293,34 +284,28 @@ onMounted(() => {
         </div>
       </template>
 
-      <div class="px-3 py-2 border-top d-flex flex-wrap gap-2 align-items-center justify-content-between">
-        <BButton
-          size="sm"
-          variant="outline-secondary"
-          :disabled="!store.hasPrev || store.loading"
-          @click="store.first()"
-        >
-          Trang đầu
-        </BButton>
-        <BButton
-          size="sm"
-          variant="outline-secondary"
-          :disabled="!store.hasPrev || store.loading"
-          @click="store.prev()"
-        >
-          <FontAwesomeIcon v-if="store.loading" icon="spinner" spin aria-hidden="true" />
-          Trang trước
-        </BButton>
-        <span class="small text-body-secondary">Trang {{ store.pageIndex + 1 }}</span>
-        <BButton
-          size="sm"
-          variant="outline-secondary"
-          :disabled="!store.hasMore || store.loading"
-          @click="store.next()"
-        >
-          <FontAwesomeIcon v-if="store.loading" icon="spinner" spin aria-hidden="true" />
-          Trang sau
-        </BButton>
+      <div class="px-3 py-2 border-top d-flex align-items-center justify-content-end">
+        <div class="d-flex align-items-center gap-2">
+          <BButton
+            size="sm"
+            variant="outline-secondary"
+            aria-label="Trang trước"
+            :disabled="!store.hasPrev || store.loading"
+            @click="store.prev()"
+          >
+            <FontAwesomeIcon icon="chevron-left" aria-hidden="true" />
+          </BButton>
+          <span class="small text-body-secondary">Trang {{ store.pageIndex + 1 }}</span>
+          <BButton
+            size="sm"
+            variant="outline-secondary"
+            aria-label="Trang sau"
+            :disabled="!store.hasMore || store.loading"
+            @click="store.next()"
+          >
+            <FontAwesomeIcon icon="chevron-right" aria-hidden="true" />
+          </BButton>
+        </div>
       </div>
     </section>
 
